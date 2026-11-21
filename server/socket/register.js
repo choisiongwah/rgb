@@ -3,7 +3,8 @@ import { authService } from '../middleware/auth.js';
 
 const inputSchema = z.object({
   action: z.enum(['R', 'G', 'B']),
-  inputId: z.number().int().nonnegative()
+  inputId: z.number().int().nonnegative(),
+  roundId: z.number().int().nonnegative().optional()
 });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume']) }),
@@ -82,10 +83,18 @@ export function registerSocketHandlers(io, { sessions }) {
       if (parsed.data.inputId <= socket.data.lastInputId) return ack({ ok: false, error: 'DUPLICATE_INPUT' });
       socket.data.lastInputId = parsed.data.inputId;
       try {
-        const result = sessions.submitInput(socket.data.playerSessionId, socket.data.playerToken, parsed.data.action);
+        const result = sessions.submitInput(
+          socket.data.playerSessionId,
+          socket.data.playerToken,
+          parsed.data.action,
+          parsed.data.roundId ?? null
+        );
         const state = sessions.toPublicView(result.session);
         io.to(room(result.session.id)).emit('game:state', state);
-        ack({ ok: true, correct: result.correct, reset: result.reset, cycleCompleted: result.cycleCompleted });
+        ack({
+          ok: true, correct: result.correct, reset: result.reset,
+          cycleCompleted: result.cycleCompleted, pointAwarded: result.pointAwarded || 0
+        });
       } catch (error) {
         ack({ ok: false, error: error.message });
       }

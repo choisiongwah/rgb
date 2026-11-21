@@ -1,25 +1,40 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 
 const COLORS = ['RED', 'GREEN', 'BLUE'];
 const SEQUENCE = ['R', 'G', 'B'];
 const DEFAULT_TARGET_CYCLES = 20;
 const MIN_TARGET_CYCLES = 1;
 const MAX_TARGET_CYCLES = 100;
+const DICE_TARGET = 8;
 const POINTS_BY_PLACE = { 1: 5, 2: 3, 3: 1 };
 
+function createDiceRoll() {
+  const values = [];
+  while (values.length < 3) {
+    const value = randomInt(1, 7);
+    if (!values.includes(value)) values.push(value);
+  }
+  return values;
+}
+
 export class SessionService {
-  constructor() { this.sessions = new Map(); }
+  constructor({ diceRoll = createDiceRoll } = {}) {
+    this.sessions = new Map();
+    this.diceRoll = diceRoll;
+  }
 
   create({ host }) {
     const id = randomBytes(4).toString('hex').toUpperCase();
     const session = {
       id, host, status: 'waiting', paused: false, createdAt: Date.now(),
       stage: 1, nextPlace: 1, controllerColor: null,
-      targetCycles: DEFAULT_TARGET_CYCLES,
+      targetCycles: DEFAULT_TARGET_CYCLES, diceTarget: DICE_TARGET,
+      diceValues: null, diceRoundId: 0,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
-        progressIndex: 0, cycles: 0, totalPoints: 0,
+        progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
+        roundFeedback: null, totalPoints: 0,
         completed: false, place: null, pointsEarned: 0
       }))
     };
@@ -49,6 +64,9 @@ export class SessionService {
       slot.activeForRound = true;
       slot.progressIndex = 0;
       slot.cycles = 0;
+      slot.successCount = 0;
+      slot.roundAttempted = false;
+      slot.roundFeedback = null;
       slot.completed = false;
       slot.place = null;
       slot.pointsEarned = 0;
@@ -84,14 +102,19 @@ export class SessionService {
       player.activeForRound = participants.includes(player);
       player.progressIndex = 0;
       player.cycles = 0;
+      player.successCount = 0;
+      player.roundAttempted = false;
+      player.roundFeedback = null;
       player.completed = false;
       player.place = null;
       player.pointsEarned = 0;
     }
+    if (session.stage === 2) this.rollNextDiceRound(session);
+    else session.diceValues = null;
     return session;
   }
 
-  submitInput(id, token, action) {
+  submitInput(id, token, action, diceRoundId = null) {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
     const slot = this.getSlot(id, token);
@@ -100,6 +123,38 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 2) {
+      if (diceRoundId !== session.diceRoundId) throw new Error('STALE_ROUND');
+      if (slot.roundAttempted) throw new Error('ALREADY_ANSWERED');
+      const positions = { R: 0, G: 1, B: 2 };
+      if (!(action in positions)) throw new Error('INVALID_INPUT');
+      slot.roundAttempted = true;
+      const largestIndex = session.diceValues.indexOf(Math.max(...session.diceValues));
+      if (positions[action] !== largestIndex) {
+        slot.roundFeedback = 'wrong';
+        if (this.allDicePlayersAttempted(session)) this.rollNextDiceRound(session);
+        return { session, slot, correct: false, reset: false, cycleCompleted: false };
+      }
+
+      slot.successCount += 1;
+      slot.roundFeedback = 'correct';
+      let cycleCompleted = false;
+      if (slot.successCount >= session.diceTarget) {
+        cycleCompleted = true;
+        slot.completed = true;
+        slot.place = session.nextPlace++;
+        slot.pointsEarned = POINTS_BY_PLACE[slot.place] || 0;
+        slot.totalPoints += slot.pointsEarned;
+      }
+      if (this.allActivePlayersFinished(session)) {
+        session.status = 'finished';
+        session.paused = false;
+      } else {
+        this.rollNextDiceRound(session, slot);
+      }
+      return { session, slot, correct: true, reset: false, cycleCompleted, pointAwarded: 1 };
+    }
 
     const expected = SEQUENCE[slot.progressIndex];
     if (action !== expected) {
@@ -128,6 +183,21 @@ export class SessionService {
     return { session, slot, correct: true, reset: false, cycleCompleted };
   }
 
+  rollNextDiceRound(session, winner = null) {
+    session.diceValues = this.diceRoll();
+    session.diceRoundId += 1;
+    for (const player of session.players) {
+      if (!player.activeForRound || player.completed) continue;
+      player.roundAttempted = false;
+      player.roundFeedback = player === winner ? 'correct' : null;
+    }
+  }
+
+  allDicePlayersAttempted(session) {
+    const remaining = session.players.filter((player) => player.activeForRound && !player.completed);
+    return remaining.length > 0 && remaining.every((player) => !player.connected || player.roundAttempted);
+  }
+
   allActivePlayersFinished(session) {
     const active = session.players.filter((player) => player.activeForRound);
     return active.length > 0 && active.every((player) => player.completed);
@@ -137,6 +207,7 @@ export class SessionService {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
     this.assertController(session, this.getSlot(id, token));
+    if (session.stage === 2) throw new Error('FINISH_NOT_AVAILABLE');
     if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
     session.status = 'finished';
     session.paused = false;
@@ -162,6 +233,9 @@ export class SessionService {
       player.activeForRound = false;
       player.progressIndex = 0;
       player.cycles = 0;
+      player.successCount = 0;
+      player.roundAttempted = false;
+      player.roundFeedback = null;
       player.completed = false;
       player.place = null;
       player.pointsEarned = 0;
@@ -169,6 +243,7 @@ export class SessionService {
     session.status = 'waiting';
     session.paused = false;
     session.nextPlace = 1;
+    session.diceValues = null;
     return session;
   }
 
@@ -192,10 +267,14 @@ export class SessionService {
     session.status = 'waiting';
     session.paused = false;
     session.nextPlace = 1;
+    session.diceValues = null;
     for (const player of session.players) {
       player.activeForRound = false;
       player.progressIndex = 0;
       player.cycles = 0;
+      player.successCount = 0;
+      player.roundAttempted = false;
+      player.roundFeedback = null;
       player.completed = false;
       player.place = null;
       player.pointsEarned = 0;
@@ -207,11 +286,15 @@ export class SessionService {
     return {
       id: session.id, status: session.status, paused: session.paused,
       stage: session.stage, targetCycles: session.targetCycles,
+      diceTarget: session.diceTarget, diceValues: session.diceValues,
+      diceRoundId: session.diceRoundId,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
         color: player.color, player: player.player, connected: player.connected,
         joined: player.joined, activeForRound: player.activeForRound,
         progressIndex: player.progressIndex, cycles: player.cycles,
+        successCount: player.successCount, roundAttempted: player.roundAttempted,
+        roundFeedback: player.roundFeedback,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
