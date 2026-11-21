@@ -207,6 +207,7 @@ export class SessionService {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
     this.assertController(session, this.getSlot(id, token));
+    if (session.stage === 2) throw new Error('FINISH_NOT_AVAILABLE');
     if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
     session.status = 'finished';
     session.paused = false;
