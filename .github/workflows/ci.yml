@@ -16,5 +16,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
+      - name: Dependency audit
+        run: npm audit || true
       - run: npm test
       - run: npm run build
