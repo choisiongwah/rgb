@@ -176,6 +176,7 @@ function readableError(code) {
     INVALID_TARGET_CYCLES: 'Choose between 1 and 100 cycles',
     DUPLICATE_INPUT: 'Input already received',
     STALE_ROUND: 'That dice roll has passed — use the current dice',
-    ALREADY_ANSWERED: 'You already answered this dice roll'
+    ALREADY_ANSWERED: 'You already answered this dice roll',
+    FINISH_NOT_AVAILABLE: 'Level 2 runs until all three places are decided'
   })[code] || code || 'Something went wrong';
 }
