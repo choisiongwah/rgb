@@ -8,6 +8,7 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         node-version: [20, 22]
     steps:
@@ -15,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Update npm
+        run: npm install --global npm@latest
       - run: npm install
       - name: Dependency audit
         run: npm audit --audit-level=high
