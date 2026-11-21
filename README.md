@@ -29,7 +29,7 @@ These are demo credentials committed to a public repository. Replace them before
 - Level 1 is RGB Sequence Rush: complete R → G → B cycles. Config controls the target (1–100; default 20). A wrong button resets only the current cycle.
 - Level 2 is Dice Reaction: three distinct values from 1–6 are rolled. R means left, G means middle, and B means right. The largest value is the correct position. The first correct answer earns +1 and triggers the next roll. A wrong answer displays a red X and disqualifies that player for that roll; if all remaining connected players have answered incorrectly, the dice roll again. First to 8 correct answers places first, and play continues for second and third.
 - Both levels award placement points: 1st = 5, 2nd = 3, 3rd = 1. Cumulative points carry between levels.
-- All players can pause/resume and move to the next level once the current level is finished. Only the controller can start/reset/finish a level or configure Level 1.
+- All players can pause/resume and move to the next level once the current level is finished. Only the controller can start/reset a level or configure Level 1. Level 2 runs through all three placements automatically and cannot be manually finished early.
 - Reset removes points awarded in the current level and clears its progress while preserving points from earlier levels.
 - The desktop is a shared display; all gameplay input and player controls come from the phones.
 
