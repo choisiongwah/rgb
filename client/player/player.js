@@ -122,11 +122,6 @@ function updateController(state) {
   latestState = state;
   const mine = state.players.find((player) => player.color === playerColor);
   if (!mine) return;
-  const sequence = document.querySelector('#sequence');
-  [...sequence.children].forEach((item, index) => {
-    item.classList.toggle('done', index < mine.progressIndex);
-    item.classList.toggle('current', index === mine.progressIndex && state.status === 'playing' && !state.paused);
-  });
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed || !mine.activeForRound;
   });
