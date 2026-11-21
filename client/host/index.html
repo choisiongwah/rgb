@@ -1,1 +1,26 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RGB Host</title></head><body><main><section id="login"><h1>RGB</h1><p>Sign in to launch a game room.</p><form id="login-form"><input name="username" placeholder="Username" required><input name="password" type="password" placeholder="Password" required><button>Sign in</button></form><p id="error"></p></section><section id="dashboard" hidden><button id="logout">Log out</button><h1>Game room</h1><p id="welcome"></p><button id="create">Create game session</button><h2 id="session-id"></h2><div id="slots"></div><div id="game-root"></div></section></main><script type="module" src="./host.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RGB Host</title></head>
+<body>
+<main>
+  <section id="login">
+    <h1>RGB</h1><p>Sign in to launch a game room.</p>
+    <form id="login-form"><input name="username" placeholder="Username" required><input name="password" type="password" placeholder="Password" required><button>Sign in</button></form>
+    <p id="error" role="alert"></p>
+  </section>
+  <section id="dashboard" hidden>
+    <header class="topbar"><div><h1>RGB Game Host</h1><p id="welcome"></p></div><button id="logout" class="secondary">Log out</button></header>
+    <button id="create">Create game session</button>
+    <div id="room" hidden>
+      <h2 id="session-id"></h2>
+      <div id="slots"></div>
+      <div class="game-controls">
+        <button id="start">Start level</button><button id="pause" class="secondary" disabled>Pause</button>
+        <button id="finish" class="secondary" disabled>Finish level</button><button id="next" class="secondary" disabled>Next level</button>
+      </div>
+      <div id="game-root"></div>
+    </div>
+  </section>
+</main>
+<script type="module" src="./host.js"></script>
+</body></html>
