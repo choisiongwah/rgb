@@ -116,9 +116,10 @@ class RGBScene extends Phaser.Scene {
   updateState(state) {
     if (!this.title) return;
     const isDice = state.stage === 2;
+    this.title.setText(isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
     this.subtitle.setText(isDice
-      ? 'Find the biggest dice. First correct player earns +1.'
+      ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setText(isDice ? 'R = LEFT       G = MIDDLE       B = RIGHT' : 'R     →     G     →     B');
     this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
@@ -135,7 +136,8 @@ class RGBScene extends Phaser.Scene {
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
     if (!isDice) {
-      players.forEach((player, index) => {
+      players.forEach((player) => {
+        const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
         const label = (player.player?.name || player.color) +
           '\\n' + player.cycles + ' / ' + state.targetCycles + ' cycles' +
@@ -152,13 +154,14 @@ class RGBScene extends Phaser.Scene {
       });
     }
     for (let index = 0; index < this.playerTexts.length; index += 1) {
-      if (isDice || index >= players.length) {
+      if (isDice || !state.players[index]?.joined) {
         this.playerTexts[index]?.destroy();
         this.playerTexts[index] = null;
       }
     }
-    players.forEach((player, index) => {
+    players.forEach((player) => {
       if (player.place) {
+        const index = state.players.findIndex((slot) => slot.color === player.color);
         const key = state.stage + ':' + player.color + ':' + player.place;
         if (!this.celebrated.has(key)) {
           this.celebrated.add(key);
