@@ -18,10 +18,28 @@ function renderSlots(state) {
   for (const player of state.players) {
     const status = $('#slot-status-' + player.color);
     const qr = $('#qr-' + player.color);
+    const count = $('#count-' + player.color);
+    const result = $('#result-' + player.color);
     if (status) status.textContent = player.joined
-      ? (player.player?.name || 'Player') + (player.connected ? ' · Connected' : ' · Disconnected')
-      : 'Scan to join';
+      ? (player.player?.name || 'Player') + (player.connected ? ' · CONNECTED' : ' · DISCONNECTED')
+      : 'SCAN QR TO JOIN';
     if (qr) qr.hidden = player.joined;
+    if (count) count.textContent = state.stage === 2
+      ? player.successCount + ' / ' + state.diceTarget
+      : player.cycles + ' / ' + state.targetCycles;
+    if (result) {
+      result.className = 'player-result';
+      if (player.roundFeedback === 'wrong' && !player.completed) {
+        result.textContent = '✕';
+        result.classList.add('wrong');
+      } else if (player.roundFeedback === 'correct') {
+        result.textContent = '+1';
+        result.classList.add('correct');
+      } else if (player.place) {
+        result.textContent = ordinal(player.place);
+        result.classList.add('place');
+      } else result.textContent = player.completed ? 'FINISHED' : '';
+    }
   }
 }
 function applyState(state) {
@@ -34,33 +52,53 @@ class RGBScene extends Phaser.Scene {
   constructor() { super('RGBScene'); this.celebrated = new Set(); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
-    this.title = this.add.text(0, 24, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
-    this.subtitle = this.add.text(0, 76, 'Complete R → G → B. First to the target wins.', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
-    this.stageText = this.add.text(0, 120, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
-    this.sequenceText = this.add.text(0, 166, 'R     →     G     →     B', { fontSize: '48px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0);
-    this.statusText = this.add.text(0, 235, 'Waiting for players…', { fontSize: '22px', color: '#cbd5e1' }).setOrigin(0.5, 0);
+    this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
+    this.subtitle = this.add.text(0, 0, '', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
+    this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
+    this.sequenceText = this.add.text(0, 0, 'R     →     G     →     B', { fontSize: '48px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0);
+    this.statusText = this.add.text(0, 0, 'Waiting for players…', { fontSize: '22px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.playerTexts = [];
+    this.diceGraphics = this.add.graphics();
+    this.diceNumbers = [0, 1, 2].map(() => this.add.text(0, 0, '', {
+      fontSize: '72px', fontStyle: 'bold', color: '#111827'
+    }).setOrigin(0.5));
+    this.diceLabels = ['LEFT · R', 'MIDDLE · G', 'RIGHT · B'].map((label) =>
+      this.add.text(0, 0, label, { fontSize: '18px', fontStyle: 'bold', color: '#cbd5e1' }).setOrigin(0.5)
+    );
     const graphics = this.make.graphics({ x: 0, y: 0, add: false });
     graphics.fillStyle(0xffffff, 1);
     graphics.fillRoundedRect(0, 0, 10, 16, 2);
     graphics.generateTexture('rgb-confetti', 10, 16);
     graphics.destroy();
-    this.scale.on('resize', (size) => this.layout(size.width));
-    this.layout(this.scale.width);
+    this.scale.on('resize', (size) => this.layout(size.width, size.height));
+    this.layout(this.scale.width, this.scale.height);
     if (currentState) this.updateState(currentState);
   }
-  layout(width) {
+  layout(width, height) {
     const center = width / 2;
-    this.title?.setX(center);
-    this.subtitle?.setX(center);
-    this.stageText?.setX(center);
-    this.sequenceText?.setX(center);
-    this.statusText?.setX(center);
-    this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, 315));
+    this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
+    this.subtitle?.setPosition(center, height * 0.16).setFontSize(Math.max(12, Math.min(20, width * 0.017)));
+    this.stageText?.setPosition(center, height * 0.26).setFontSize(Math.max(16, Math.min(25, width * 0.021)));
+    this.sequenceText?.setPosition(center, height * 0.39).setFontSize(Math.max(19, Math.min(48, width * 0.04)));
+    this.statusText?.setPosition(center, height * 0.88).setFontSize(Math.max(13, Math.min(23, width * 0.019)));
+    this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, height * 0.53));
+    const size = Math.min(height * 0.27, width * 0.15, 170);
+    const gap = Math.min(width * 0.055, 54);
+    const y = height * 0.59;
+    this.diceGraphics?.clear();
+    for (let index = 0; index < 3; index += 1) {
+      const x = center + (index - 1) * (size + gap);
+      this.diceGraphics?.fillStyle(0xf8fafc, 1);
+      this.diceGraphics?.lineStyle(5, [0xf87171, 0x4ade80, 0x60a5fa][index], 1);
+      this.diceGraphics?.fillRoundedRect(x - size / 2, y - size / 2, size, size, 18);
+      this.diceGraphics?.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 18);
+      this.diceNumbers?.[index]?.setPosition(x, y).setFontSize(Math.max(32, size * 0.52));
+      this.diceLabels?.[index]?.setPosition(x, y + size * 0.72).setFontSize(Math.max(11, Math.min(19, width * 0.016)));
+    }
   }
   celebrate(index, place) {
     const x = this.scale.width * (index + 0.5) / 3;
-    const y = 355;
+    const y = this.scale.height * 0.5;
     const emitter = this.add.particles(x, y, 'rgb-confetti', {
       speed: { min: 120, max: 340 }, angle: { min: 200, max: 340 },
       gravityY: 260, lifespan: 1500, quantity: 48, scale: { start: 1.2, end: 0.2 },
@@ -73,27 +111,49 @@ class RGBScene extends Phaser.Scene {
   }
   updateState(state) {
     if (!this.title) return;
+    const isDice = state.stage === 2;
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText('Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
+    this.subtitle.setText(isDice
+      ? 'Find the biggest dice. First correct player earns +1.'
+      : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
+    this.sequenceText.setText(isDice ? 'R = LEFT       G = MIDDLE       B = RIGHT' : 'R     →     G     →     B');
     this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
       : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
-      : state.paused ? 'GAME PAUSED' : 'Race to ' + state.targetCycles + ' completed cycles!');
+      : state.paused ? 'GAME PAUSED'
+      : isDice ? 'Tap the colour matching the largest number'
+      : 'Race to ' + state.targetCycles + ' completed cycles!');
+    this.diceGraphics.setVisible(isDice);
+    this.diceNumbers.forEach((item, index) => {
+      item.setVisible(isDice);
+      item.setText(isDice && state.diceValues ? String(state.diceValues[index]) : '');
+    });
+    this.diceLabels.forEach((item) => item.setVisible(isDice));
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
-    players.forEach((player, index) => {
-      const placeLine = player.place ? '\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
-      const label = (player.player?.name || player.color) +
-        '\n' + player.cycles + ' / ' + state.targetCycles + ' cycles' +
-        '\n' + player.totalPoints + ' TOTAL POINTS' + placeLine +
-        (player.activeForRound && !player.connected ? '\nDISCONNECTED' : '');
-      if (!this.playerTexts[index]) {
-        this.playerTexts[index] = this.add.text(this.scale.width * (index + 0.5) / 3, 315, label, {
-          fontSize: player.place ? '28px' : '22px', color: colors[player.color], align: 'center', lineSpacing: 8,
-          backgroundColor: '#1f2937', padding: { x: 18, y: 14 }
-        }).setOrigin(0.5, 0);
-      } else {
-        this.playerTexts[index].setText(label).setColor(colors[player.color]).setFontSize(player.place ? 28 : 22);
+    if (!isDice) {
+      players.forEach((player, index) => {
+        const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
+        const label = (player.player?.name || player.color) +
+          '\\n' + player.cycles + ' / ' + state.targetCycles + ' cycles' +
+          '\\n' + player.totalPoints + ' TOTAL POINTS' + placeLine +
+          (player.activeForRound && !player.connected ? '\\nDISCONNECTED' : '');
+        if (!this.playerTexts[index]) {
+          this.playerTexts[index] = this.add.text(this.scale.width * (index + 0.5) / 3, this.scale.height * 0.53, label, {
+            fontSize: player.place ? '25px' : '19px', color: colors[player.color], align: 'center', lineSpacing: 6,
+            backgroundColor: '#1f2937', padding: { x: 12, y: 10 }
+          }).setOrigin(0.5, 0);
+        } else {
+          this.playerTexts[index].setText(label).setColor(colors[player.color]).setFontSize(player.place ? 25 : 19);
+        }
+      });
+    }
+    for (let index = 0; index < this.playerTexts.length; index += 1) {
+      if (isDice || index >= players.length) {
+        this.playerTexts[index]?.destroy();
+        this.playerTexts[index] = null;
       }
+    }
+    players.forEach((player, index) => {
       if (player.place) {
         const key = state.stage + ':' + player.color + ':' + player.place;
         if (!this.celebrated.has(key)) {
@@ -102,11 +162,7 @@ class RGBScene extends Phaser.Scene {
         }
       }
     });
-    for (let index = players.length; index < this.playerTexts.length; index += 1) {
-      this.playerTexts[index]?.destroy();
-      this.playerTexts[index] = null;
-    }
-    this.layout(this.scale.width);
+    this.layout(this.scale.width, this.scale.height);
   }
 }
 function ordinal(place) { return place === 1 ? '1ST' : place === 2 ? '2ND' : place === 3 ? '3RD' : place + 'TH'; }
@@ -121,10 +177,11 @@ async function createRoom() {
 
   $('#room').hidden = false;
   $('#session-id').textContent = 'Session ' + session.id;
-  $('#slots').innerHTML = '';
+  $('#dashboard').classList.add('room-active');
+  $('#player-strip').innerHTML = '';
   for (const player of session.players) {
     const card = document.createElement('article');
-    card.className = 'slot ' + player.color.toLowerCase();
+    card.className = 'player-panel ' + player.color.toLowerCase();
     const title = document.createElement('h3');
     title.textContent = player.color;
     const qr = document.createElement('img');
@@ -133,9 +190,17 @@ async function createRoom() {
     qr.src = await QRCode.toDataURL(publicBaseUrl + '/player/?sessionId=' + session.id + '&joinToken=' + player.joinToken);
     const status = document.createElement('p');
     status.id = 'slot-status-' + player.color;
-    status.textContent = 'Scan to join';
-    card.append(title, qr, status);
-    $('#slots').append(card);
+    status.className = 'player-status';
+    status.textContent = 'SCAN QR TO JOIN';
+    const count = document.createElement('strong');
+    count.id = 'count-' + player.color;
+    count.className = 'player-count';
+    count.textContent = '0';
+    const result = document.createElement('div');
+    result.id = 'result-' + player.color;
+    result.className = 'player-result';
+    card.append(title, qr, status, count, result);
+    $('#player-strip').append(card);
   }
 
   socket?.disconnect();
@@ -148,9 +213,9 @@ async function createRoom() {
 
   game?.destroy(true);
   game = new Phaser.Game({
-    type: Phaser.AUTO, parent: 'game-root', width: 1200, height: 650,
+    type: Phaser.AUTO, parent: 'game-root', width: 1200, height: 700,
     backgroundColor: '#111827',
-    scale: { mode: Phaser.Scale.RESIZE, width: 1200, height: 650 },
+    scale: { mode: Phaser.Scale.RESIZE, width: 1200, height: 700 },
     scene: [RGBScene]
   });
   applyState(session);
@@ -164,7 +229,7 @@ $('#login-form').addEventListener('submit', async (event) => {
     body: JSON.stringify({ username: form.get('username'), password: form.get('password') })
   });
   const data = await response.json();
-  if (!response.ok) { $('#error').textContent = data.error; return; }
+  if (!response.ok) { $('#login-error').textContent = data.error; return; }
   token = data.token;
   sessionStorage.setItem('rgb-token', token);
   show(data.user);
