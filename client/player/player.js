@@ -56,7 +56,8 @@ function renderController(name, color, state) {
   root.innerHTML = '<header><div><h1 id="player-name"></h1><p id="player-color"></p></div><span id="connection-state">Connected</span></header>' +
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
-    '<div class="pad"><button data-a="R" class="red" aria-label="Red">R</button><button data-a="G" class="green" aria-label="Green">G</button><button data-a="B" class="blue" aria-label="Blue">B</button></div>' +
+    '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
+    '<div class="pad"><button data-a="R" class="red" aria-label="Red / Left">R</button><button data-a="G" class="green" aria-label="Green / Middle">G</button><button data-a="B" class="blue" aria-label="Blue / Right">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
     '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
   document.querySelector('#player-name').textContent = name;
@@ -67,16 +68,22 @@ function renderController(name, color, state) {
       if (button.disabled || !socket?.connected) return;
       const thisInput = inputId++;
       button.classList.add('pressed');
-      socket.emit('player:input', { action: button.dataset.a, inputId: thisInput }, (result) => {
+      const payload = { action: button.dataset.a, inputId: thisInput };
+      if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
+      socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) setFeedback(readableError(result.error), 'warning');
-        else if (!result.correct) setFeedback('Wrong colour — sequence restarted', 'warning');
+        else if (!result.correct) setFeedback(latestState?.stage === 2
+          ? '✕ Wrong position — wait for the next dice roll'
+          : 'Wrong colour — sequence restarted', 'warning');
+        else if (result.pointAwarded) setFeedback('Correct! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
         else setFeedback('Good — keep going!', 'success');
       });
     }, { passive: false });
     button.addEventListener('pointerup', () => button.classList.remove('pressed'));
     button.addEventListener('pointercancel', () => button.classList.remove('pressed'));
+    button.addEventListener('lostpointercapture', () => button.classList.remove('pressed'));
   });
   root.querySelector('#save-config').addEventListener('click', () => {
     const targetCycles = Number(root.querySelector('#target-cycles').value);
@@ -96,7 +103,7 @@ function renderControls(state) {
     if (state.status === 'waiting') buttons.push(['start', 'Start level', false, 'primary']);
     if (isPlaying) buttons.push(['finish', 'Finish level', false, 'danger']);
     if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', false, 'danger']);
-    buttons.push(['config', 'Config', false, 'secondary']);
+    if (state.stage === 1) buttons.push(['config', 'Config', false, 'secondary']);
   }
   if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', false, 'secondary']);
   if (isFinished) buttons.push(['next', 'Next level', false, 'primary']);
@@ -114,23 +121,36 @@ function renderControls(state) {
     });
     controls.append(button);
   }
-  const next = controls.querySelector('button');
-  if (next) next.setAttribute('aria-label', next.textContent);
 }
 
 function updateController(state) {
   latestState = state;
   const mine = state.players.find((player) => player.color === playerColor);
   if (!mine) return;
+  const isDice = state.stage === 2;
   root.querySelectorAll('[data-a]').forEach((button) => {
-    button.disabled = state.status !== 'playing' || state.paused || mine.completed || !mine.activeForRound;
+    button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
+      !mine.activeForRound || (isDice && mine.roundAttempted);
   });
-  if (mine.completed) setFeedback('You finished — ' + mine.place + ordinal(mine.place) + ' place!', 'success');
-  else if (state.status === 'finished') setFeedback('Scene complete. Get ready for the next level.', 'success');
+  const sequence = root.querySelector('#sequence');
+  const hint = root.querySelector('#input-hint');
+  if (isDice) {
+    sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
+    hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
+  } else {
+    sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
+    hint.textContent = 'Tap R → G → B in order';
+  }
+  if (mine.completed) setFeedback('You finished — ' + ordinal(mine.place) + ' place!', 'success');
+  else if (state.status === 'finished') setFeedback('Level complete. Next level is ready.', 'success');
   else if (state.paused) setFeedback('Game paused', 'warning');
   else if (state.status === 'waiting') setFeedback('Waiting for the game to start', '');
   else if (!mine.activeForRound) setFeedback('Ready for the next level', '');
-  else if (!mine.completed) setFeedback('Tap R → G → B in order', '');
+  else if (isDice && mine.roundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong answer — wait for next dice roll', 'warning');
+  else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
+  else if (isDice && mine.roundAttempted) setFeedback('Answer received — wait for next roll', '');
+  else if (isDice) setFeedback('Which position has the biggest number?', '');
+  else setFeedback('Tap R → G → B in order', '');
   renderControls(state);
   const target = root.querySelector('#target-cycles');
   if (target && document.activeElement !== target) target.value = state.targetCycles;
@@ -154,6 +174,8 @@ function readableError(code) {
     LEVEL_NOT_FINISHED: 'Wait until the scene is complete',
     CONFIG_LOCKED_DURING_GAME: 'Config is locked while playing',
     INVALID_TARGET_CYCLES: 'Choose between 1 and 100 cycles',
-    DUPLICATE_INPUT: 'Input already received'
+    DUPLICATE_INPUT: 'Input already received',
+    STALE_ROUND: 'That dice roll has passed — use the current dice',
+    ALREADY_ANSWERED: 'You already answered this dice roll'
   })[code] || code || 'Something went wrong';
 }
