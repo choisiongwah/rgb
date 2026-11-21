@@ -88,11 +88,11 @@ class RGBScene extends Phaser.Scene {
         (player.activeForRound && !player.connected ? '\nDISCONNECTED' : '');
       if (!this.playerTexts[index]) {
         this.playerTexts[index] = this.add.text(this.scale.width * (index + 0.5) / 3, 315, label, {
-          fontSize: '22px', color: colors[player.color], align: 'center', lineSpacing: 8,
+          fontSize: player.place ? '28px' : '22px', color: colors[player.color], align: 'center', lineSpacing: 8,
           backgroundColor: '#1f2937', padding: { x: 18, y: 14 }
         }).setOrigin(0.5, 0);
       } else {
-        this.playerTexts[index].setText(label).setColor(colors[player.color]);
+        this.playerTexts[index].setText(label).setColor(colors[player.color]).setFontSize(player.place ? 28 : 22);
       }
       if (player.place) {
         const key = state.stage + ':' + player.color + ':' + player.place;
