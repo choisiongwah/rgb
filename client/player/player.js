@@ -8,16 +8,19 @@ const joinToken = params.get('joinToken');
 let socket;
 let joined = false;
 let playerColor;
+let isController = false;
+let inputId = 0;
+let latestState;
 
 if (!sessionId || !joinToken) {
   root.textContent = 'Invalid player link';
 } else {
-  root.innerHTML = '<h1>Join RGB</h1><form id="join"><input name="name" maxlength="20" placeholder="Your name" required><button>Join game</button></form><p id="status"></p>';
+  root.innerHTML = '<div class="join-card"><h1>Join RGB</h1><form id="join"><input name="name" maxlength="20" placeholder="Your name" required><button>Join game</button></form><p id="status" role="status"></p></div>';
   root.querySelector('#join').addEventListener('submit', (event) => {
     event.preventDefault();
     const name = new FormData(event.currentTarget).get('name').trim();
     if (!name || socket) return;
-    socket = io({ auth: { sessionId, joinToken } });
+    socket = io({ auth: { sessionId, joinToken }, transports: ['websocket', 'polling'] });
     socket.on('connect', () => socket.emit('player:join', { name }, (ack) => {
       if (!ack.ok) {
         if (!joined) root.querySelector('#status').textContent = readableError(ack.error);
@@ -26,6 +29,7 @@ if (!sessionId || !joinToken) {
       if (!joined) {
         joined = true;
         playerColor = ack.color;
+        isController = ack.isController;
         renderController(name, ack.color, ack.state);
       } else {
         updateController(ack.state);
@@ -41,31 +45,83 @@ if (!sessionId || !joinToken) {
   });
 }
 
+function emitControl(action, extra = {}) {
+  if (!socket?.connected) return;
+  socket.emit('player:control', { action, ...extra }, (result) => {
+    if (!result.ok) setFeedback(readableError(result.error), 'warning');
+  });
+}
+
 function renderController(name, color, state) {
   root.innerHTML = '<header><div><h1 id="player-name"></h1><p id="player-color"></p></div><span id="connection-state">Connected</span></header>' +
-    '<section class="progress"><strong id="cycle-count">0 / 20</strong><span id="points">0 points</span><div class="track"><div id="bar"></div></div><p id="feedback">Wait for the host to start</p></section>' +
+    '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
-    '<div class="pad"><button data-a="R" class="red">R</button><button data-a="G" class="green">G</button><button data-a="B" class="blue">B</button></div>';
+    '<div class="pad"><button data-a="R" class="red" aria-label="Red">R</button><button data-a="G" class="green" aria-label="Green">G</button><button data-a="B" class="blue" aria-label="Blue">B</button></div>' +
+    '<section id="controls" class="controls"></section>' +
+    '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
   document.querySelector('#player-name').textContent = name;
   document.querySelector('#player-color').textContent = color + ' PLAYER';
-  root.querySelectorAll('[data-a]').forEach((button) => button.addEventListener('click', () => {
-    if (button.disabled || !socket?.connected) return;
-    socket.emit('player:input', { action: button.dataset.a }, (result) => {
-      if (!result.ok) setFeedback(readableError(result.error), 'warning');
-      else if (!result.correct) setFeedback('Wrong colour — start the sequence again', 'warning');
-      else if (result.cycleCompleted) setFeedback('Cycle complete! Nice work.', 'success');
-      else setFeedback('Correct — keep going!', 'success');
-    });
-  }));
+  root.querySelectorAll('[data-a]').forEach((button) => {
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      if (button.disabled || !socket?.connected) return;
+      const thisInput = inputId++;
+      button.classList.add('pressed');
+      socket.emit('player:input', { action: button.dataset.a, inputId: thisInput }, (result) => {
+        button.classList.remove('pressed');
+        if (!result.ok) setFeedback(readableError(result.error), 'warning');
+        else if (!result.correct) setFeedback('Wrong colour — sequence restarted', 'warning');
+        else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
+        else setFeedback('Good — keep going!', 'success');
+      });
+    }, { passive: false });
+    button.addEventListener('pointerup', () => button.classList.remove('pressed'));
+    button.addEventListener('pointercancel', () => button.classList.remove('pressed'));
+  });
+  root.querySelector('#save-config').addEventListener('click', () => {
+    const targetCycles = Number(root.querySelector('#target-cycles').value);
+    emitControl('configure', { targetCycles });
+    root.querySelector('#config-panel').hidden = true;
+  });
   updateController(state);
 }
 
+function renderControls(state) {
+  const controls = root.querySelector('#controls');
+  if (!controls) return;
+  const isFinished = state.status === 'finished';
+  const isPlaying = state.status === 'playing';
+  const buttons = [];
+  if (isController) {
+    if (state.status === 'waiting') buttons.push(['start', 'Start level', false, 'primary']);
+    if (isPlaying) buttons.push(['finish', 'Finish level', false, 'danger']);
+    if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', false, 'danger']);
+    buttons.push(['config', 'Config', false, 'secondary']);
+  }
+  if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', false, 'secondary']);
+  if (isFinished) buttons.push(['next', 'Next level', false, 'primary']);
+  controls.innerHTML = '';
+  for (const [action, label, , style] of buttons) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = style;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      if (action === 'config') {
+        root.querySelector('#target-cycles').value = state.targetCycles;
+        root.querySelector('#config-panel').hidden = !root.querySelector('#config-panel').hidden;
+      } else emitControl(action);
+    });
+    controls.append(button);
+  }
+  const next = controls.querySelector('button');
+  if (next) next.setAttribute('aria-label', next.textContent);
+}
+
 function updateController(state) {
+  latestState = state;
   const mine = state.players.find((player) => player.color === playerColor);
   if (!mine) return;
-  document.querySelector('#cycle-count').textContent = mine.cycles + ' / ' + state.targetCycles;
-  document.querySelector('#points').textContent = mine.totalPoints + ' total points';
-  document.querySelector('#bar').style.width = (mine.cycles / state.targetCycles * 100) + '%';
   const sequence = document.querySelector('#sequence');
   [...sequence.children].forEach((item, index) => {
     item.classList.toggle('done', index < mine.progressIndex);
@@ -74,11 +130,15 @@ function updateController(state) {
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed || !mine.activeForRound;
   });
-  if (mine.completed) setFeedback('You finished ' + mine.place + ordinal(mine.place) + ' · +' + mine.pointsEarned + ' points!', 'success');
-  else if (state.status === 'finished') setFeedback('Level finished. You earned no placement points this level.', 'warning');
-  else if (state.paused) setFeedback('Game paused by host', 'warning');
-  else if (state.status === 'waiting') setFeedback('Waiting for host to start level ' + state.stage, '');
-  else if (!mine.activeForRound) setFeedback('You joined — ready for the next level', '');
+  if (mine.completed) setFeedback('You finished — ' + mine.place + ordinal(mine.place) + ' place!', 'success');
+  else if (state.status === 'finished') setFeedback('Scene complete. Get ready for the next level.', 'success');
+  else if (state.paused) setFeedback('Game paused', 'warning');
+  else if (state.status === 'waiting') setFeedback('Waiting for the game to start', '');
+  else if (!mine.activeForRound) setFeedback('Ready for the next level', '');
+  else if (!mine.completed) setFeedback('Tap R → G → B in order', '');
+  renderControls(state);
+  const target = root.querySelector('#target-cycles');
+  if (target && document.activeElement !== target) target.value = state.targetCycles;
 }
 
 function setFeedback(message, kind) {
@@ -87,13 +147,18 @@ function setFeedback(message, kind) {
   el.textContent = message;
   el.className = kind || '';
 }
-function ordinal(place) { return place === 1 ? 'st' : place === 2 ? 'nd' : place === 3 ? 'rd' : 'th'; }
+function ordinal(place) { return place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : place + 'th'; }
 function readableError(code) {
   return ({
     SLOT_OCCUPIED: 'This player slot is already in use',
     GAME_PAUSED: 'The game is paused',
-    LEVEL_NOT_RUNNING: 'The level has not started',
-    PLAYER_ALREADY_FINISHED: 'You have already finished this level',
-    NOT_IN_THIS_LEVEL: 'You can join the next level'
+    LEVEL_NOT_RUNNING: 'The level is not running',
+    PLAYER_ALREADY_FINISHED: 'You have already finished',
+    NOT_IN_THIS_LEVEL: 'You can join the next level',
+    CONTROLLER_ONLY: 'Only the first player can do that',
+    LEVEL_NOT_FINISHED: 'Wait until the scene is complete',
+    CONFIG_LOCKED_DURING_GAME: 'Config is locked while playing',
+    INVALID_TARGET_CYCLES: 'Choose between 1 and 100 cycles',
+    DUPLICATE_INPUT: 'Input already received'
   })[code] || code || 'Something went wrong';
 }

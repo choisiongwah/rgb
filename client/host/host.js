@@ -14,38 +14,37 @@ function show(user) {
   $('#dashboard').hidden = false;
   $('#welcome').textContent = 'Signed in as ' + user.username + ' (' + user.role + ')';
 }
-function updateControls(state) {
-  $('#start').disabled = state.status !== 'waiting';
-  $('#pause').disabled = state.status !== 'playing';
-  $('#pause').textContent = state.paused ? 'Resume' : 'Pause';
-  $('#finish').disabled = state.status !== 'playing';
-  $('#next').disabled = state.status !== 'finished';
-}
 function renderSlots(state) {
   for (const player of state.players) {
     const status = $('#slot-status-' + player.color);
+    const qr = $('#qr-' + player.color);
     if (status) status.textContent = player.joined
       ? (player.player?.name || 'Player') + (player.connected ? ' · Connected' : ' · Disconnected')
       : 'Scan to join';
+    if (qr) qr.hidden = player.joined;
   }
 }
 function applyState(state) {
   currentState = state;
   renderSlots(state);
-  updateControls(state);
   if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
 }
 
 class RGBScene extends Phaser.Scene {
-  constructor() { super('RGBScene'); }
+  constructor() { super('RGBScene'); this.celebrated = new Set(); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.title = this.add.text(0, 24, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
-    this.subtitle = this.add.text(0, 76, 'Complete R → G → B. First to 20 cycles wins.', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
+    this.subtitle = this.add.text(0, 76, 'Complete R → G → B. First to the target wins.', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.stageText = this.add.text(0, 120, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
     this.sequenceText = this.add.text(0, 166, 'R     →     G     →     B', { fontSize: '48px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0);
     this.statusText = this.add.text(0, 235, 'Waiting for players…', { fontSize: '22px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.playerTexts = [];
+    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRoundedRect(0, 0, 10, 16, 2);
+    graphics.generateTexture('rgb-confetti', 10, 16);
+    graphics.destroy();
     this.scale.on('resize', (size) => this.layout(size.width));
     this.layout(this.scale.width);
     if (currentState) this.updateState(currentState);
@@ -59,34 +58,58 @@ class RGBScene extends Phaser.Scene {
     this.statusText?.setX(center);
     this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, 315));
   }
+  celebrate(index, place) {
+    const x = this.scale.width * (index + 0.5) / 3;
+    const y = 355;
+    const emitter = this.add.particles(x, y, 'rgb-confetti', {
+      speed: { min: 120, max: 340 }, angle: { min: 200, max: 340 },
+      gravityY: 260, lifespan: 1500, quantity: 48, scale: { start: 1.2, end: 0.2 },
+      rotate: { min: 0, max: 360 },
+      tint: [0xfacc15, 0x4ade80, 0x60a5fa, 0xf472b6, 0xffffff],
+      emitting: false
+    });
+    emitter.explode(48, x, y);
+    this.time.delayedCall(1800, () => emitter.destroy());
+  }
   updateState(state) {
     if (!this.title) return;
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.statusText.setText(state.status === 'waiting' ? 'Ready when you are — host can start the level'
-      : state.status === 'finished' ? 'LEVEL COMPLETE'
+    this.subtitle.setText('Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
+    this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
+      : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
       : state.paused ? 'GAME PAUSED' : 'Race to ' + state.targetCycles + ' completed cycles!');
-    this.playerTexts.forEach((item) => item.destroy());
-    this.playerTexts = [];
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
     players.forEach((player, index) => {
+      const placeLine = player.place ? '\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
       const label = (player.player?.name || player.color) +
         '\n' + player.cycles + ' / ' + state.targetCycles + ' cycles' +
-        '\n' + player.totalPoints + ' total points' +
-        (player.place ? '\n' + player.place + getOrdinalSuffix(player.place) + ' place · +' + player.pointsEarned : '') +
-        (player.completed ? '\nFINISHED' : player.activeForRound && !player.connected ? '\nDISCONNECTED' : '');
-      const item = this.add.text(this.scale.width * (index + 0.5) / 3, 315, label, {
-        fontSize: '22px', color: colors[player.color], align: 'center', lineSpacing: 8,
-        backgroundColor: '#1f2937', padding: { x: 18, y: 14 }
-      }).setOrigin(0.5, 0);
-      this.playerTexts.push(item);
+        '\n' + player.totalPoints + ' TOTAL POINTS' + placeLine +
+        (player.activeForRound && !player.connected ? '\nDISCONNECTED' : '');
+      if (!this.playerTexts[index]) {
+        this.playerTexts[index] = this.add.text(this.scale.width * (index + 0.5) / 3, 315, label, {
+          fontSize: '22px', color: colors[player.color], align: 'center', lineSpacing: 8,
+          backgroundColor: '#1f2937', padding: { x: 18, y: 14 }
+        }).setOrigin(0.5, 0);
+      } else {
+        this.playerTexts[index].setText(label).setColor(colors[player.color]);
+      }
+      if (player.place) {
+        const key = state.stage + ':' + player.color + ':' + player.place;
+        if (!this.celebrated.has(key)) {
+          this.celebrated.add(key);
+          this.celebrate(index, player.place);
+        }
+      }
     });
+    for (let index = players.length; index < this.playerTexts.length; index += 1) {
+      this.playerTexts[index]?.destroy();
+      this.playerTexts[index] = null;
+    }
     this.layout(this.scale.width);
   }
 }
-function getOrdinalSuffix(place) {
-  return place === 1 ? 'st' : place === 2 ? 'nd' : place === 3 ? 'rd' : 'th';
-}
+function ordinal(place) { return place === 1 ? '1ST' : place === 2 ? '2ND' : place === 3 ? '3RD' : place + 'TH'; }
 
 async function createRoom() {
   const response = await fetch('/api/sessions', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
@@ -105,6 +128,7 @@ async function createRoom() {
     const title = document.createElement('h3');
     title.textContent = player.color;
     const qr = document.createElement('img');
+    qr.id = 'qr-' + player.color;
     qr.alt = 'Join ' + player.color;
     qr.src = await QRCode.toDataURL(publicBaseUrl + '/player/?sessionId=' + session.id + '&joinToken=' + player.joinToken);
     const status = document.createElement('p');
@@ -151,10 +175,6 @@ $('#logout').addEventListener('click', async () => {
   location.reload();
 });
 $('#create').addEventListener('click', createRoom);
-$('#start').addEventListener('click', () => socket?.emit('host:start', (ack) => { if (!ack.ok) $('#error').textContent = ack.error; }));
-$('#pause').addEventListener('click', () => socket?.emit(currentState?.paused ? 'host:resume' : 'host:pause', (ack) => { if (!ack.ok) $('#error').textContent = ack.error; }));
-$('#finish').addEventListener('click', () => socket?.emit('host:finish-level', (ack) => { if (!ack.ok) $('#error').textContent = ack.error; }));
-$('#next').addEventListener('click', () => socket?.emit('host:next-level', (ack) => { if (!ack.ok) $('#error').textContent = ack.error; }));
 
 if (token) {
   fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
