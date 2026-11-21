@@ -101,7 +101,7 @@ function renderControls(state) {
   const buttons = [];
   if (isController) {
     if (state.status === 'waiting') buttons.push(['start', 'Start level', false, 'primary']);
-    if (isPlaying) buttons.push(['finish', 'Finish level', false, 'danger']);
+    if (isPlaying && state.stage === 1) buttons.push(['finish', 'Finish level', false, 'danger']);
     if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', false, 'danger']);
     if (state.stage === 1) buttons.push(['config', 'Config', false, 'secondary']);
   }
