@@ -1,0 +1,6 @@
+{
+  "users": [
+    {"username":"admin","role":"admin","passwordHash":{"algorithm":"scrypt","salt":"7zmBshOCNdfluox7ANn3DA==","hash":"XPOidNLJo51F5bs+IoQvrWjVyRNIs2olLkKwGpeEpkwEjzodemzacwg26eDcDliCcXX5TWW+sER4qUzcrgbBWw=="}},
+    {"username":"usera","role":"user","passwordHash":{"algorithm":"scrypt","salt":"k7FTv8erszxer2/9TQH5iA==","hash":"D5Smcsww9x8LTgBoLFpCiwnaDeeRcX876ccX3+Ps+ehPYa7X8KPYhfc060oh7NFvRBx8ohe+YVA6S8qWA80Saw=="}}
+  ]
+}
