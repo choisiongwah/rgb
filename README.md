@@ -23,15 +23,20 @@ Node.js + Phaser 3 multiplayer party-game scaffold. A desktop host displays the 
 
 These are demo credentials committed to a public repository. Replace them before public deployment and never reuse them elsewhere. Supabase Auth is a planned replacement for this temporary whitelist.
 
-## RGB Sequence Rush (first playable scene)
+## RGB Sequence Rush
 - Up to three players join using their colour-specific QR code.
-- The fixed sequence is **R → G → B**. A wrong button resets only the current cycle.
-- Completing R, G and B in order adds one cycle. First to 20 cycles places first.
-- Players who finish continue to appear on the scoreboard while remaining players race for second and third.
-- Placement points per level: 1st = 5, 2nd = 3, 3rd = 1. Players who do not finish before the host ends the level earn 0.
-- The host can start, pause/resume, manually finish a level and start the next level.
-- Cumulative points carry between levels; cycle progress resets for each new level.
-- The level automatically finishes when every participant in that level has completed 20 cycles.
+- The first player to join becomes the session controller. That player keeps controller privileges if they disconnect and reconnect.
+- Every player can pause/resume and move to the next level once the current level is finished.
+- Only the controller can start/reset/finish a level or change configuration.
+- Config currently controls the required number of R → G → B cycles (1–100; default 20).
+- A wrong button resets only the current cycle. Completing the sequence adds one cycle.
+- First to the configured target places first. Placement points per level: 1st = 5, 2nd = 3, 3rd = 1. Cumulative points carry between levels.
+- Reset removes any points awarded in the current level, clears that level's progress and returns it to waiting; points from earlier levels remain.
+- The desktop is a display-only scoreboard. Player phones provide game input and controls.
+- A player's QR code disappears from the host display once that slot has joined.
+
+## Input handling
+Mobile buttons use pointer events so touch input is sent immediately without waiting for the browser's synthetic click event. Each touch has a monotonically increasing input ID; the server rejects duplicate IDs. Socket.IO preserves event order for each player connection, and the Node server processes each event handler synchronously, so rapid and simultaneous touches are applied one by one in arrival order. Different players' inputs are also processed sequentially by the server.
 
 ## Commands
 - `npm run dev`
@@ -40,6 +45,4 @@ These are demo credentials committed to a public repository. Replace them before
 - `npm test`
 
 ## Current limitations
-This milestone implements one game scene and in-memory session state. Avatar uploads, session expiry, persistent scores, Supabase Auth, and the wider 10–20 game library remain future work. Player reconnection preserves current cycle progress. The host can manually finish the level if a player does not return.
-
-Use HTTPS in production, restrict allowed origins, and use persistent/shared session storage before running multiple server instances.
+Session state and scores are in memory. Avatar uploads, persistent scores, Supabase Auth, and the wider game library remain future work. Use HTTPS in production, restrict allowed origins, and use persistent/shared session storage before running multiple server instances.
