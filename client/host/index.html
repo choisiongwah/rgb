@@ -11,11 +11,11 @@
   <section id="dashboard" hidden>
     <header class="topbar"><div><h1>RGB Game Display</h1><p id="welcome"></p></div><button id="logout" class="secondary">Log out</button></header>
     <button id="create">Create game session</button>
+    <p id="error" role="alert"></p>
     <div id="room" hidden>
       <h2 id="session-id"></h2>
-      <div id="slots"></div>
-      <p class="display-hint">This screen is display-only. Use the player phones to control the game.</p>
-      <div id="game-root"></div>
+      <div id="game-root" aria-label="Shared game screen"></div>
+      <div id="player-strip" aria-label="Player connection and score panels"></div>
     </div>
   </section>
 </main>
