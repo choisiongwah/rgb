@@ -24,21 +24,25 @@ function renderSlots(state) {
       ? (player.player?.name || 'Player') + (player.connected ? ' · CONNECTED' : ' · DISCONNECTED')
       : 'SCAN QR TO JOIN';
     if (qr) qr.hidden = player.joined;
-    if (count) count.textContent = state.stage === 2
-      ? player.successCount + ' / ' + state.diceTarget
-      : player.cycles + ' / ' + state.targetCycles;
+    if (count) {
+      count.hidden = !player.joined;
+      count.textContent = state.stage === 2
+        ? player.successCount + ' / ' + state.diceTarget
+        : player.cycles + ' / ' + state.targetCycles;
+    }
     if (result) {
+      result.hidden = !player.joined;
       result.className = 'player-result';
-      if (player.roundFeedback === 'wrong' && !player.completed) {
+      if (player.place) {
+        result.textContent = ordinal(player.place);
+        result.classList.add('place');
+      } else if (player.roundFeedback === 'wrong') {
         result.textContent = '✕';
         result.classList.add('wrong');
       } else if (player.roundFeedback === 'correct') {
         result.textContent = '+1';
         result.classList.add('correct');
-      } else if (player.place) {
-        result.textContent = ordinal(player.place);
-        result.classList.add('place');
-      } else result.textContent = player.completed ? 'FINISHED' : '';
+      } else result.textContent = '';
     }
   }
 }
