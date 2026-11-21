@@ -132,6 +132,12 @@ describe('SessionService RGB Sequence Rush', () => {
 });
 
 describe('SessionService Level 2 Dice Reaction', () => {
+  it('does not allow manual finish before second and third place are decided', () => {
+    const { service, session, slots } = createLevel2Session();
+    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+    expect(session.status).toBe('playing');
+  });
+
   it('starts with three distinct dice values and publishes the current round id', () => {
     const { service, session } = createLevel2Session();
     expect(session.stage).toBe(2);
