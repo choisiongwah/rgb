@@ -9,10 +9,24 @@ function createPlayingSession(count = 3) {
   service.startLevel(session.id, slots[0].token);
   return { service, session, slots };
 }
+function createLevel2Session(count = 3) {
+  const service = new SessionService({ diceRoll: () => [4, 6, 2] });
+  const session = service.create({ host: { username: 'admin', role: 'admin' } });
+  const slots = session.players.slice(0, count);
+  slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Player ' + (index + 1) }));
+  service.startLevel(session.id, slots[0].token);
+  service.finishLevel(session.id, slots[0].token);
+  service.nextLevel(session.id);
+  service.startLevel(session.id, slots[0].token);
+  return { service, session, slots };
+}
 function completeCycles(service, session, slot, cycles = 20) {
   for (let i = 0; i < cycles; i += 1) {
     for (const action of ['R', 'G', 'B']) service.submitInput(session.id, slot.token, action);
   }
+}
+function answerDice(service, session, slot, action = 'G') {
+  return service.submitInput(session.id, slot.token, action, session.diceRoundId);
 }
 
 describe('SessionService RGB Sequence Rush', () => {
@@ -114,5 +128,84 @@ describe('SessionService RGB Sequence Rush', () => {
     service.resetLevel(session.id, slots[0].token);
     service.configure(session.id, slots[0].token, 12);
     expect(session.targetCycles).toBe(12);
+  });
+});
+
+describe('SessionService Level 2 Dice Reaction', () => {
+  it('starts with three distinct dice values and publishes the current round id', () => {
+    const { service, session } = createLevel2Session();
+    expect(session.stage).toBe(2);
+    expect(session.diceValues).toEqual([4, 6, 2]);
+    expect(new Set(session.diceValues).size).toBe(3);
+    expect(service.toPublicView(session).diceRoundId).toBe(session.diceRoundId);
+    expect(session.diceTarget).toBe(8);
+  });
+
+  it('awards the point to the first player choosing the largest dice position', () => {
+    const { service, session, slots } = createLevel2Session();
+    const roundId = session.diceRoundId;
+    const result = service.submitInput(session.id, slots[0].token, 'G', roundId);
+    expect(result.correct).toBe(true);
+    expect(result.pointAwarded).toBe(1);
+    expect(slots[0].successCount).toBe(1);
+    expect(session.diceRoundId).toBe(roundId + 1);
+    expect(slots[1].roundAttempted).toBe(false);
+  });
+
+  it('marks a wrong answer and disqualifies that player for the current dice roll', () => {
+    const { service, session, slots } = createLevel2Session();
+    const roundId = session.diceRoundId;
+    const result = service.submitInput(session.id, slots[0].token, 'R', roundId);
+    expect(result.correct).toBe(false);
+    expect(slots[0].roundFeedback).toBe('wrong');
+    expect(slots[0].roundAttempted).toBe(true);
+    expect(slots[0].successCount).toBe(0);
+    expect(() => service.submitInput(session.id, slots[0].token, 'G', roundId)).toThrow('ALREADY_ANSWERED');
+  });
+
+  it('rerolls only after all remaining players have used their attempt', () => {
+    const { service, session, slots } = createLevel2Session();
+    const firstRound = session.diceRoundId;
+    answerDice(service, session, slots[0], 'R');
+    answerDice(service, session, slots[1], 'B');
+    expect(session.diceRoundId).toBe(firstRound);
+    answerDice(service, session, slots[2], 'R');
+    expect(session.diceRoundId).toBe(firstRound + 1);
+    expect(slots.every((player) => !player.roundAttempted)).toBe(true);
+    expect(slots.every((player) => player.roundFeedback === null)).toBe(true);
+  });
+
+  it('rejects late taps from a dice roll that has already advanced', () => {
+    const { service, session, slots } = createLevel2Session();
+    const oldRound = session.diceRoundId;
+    answerDice(service, session, slots[0], 'G');
+    expect(() => service.submitInput(session.id, slots[1].token, 'G', oldRound)).toThrow('STALE_ROUND');
+    expect(slots[1].successCount).toBe(0);
+  });
+
+  it('continues after first place so second and third place can finish', () => {
+    const { service, session, slots } = createLevel2Session();
+    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[0], 'G');
+    expect(slots[0].place).toBe(1);
+    expect(slots[0].successCount).toBe(8);
+    expect(session.status).toBe('playing');
+    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[1], 'G');
+    expect(slots[1].place).toBe(2);
+    expect(session.status).toBe('playing');
+    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[2], 'G');
+    expect(slots[2].place).toBe(3);
+    expect(session.status).toBe('finished');
+    expect(slots.map((player) => player.pointsEarned)).toEqual([5, 3, 1]);
+    expect(slots.map((player) => player.totalPoints)).toEqual([5, 3, 1]);
+  });
+
+  it('rolls again when every connected remaining player has been disqualified', () => {
+    const { service, session, slots } = createLevel2Session();
+    const firstRound = session.diceRoundId;
+    answerDice(service, session, slots[0], 'R');
+    answerDice(service, session, slots[1], 'B');
+    answerDice(service, session, slots[2], 'R');
+    expect(session.diceRoundId).toBe(firstRound + 1);
+    expect(slots.every((player) => !player.roundAttempted)).toBe(true);
   });
 });
