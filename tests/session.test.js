@@ -354,3 +354,58 @@ describe('SessionService Level 2 Dice Reaction', () => {
     expect(slots.every((player) => !player.roundAttempted)).toBe(true);
   });
 });
+
+
+describe('SessionService Level 4 Rocket Flight', () => {
+  function createLevel4Session(count = 3, random = () => 0.5) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Pilot ' + (index + 1) }));
+    session.stage = 4;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
+  }
+  it('initializes independent flight state for each joined pilot', () => {
+    const { service, session } = createLevel4Session();
+    const view = service.toPublicView(session);
+    expect(view.players.map((player) => player.flappy.blockersPassed)).toEqual([0, 0, 0]);
+    expect(view.players[0].flappy).not.toBe(view.players[1].flappy);
+  });
+  it('accepts jump input and rejects lane controls', () => {
+    const { service, session, slots } = createLevel4Session(1);
+    expect(service.submitInput(session.id, slots[0].token, 'JUMP').jumped).toBe(true);
+    expect(slots[0].flappy.velocity).toBeLessThan(0);
+    expect(() => service.submitInput(session.id, slots[0].token, 'R')).toThrow('INVALID_INPUT');
+  });
+  it('moves obstacles faster after blocker 6', () => {
+    const { service, slots } = createLevel4Session(1);
+    const flight = slots[0].flappy;
+    flight.obstacles = [{ id: 1, x: 0.8, gapY: 0.5, drift: 0, passed: false }];
+    service.tickFlappy(100);
+    const easyDistance = 0.8 - flight.obstacles[0].x;
+    flight.blockersPassed = 6;
+    flight.obstacles[0].x = 0.8;
+    service.tickFlappy(100);
+    expect(0.8 - flight.obstacles[0].x).toBeGreaterThan(easyDistance);
+  });
+  it('keeps the level running after first and second place, then awards all placements', () => {
+    const { service, session, slots } = createLevel4Session();
+    for (let i = 0; i < 3; i += 1) {
+      const flight = slots[i].flappy;
+      flight.blockersPassed = 19;
+      flight.obstacles = [{ id: 1, x: 0.21, gapY: 0.5, drift: 0, passed: false }];
+      flight.y = 0.5;
+      service.tickFlappy(100);
+      expect(slots[i].place).toBe(i + 1);
+      expect(session.status).toBe(i === 2 ? 'finished' : 'playing');
+    }
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
+  });
+  it('does not advance flight while paused', () => {
+    const { service, session, slots } = createLevel4Session(1);
+    service.setPaused(session.id, true);
+    service.tickFlappy(1000);
+    expect(slots[0].flappy.y).toBe(0.5);
+  });
+});
