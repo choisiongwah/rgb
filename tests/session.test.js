@@ -20,6 +20,17 @@ function createLevel2Session(count = 3) {
   service.startLevel(session.id, slots[0].token);
   return { service, session, slots };
 }
+
+function createLevel3Session(count = 3, random = () => 0.99) {
+  const service = new SessionService({ random });
+  const session = service.create({ host: { username: 'admin', role: 'admin' } });
+  const slots = session.players.slice(0, count);
+  slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Racer ' + (index + 1) }));
+  session.stage = 3;
+  service.startLevel(session.id, slots[0].token);
+  return { service, session, slots };
+}
+
 function completeCycles(service, session, slot, cycles = 20) {
   for (let i = 0; i < cycles; i += 1) {
     for (const action of ['R', 'G', 'B']) service.submitInput(session.id, slot.token, action);
@@ -172,6 +183,74 @@ describe('SessionService RGB Sequence Rush', () => {
     service.resetLevel(session.id, slots[0].token);
     service.configure(session.id, slots[0].token, 12);
     expect(session.targetCycles).toBe(12);
+  });
+});
+
+describe('SessionService Level 3 Highway Dodge', () => {
+  it('starts each player in the centre lane with an independent race state', () => {
+    const { service, session, slots } = createLevel3Session();
+    const view = service.toPublicView(session);
+    expect(view.players.map((player) => player.race.lane)).toEqual([1, 1, 1]);
+    expect(view.players.map((player) => player.race.distanceMeters)).toEqual([0, 0, 0]);
+    expect(view.players[0].race).not.toBe(view.players[1].race);
+  });
+
+  it('maps R, G and B to left, centre and right lanes', () => {
+    const { service, session, slots } = createLevel3Session(1);
+    service.submitInput(session.id, slots[0].token, 'R');
+    expect(slots[0].race.lane).toBe(0);
+    service.submitInput(session.id, slots[0].token, 'G');
+    expect(slots[0].race.lane).toBe(1);
+    service.submitInput(session.id, slots[0].token, 'B');
+    expect(slots[0].race.lane).toBe(2);
+  });
+
+  it('advances distance at 100 metres per second and increases race speed', () => {
+    const { service, session, slots } = createLevel3Session(1);
+    service.tickRaces(1000);
+    expect(slots[0].race.distanceMeters).toBeCloseTo(100);
+    expect(slots[0].race.speedMultiplier).toBeCloseTo(1);
+    service.tickRaces(1000);
+    expect(slots[0].race.distanceMeters).toBeGreaterThan(200);
+    expect(slots[0].race.speedMultiplier).toBeGreaterThan(1);
+  });
+
+  it('applies a two-second collision penalty and temporarily locks lane input', () => {
+    const { service, session, slots } = createLevel3Session(1, () => 0.4);
+    for (let i = 0; i < 5; i += 1) service.tickRaces(500);
+    expect(slots[0].race.crashId).toBe(1);
+    expect(slots[0].race.penaltyMs).toBe(2000);
+    expect(() => service.submitInput(session.id, slots[0].token, 'R')).toThrow('RACE_PENALTY_ACTIVE');
+    const distanceAtCrash = slots[0].race.distanceMeters;
+    slots[0].race.obstacles = [];
+    service.tickRaces(1000);
+    expect(slots[0].race.penaltyMs).toBe(1000);
+    expect(slots[0].race.distanceMeters).toBe(distanceAtCrash);
+    service.tickRaces(1000);
+    expect(slots[0].race.penaltyMs).toBe(0);
+    service.submitInput(session.id, slots[0].token, 'R');
+    expect(slots[0].race.lane).toBe(0);
+  });
+
+  it('continues the race after first place until all players finish', () => {
+    const { service, session, slots } = createLevel3Session(3);
+    for (let i = 0; i < 100 && !slots[0].completed; i += 1) service.tickRaces(500);
+    expect(slots[0].place).toBe(1);
+    expect(session.status).toBe('playing');
+    expect(slots[1].completed).toBe(false);
+    for (const slot of slots.slice(1)) {
+      for (let i = 0; i < 100 && !slot.completed; i += 1) service.tickRaces(500);
+    }
+    expect(slots.map((slot) => slot.place)).toEqual([1, 2, 3]);
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
+    expect(session.status).toBe('finished');
+  });
+
+  it('does not advance races while paused', () => {
+    const { service, session, slots } = createLevel3Session(1);
+    service.setPaused(session.id, true);
+    service.tickRaces(1000);
+    expect(slots[0].race.distanceMeters).toBe(0);
   });
 });
 
