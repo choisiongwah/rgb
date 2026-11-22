@@ -25,7 +25,7 @@ app.use('/api/sessions', createSessionRouter({ sessions }));
 registerSocketHandlers(io, { sessions });
 
 const raceTicker = setInterval(() => {
-  for (const session of [...sessions.tickRaces(100), ...sessions.tickFlappy(100), ...sessions.tickUfos(100), ...sessions.tickPies(100), ...sessions.tickIslands(100)]) {
+  for (const session of [...sessions.tickRaces(100), ...sessions.tickFlappy(100), ...sessions.tickUfos(100), ...sessions.tickPies(100), ...sessions.tickIslands(100), ...sessions.tickBurgerStacks(100)]) {
     io.to('session:' + session.id).emit('game:state', sessions.toPublicView(session));
   }
 }, 100);
