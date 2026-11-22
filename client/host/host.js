@@ -21,7 +21,9 @@ function renderSlots(state) {
     const count = $('#count-' + player.color);
     const result = $('#result-' + player.color);
     const mascot = $('#mascot-' + player.color);
-    const avatar = $('#avatar-' + player.color);\n    if (mascot) { mascot.hidden = !player.joined; mascot.className = 'player-mascot ' + (player.player?.character || 'astronaut'); }\n    if (avatar) { if (player.player?.avatar) { avatar.src = player.player.avatar; avatar.hidden = false; } else { avatar.removeAttribute('src'); avatar.hidden = true; } }
+    const avatar = $('#avatar-' + player.color);
+    if (mascot) { mascot.hidden = !player.joined; mascot.className = 'player-mascot ' + (player.player?.character || 'astronaut'); }
+    if (avatar) { if (player.player?.avatar) { avatar.src = player.player.avatar; avatar.hidden = false; } else { avatar.removeAttribute('src'); avatar.hidden = true; } }
     if (status) status.textContent = player.joined
       ? (player.player?.name || 'Player') + (player.connected ? ' · CONNECTED' : ' · DISCONNECTED')
       : 'SCAN QR TO JOIN';
