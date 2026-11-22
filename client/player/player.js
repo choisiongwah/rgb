@@ -237,12 +237,12 @@ function renderIsland(state, mine) {
   root.querySelector('#island-milestone').textContent = island.milestone ? 'CHECKPOINT ' + island.milestone : 'START ISLAND';
   root.querySelector('#island-progress-fill').style.width = (progress / 50 * 100) + '%';
   const player = root.querySelector('#island-player');
-  player.style.left = (8 + progress / 50 * 76) + '%';
+  player.style.left = '50%'; player.style.top = (88 - progress / 50 * 58) + '%';
   player.classList.toggle('bitten', (island.penaltyMs || 0) > 0);
   const shark = root.querySelector('#island-shark');
   shark.textContent = ({R:'🦈',G:'🦈',B:'🦈'}[island.sharks?.[progress]] || '🦈');
   shark.style.filter = ({R:'drop-shadow(0 0 12px #ef4444) hue-rotate(320deg) saturate(2)',G:'drop-shadow(0 0 12px #22c55e) hue-rotate(70deg) saturate(2)',B:'drop-shadow(0 0 12px #3b82f6)'}[island.sharks?.[progress]] || 'none');
-  shark.style.left = Math.min(88, 8 + progress / 50 * 76 + 5) + '%';
+  shark.style.left = '50%'; shark.style.top = Math.max(24, 88 - progress / 50 * 58 + 10) + '%';
   if (island.biteId !== lastIslandBiteId) { lastIslandBiteId=island.biteId; const bite=root.querySelector('#island-bite'); bite.classList.remove('show'); void bite.offsetWidth; bite.classList.add('show'); player.classList.add('bitten'); }
 }
 
