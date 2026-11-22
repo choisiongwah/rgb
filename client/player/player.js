@@ -18,8 +18,16 @@ if (!sessionId || !joinToken) {
   root.innerHTML = '<div class="join-card"><h1>Join RGB</h1><form id="join"><input name="name" maxlength="20" placeholder="Your name" required><label for="character">Choose your suit</label><select name="character" id="character"><option value="astronaut">🚀 Astronaut</option><option value="racer">🏎️ Car Racer</option><option value="hazmat">☣️ Hazmat Explorer</option></select><label for="avatar">Profile photo (optional)</label><input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/webp"><small>Your photo appears inside your character visor.</small><button>Join game</button></form><p id="status" role="status"></p></div>';
   root.querySelector('#join').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const name = new FormData(event.currentTarget).get('name').trim();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get('name') || '').trim();
+    const character = String(form.get('character') || 'astronaut');
+    const file = form.get('avatar');
     if (!name || socket) return;
+    let avatar = null;
+    if (file instanceof File && file.size) {
+      try { avatar = await resizeAvatar(file); }
+      catch { root.querySelector('#status').textContent = 'Could not read that photo. Try another image.'; return; }
+    }
     socket = io({ auth: { sessionId, joinToken }, transports: ['websocket', 'polling'] });
     socket.on('connect', () => socket.emit('player:join', { name, character, avatar }, (ack) => {
       if (!ack.ok) {
@@ -165,7 +173,8 @@ function setFeedback(message, kind) {
 function ordinal(place) { return place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : place + 'th'; }
 function readableError(code) {
   return ({
-    SLOT_OCCUPIED: 'This player slot is already in use',\n    INVALID_PROFILE: 'That profile photo is not supported. Try a JPG, PNG or WebP image.',
+    SLOT_OCCUPIED: 'This player slot is already in use',
+    INVALID_PROFILE: 'That profile photo is not supported. Try a JPG, PNG or WebP image.',
     GAME_PAUSED: 'The game is paused',
     LEVEL_NOT_RUNNING: 'The level is not running',
     PLAYER_ALREADY_FINISHED: 'You have already finished',
