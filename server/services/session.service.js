@@ -6,6 +6,11 @@ const DEFAULT_TARGET_CYCLES = 20;
 const MIN_TARGET_CYCLES = 1;
 const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 8;
+const RACE_TARGET_METERS = 3000;
+const RACE_VEHICLES = ['🚗', '🚕', '🚙', '🚚', '🚛', '🚌', '🚓'];
+function createRaceState() {
+  return { lane: 1, distanceMeters: 0, speedMultiplier: 1, penaltyMs: 0, obstacles: [], crashId: 0, spawnAccumulator: 0, nextObstacleId: 1 };
+}
 const POINTS_BY_PLACE = { 1: 5, 2: 3, 3: 1 };
 
 function createDiceRoll() {
@@ -18,9 +23,10 @@ function createDiceRoll() {
 }
 
 export class SessionService {
-  constructor({ diceRoll = createDiceRoll } = {}) {
+  constructor({ diceRoll = createDiceRoll, random = Math.random } = {}) {
     this.sessions = new Map();
     this.diceRoll = diceRoll;
+    this.random = random;
   }
 
   create({ host }) {
@@ -35,7 +41,7 @@ export class SessionService {
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0
+        completed: false, place: null, pointsEarned: 0, race: createRaceState()
       }))
     };
     this.sessions.set(id, session);
@@ -115,9 +121,11 @@ export class SessionService {
       player.completed = false;
       player.place = null;
       player.pointsEarned = 0;
+      player.race = createRaceState();
     }
     if (session.stage === 2) this.rollNextDiceRound(session);
     else session.diceValues = null;
+    if (session.stage === 3) for (const player of session.players) player.race = createRaceState();
     return session;
   }
 
@@ -130,6 +138,13 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 3) {
+      if (!['R', 'G', 'B'].includes(action)) throw new Error('INVALID_INPUT');
+      if (slot.race.penaltyMs > 0) throw new Error('RACE_PENALTY_ACTIVE');
+      slot.race.lane = { R: 0, G: 1, B: 2 }[action];
+      return { session, slot, correct: true, laneChanged: true };
+    }
 
     if (session.stage === 2) {
       if (diceRoundId !== session.diceRoundId) throw new Error('STALE_ROUND');
@@ -200,6 +215,63 @@ export class SessionService {
       player.roundAttempted = false;
       player.roundFeedback = player === winner ? 'correct' : null;
     }
+  }
+
+  tickRaces(deltaMs = 100) {
+    const delta = Math.max(0, Math.min(500, Number(deltaMs) || 0)) / 1000;
+    if (!delta) return [];
+    const updated = [];
+    for (const session of this.sessions.values()) {
+      if (session.stage !== 3 || session.status !== 'playing' || session.paused) continue;
+      for (const player of session.players) {
+        if (!player.activeForRound || player.completed) continue;
+        const race = player.race;
+        race.speedMultiplier = Math.min(2.5, 1 + (race.distanceMeters / RACE_TARGET_METERS) * 1.5);
+        if (race.penaltyMs > 0) race.penaltyMs = Math.max(0, race.penaltyMs - delta * 1000);
+        else race.distanceMeters = Math.min(RACE_TARGET_METERS, race.distanceMeters + 100 * race.speedMultiplier * delta);
+
+        const obstacleSpeed = 0.43 * race.speedMultiplier;
+        for (const obstacle of race.obstacles) obstacle.progress += obstacleSpeed * delta;
+        race.obstacles = race.obstacles.filter((obstacle) => obstacle.progress < 1.08);
+
+        if (race.penaltyMs <= 0) {
+          const collision = race.obstacles.find((obstacle) =>
+            obstacle.lane === race.lane && obstacle.progress >= 0.82 && obstacle.progress - obstacleSpeed * delta < 0.82
+          );
+          if (collision) {
+            race.penaltyMs = 2000;
+            race.crashId += 1;
+            race.obstacles = race.obstacles.filter((obstacle) => obstacle.id !== collision.id);
+          }
+        }
+
+        race.spawnAccumulator += delta;
+        const spawnInterval = Math.max(0.55, 1.25 / race.speedMultiplier);
+        if (race.spawnAccumulator >= spawnInterval && race.obstacles.length < 5) {
+          race.spawnAccumulator -= spawnInterval;
+          race.obstacles.push({
+            id: race.nextObstacleId++,
+            lane: Math.floor(this.random() * 3),
+            type: RACE_VEHICLES[Math.floor(this.random() * RACE_VEHICLES.length)],
+            progress: 0
+          });
+        }
+
+        if (race.distanceMeters >= RACE_TARGET_METERS) {
+          player.completed = true;
+          player.place = session.nextPlace++;
+          player.pointsEarned = POINTS_BY_PLACE[player.place] || 0;
+          player.totalPoints += player.pointsEarned;
+          race.distanceMeters = RACE_TARGET_METERS;
+        }
+      }
+      if (this.allActivePlayersFinished(session)) {
+        session.status = 'finished';
+        session.paused = false;
+      }
+      updated.push(session);
+    }
+    return updated;
   }
 
   allDicePlayersAttempted(session) {
@@ -329,7 +401,7 @@ export class SessionService {
         progressIndex: player.progressIndex, cycles: player.cycles,
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
-        totalPoints: player.totalPoints, completed: player.completed,
+        race: player.race, totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
     };
