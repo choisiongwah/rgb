@@ -14,8 +14,8 @@ let latestState;
 let lastCrashId = 0;
 let lastFlappyCrashId = 0;
 let lastIslandBiteId = 0;
-let lastIslandProgress = -1;
-let lastPieHitId = 0;
+let lastKnifeMissId = 0;
+let lastKnifeHitId = 0;
 let lastBurgerStackFlashId = 0;
 let lastBurgerStackMissId = 0;
 let errorAudioContext;
@@ -97,8 +97,10 @@ function renderController(name, color, state) {
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
     '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
+    '<section id="burger-builder-screen" class="burger-builder-screen" hidden><div class="burger-builder-hud"><strong id="burger-builder-score">Score: 0</strong><span id="burger-builder-progress">0 / 6 BURGERS</span></div><div class="burger-builder-board"><div class="burger-builder-current"><span class="burger-caption">YOUR BURGER</span><div id="burger-builder-layers" class="burger-builder-layers"></div></div><div class="burger-builder-target"><span class="burger-caption">TARGET BURGER</span><div id="burger-builder-recipe" class="burger-builder-layers"></div></div></div><div id="burger-builder-result" class="burger-builder-result"></div></section>' +
     '<section id="burger-stack-screen" class="burger-stack-screen" hidden><div class="burger-stack-hud"><strong id="burger-stack-progress">0 / 4 BURGERS</strong><span id="burger-stack-difficulty">EASY STACK</span></div><div class="burger-stack-world"><div class="burger-stack-lanes"><span></span><span></span><span></span></div><div id="burger-stack-drops" class="burger-stack-drops"></div><div id="burger-stack-player" class="burger-stack-player">👨‍🍳</div><div id="burger-stack-base" class="burger-stack-base"><span>🍞</span><div id="burger-stack-layers"></div><span>🍞</span></div><div id="burger-stack-effect" class="burger-stack-effect">PERFECT STACK!</div><div id="burger-stack-miss" class="burger-stack-miss">MISALIGNED! -1 SEC</div></div><div class="burger-stack-status"><span id="burger-stack-challenge">CHALLENGE 1</span><span id="burger-stack-penalty"></span></div></section>' +
-    '<section id="island-screen" class="island-screen" hidden><div class="island-hud"><strong id="island-progress">0 / 50 SHARKS</strong><span id="island-milestone">START</span></div><div class="island-world"><div class="island-sky"></div><div class="island-sea"></div><div class="island-destination">🏝️<small>DESTINATION</small></div><div id="island-steps" class="island-steps"></div><div id="island-player" class="island-player">🧑‍🚀</div><div id="island-shark" class="island-shark">🦈</div><div id="island-bite" class="island-bite">CHOMP! -1 SEC</div></div><div class="island-progress"><div id="island-progress-fill"></div></div></section>' +
+    '<section id="knife-wheel-screen" class="knife-wheel-screen" hidden><div class="knife-wheel-hud"><strong id="knife-wheel-score">R: 0/4　G: 0/4　B: 0/4</strong><span id="knife-wheel-speed">ROTATING WHEEL</span></div><div class="knife-wheel-world"><div id="knife-wheel" class="knife-wheel"><div class="knife-wheel-core"></div><div id="knife-wheel-knives" class="knife-wheel-knives"></div></div><div class="knife-launch">🔪</div><div id="knife-wheel-miss" class="knife-wheel-miss">CLASH! TRY AGAIN</div></div></section>' +
+    '<section id="island-screen" class="island-screen" hidden><div class="island-hud"><strong id="island-progress">0 / 50 SHARKS</strong><span id="island-milestone">START</span></div><div class="island-world"><div class="island-sky"></div><div class="island-sea"></div><div class="island-destination">🏝️<small>DESTINATION</small></div><div id="island-preview" class="island-preview"></div><div id="island-steps" class="island-steps"></div><div id="island-player" class="island-player">🧑‍🚀</div><div id="island-shark" class="island-shark">🦈</div><div id="island-bite" class="island-bite">CHOMP! -1 SEC</div></div><div class="island-progress"><div id="island-progress-fill"></div></div></section>' +
     '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
@@ -210,17 +212,21 @@ function updateController(state) {
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurger || isBurgerStack || isMatrix;
-  hint.hidden = isRace || isFlappy || isMatrix;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack || isMatrix || isBurger;
+  hint.hidden = isRace || isFlappy || isMatrix || isBurger || isPie;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#burger-quiz').hidden = !isBurger;
   root.querySelector('#pie-screen').hidden = !isPie;
   if (isPie) renderPie(state, mine);
   if (isBurger) { root.querySelector('#burger-quiz-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>'), '🍞'].join(''); root.querySelector('#burger-built-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).slice(0, mine.burgerProgressIndex || 0).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>')].join(''); }
   root.querySelector('#island-screen').hidden = !isIsland;
+  root.querySelector('#burger-builder-screen').hidden = !isBurger;
+  root.querySelector('#knife-wheel-screen').hidden = !isPie;
   root.querySelector('#burger-stack-screen').hidden = !isBurgerStack;
   root.querySelector('.pad').classList.toggle('burger-stack-pad', isBurgerStack);
   if (isBurgerStack) renderBurgerStack(state, mine);
+  if (isBurger) renderBurgerBuilder(state, mine);
+  if (isPie) renderKnifeWheel(state, mine);
   if (isIsland) renderIsland(state, mine);
   root.querySelector('#flappy-screen').hidden = !isFlappy;
   root.querySelector('.pad').hidden = isFlappy;
@@ -228,13 +234,10 @@ function updateController(state) {
   if (isDice) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
-  } else if (isBurger) {
-    sequence.innerHTML = (state.burgerSequence || []).map((action) => '<span>' + ({ R: '🥩', G: '🥬', B: '🍅' }[action]) + '</span>').join('');
-    hint.textContent = 'Build the burger in order · R Meat · G Vegetable · B Tomato';
-  } else if (isPie) { hint.hidden=false; hint.textContent='Watch the pointer · Press the matching colour to throw a knife'; }
+  } else if (isBurger) { hint.hidden = true; } else if (isPie) { hint.hidden = true; }
   if (isUfo) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
-  } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
+  } else if (isPie) { hint.hidden = true; }
   else if (isIsland) { const nextColor = mine.island?.sharks?.[mine.island?.progress]; const nextLabel = ({R:'RED · PRESS R',G:'GREEN · PRESS G',B:'BLUE · PRESS B'})[nextColor] || 'NEXT SHARK'; hint.hidden=false; hint.textContent='NEXT SHARK: ' + nextLabel + ' · Checkpoint ' + (mine.island?.milestone || 0); }
   else if (isBurgerStack) { hint.hidden=false; hint.textContent='Move one lane at a time · R LEFT · B RIGHT · catch every falling ingredient'; }
   else if (isMatrix) { hint.hidden=false; hint.textContent='Choose the missing square · R LEFT · G MIDDLE · B RIGHT'; }
@@ -252,12 +255,14 @@ function updateController(state) {
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
   else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
-  else if (isPie && mine.roundFeedback === 'wrong') setFeedback('Missed the colour — watch the pointer and try again', 'warning');
-  else if (isPie) setFeedback('Hit R, G or B when that colour reaches the pointer', '');
+  else if (isPie && mine.roundFeedback === 'wrong') setFeedback(state.pieLastMiss?.occupied ? 'Knife collision! That position is already occupied.' : 'Wrong colour — time your throw with the rotating wheel.', 'warning');
+  else if (isPie) setFeedback('Throw when the matching colour reaches the top. Avoid embedded knives!', '');
   else if (isIsland && mine.island?.penaltyMs > 0) setFeedback('SHARK BITE! Recovering for 1 second…', 'warning');
   else if (isIsland && mine.roundFeedback === 'bitten') setFeedback('Wrong colour! You fell back to the last island checkpoint.', 'warning');
-  else if (isIsland) setFeedback('Cross the sea — match each shark colour!', '');
+  else if (isIsland) setFeedback('Preview the sharks, then press the matching colour to move forward!', '');
   else if (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0) setFeedback('MISALIGNED! Recovering for 1 second…', 'warning');
+  else if (isBurger && mine.roundFeedback === 'wrong') setFeedback('Wrong ingredient — wait for the next burger recipe.', 'warning');
+  else if (isBurger) setFeedback('Build the target burger in order: R meat · G lettuce · B tomato.', '');
   else if (isBurgerStack && mine.burgerStack?.successCount > 0) setFeedback('Burger challenge ' + mine.burgerStack.successCount + ' complete — keep stacking!', 'success');
   else if (isBurgerStack) setFeedback('Catch each ingredient in the matching lane to build a perfect burger!', '');
   else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
@@ -281,6 +286,23 @@ function updateController(state) {
   if (target && document.activeElement !== target) target.value = state.targetCycles;
 }
 
+function renderBurgerBuilder(state, mine) {
+  const recipe=state.burgerSequence||[],built=recipe.slice(0,mine.burgerProgressIndex||0),emoji={R:'🥩',G:'🥬',B:'🍅'};
+  root.querySelector('#burger-builder-score').textContent='Score: '+(mine.totalPoints||0);
+  root.querySelector('#burger-builder-progress').textContent=(mine.successCount||0)+' / '+state.burgerTarget+' BURGERS';
+  const layers=(items,complete)=>'<span class="bun top">🍞</span>'+items.map(a=>'<span class="burger-layer '+a.toLowerCase()+'">'+emoji[a]+'</span>').join('')+(complete?'<span class="bun bottom">🍞</span>':'');
+  root.querySelector('#burger-builder-layers').innerHTML=layers(built,built.length===recipe.length&&recipe.length>0);
+  root.querySelector('#burger-builder-recipe').innerHTML=layers(recipe,true);
+  root.querySelector('#burger-builder-result').textContent=built.length?'INGREDIENTS '+built.length+' / '+recipe.length:'BUILD THE SHOWN RECIPE';
+}
+function renderKnifeWheel(state,mine) {
+  root.querySelector('#knife-wheel').style.transform='rotate('+(-(state.pieAngle||0)*180/Math.PI)+'deg)';
+  root.querySelector('#knife-wheel-score').textContent='R: '+(mine.pieHits?.R||0)+'/4　G: '+(mine.pieHits?.G||0)+'/4　B: '+(mine.pieHits?.B||0)+'/4';
+  root.querySelector('#knife-wheel-speed').textContent='SPEED '+(state.pieSpeed||0.9).toFixed(1)+'×';
+  root.querySelector('#knife-wheel-knives').innerHTML=(mine.pieKnives||[]).map(k=>'<span class="embedded-knife '+k.color.toLowerCase()+'" style="--knife-angle:'+k.angle*180/Math.PI+'deg">🔪</span>').join('');
+  if((state.pieLastHitId||0)>lastKnifeHitId){lastKnifeHitId=state.pieLastHitId;const launch=root.querySelector('.knife-launch');launch.classList.remove('throw');void launch.offsetWidth;launch.classList.add('throw');}
+  if((state.pieMissId||0)>lastKnifeMissId){lastKnifeMissId=state.pieMissId;const el=root.querySelector('#knife-wheel-miss');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
+}
 function renderBurgerStack(state, mine) {
   const stack = mine.burgerStack || {};
   const successes = stack.successCount || 0;
@@ -334,10 +356,13 @@ function renderIsland(state, mine) {
   player.style.left = '50%'; player.style.top = (88 - progress / 50 * 58) + '%';
   if (progress !== lastIslandProgress) { lastIslandProgress = progress; player.classList.remove('step-forward'); void player.offsetWidth; if (progress > 0 && island.penaltyMs <= 0) player.classList.add('step-forward'); }
   player.classList.toggle('bitten', (island.penaltyMs || 0) > 0);
-  const shark = root.querySelector('#island-shark');
-  shark.textContent = ({R:'🦈',G:'🦈',B:'🦈'}[island.sharks?.[progress]] || '🦈');
-  shark.style.filter = ({R:'drop-shadow(0 0 12px #ef4444) hue-rotate(320deg) saturate(2)',G:'drop-shadow(0 0 12px #22c55e) hue-rotate(70deg) saturate(2)',B:'drop-shadow(0 0 12px #3b82f6)'}[island.sharks?.[progress]] || 'none');
-  shark.style.left = '50%'; shark.style.top = Math.max(24, 88 - progress / 50 * 58 + 10) + '%';
+  const colors={R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
+  root.querySelector('#island-preview').innerHTML=(island.sharks||[]).slice(progress,progress+6).map((color,index)=>'<span class="shark-preview '+(island.orientations?.[progress+index]||'horizontal')+'" style="--shark-color:'+colors[color]+'">🦈</span>').join('');
+  const shark=root.querySelector('#island-shark'),currentColor=island.sharks?.[progress]||'R';
+  shark.textContent='🦈';shark.style.filter='drop-shadow(0 0 12px '+colors[currentColor]+')';
+  shark.style.left='50%';shark.style.top=Math.max(24,88-progress/50*58+10)+'%';
+  shark.classList.toggle('vertical',island.orientations?.[progress]==='vertical');
+  root.querySelector('#island-world').classList.toggle('island-nudge',(island.nudgeId||0)>lastIslandBiteId);
   if (island.biteId !== lastIslandBiteId) { lastIslandBiteId=island.biteId; const bite=root.querySelector('#island-bite'); bite.classList.remove('show'); void bite.offsetWidth; bite.classList.add('show'); player.classList.add('bitten'); }
 }
 
