@@ -55,7 +55,7 @@ export class SessionService {
     if (slot.connected) throw new Error('SLOT_OCCUPIED');
 
     const isReturningPlayer = slot.joined;
-    const avatar = typeof profile.avatar === 'string' && /^data:image\\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(profile.avatar) && profile.avatar.length <= 180000
+    const avatar = typeof profile.avatar === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(profile.avatar) && profile.avatar.length <= 180000
       ? profile.avatar : null;
     const character = ['astronaut', 'racer', 'hazmat'].includes(profile.character) ? profile.character : 'astronaut';
     slot.player = {
