@@ -47,7 +47,7 @@ describe('SessionService RGB Sequence Rush', () => {
     expect(slots[0].successFeedbackId).toBe(1);
     service.submitInput(session.id, slots[0].token, 'B');
     expect(slots[0].successFeedbackId).toBe(1);
-    service.submitInput(session.id, slots[0].token, 'G');
+    service.submitInput(session.id, slots[0].token, 'R');
     expect(slots[0].successFeedbackId).toBe(2);
   });
 
