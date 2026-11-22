@@ -256,6 +256,31 @@ export class SessionService {
     return session;
   }
 
+  endGame(id, token) {
+    const session = this.get(id);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+    this.assertController(session, this.getSlot(id, token));
+
+    session.stage = 1;
+    session.status = 'waiting';
+    session.paused = false;
+    session.nextPlace = 1;
+    session.diceValues = null;
+    for (const player of session.players) {
+      player.activeForRound = false;
+      player.progressIndex = 0;
+      player.cycles = 0;
+      player.successCount = 0;
+      player.roundAttempted = false;
+      player.roundFeedback = null;
+      player.totalPoints = 0;
+      player.completed = false;
+      player.place = null;
+      player.pointsEarned = 0;
+    }
+    return session;
+  }
+
   configure(id, token, targetCycles) {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
