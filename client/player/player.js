@@ -12,6 +12,7 @@ let isController = false;
 let inputId = 0;
 let latestState;
 let lastCrashId = 0;
+let lastFlappyCrashId = 0;
 const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
@@ -67,7 +68,7 @@ function renderController(name, color, state) {
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
-    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
+    '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +\n    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
     '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
@@ -97,6 +98,17 @@ function renderController(name, color, state) {
     button.addEventListener('pointercancel', () => button.classList.remove('pressed'));
     button.addEventListener('lostpointercapture', () => button.classList.remove('pressed'));
   });
+  const jump = (event) => {
+    if (latestState?.stage !== 4 || latestState.status !== 'playing' || latestState.paused) return;
+    event?.preventDefault?.();
+    if (!socket?.connected) return;
+    socket.emit('player:input', { action: 'JUMP', inputId: inputId++ }, (result) => {
+      if (!result.ok) setFeedback(readableError(result.error), 'warning');
+    });
+  };
+  const flightWorld = root.querySelector('#flappy-world');
+  flightWorld.addEventListener('pointerdown', jump);
+  flightWorld.addEventListener('keydown', (event) => { if ([' ', 'Enter', 'ArrowUp'].includes(event.key)) jump(event); });
   root.querySelector('#save-config').addEventListener('click', () => {
     const targetCycles = Number(root.querySelector('#target-cycles').value);
     emitControl('configure', { targetCycles });
@@ -144,6 +156,7 @@ function updateController(state) {
   if (!mine) return;
   const isDice = state.stage === 2;
   const isRace = state.stage === 3;
+  const isFlappy = state.stage === 4;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
       !mine.activeForRound || (isDice && mine.roundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0);
@@ -153,6 +166,9 @@ function updateController(state) {
   sequence.hidden = isRace;
   hint.hidden = isRace;
   root.querySelector('#race-screen').hidden = !isRace;
+  root.querySelector('#flappy-screen').hidden = !isFlappy;
+  root.querySelector('.pad').hidden = isFlappy;
+  if (isFlappy) renderFlappy(state, mine);
   if (isDice) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
@@ -167,6 +183,8 @@ function updateController(state) {
   else if (state.status === 'waiting') setFeedback('Waiting for the game to start', '');
   else if (!mine.activeForRound) setFeedback('Ready for the next level', '');
   else if (isRace && (mine.race?.penaltyMs || 0) > 0) setFeedback('CRASH! 2-second penalty — hold tight', 'warning');
+  else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
+  else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
   else if (isDice && mine.roundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong answer — wait for next dice roll', 'warning');
   else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
@@ -224,6 +242,38 @@ function renderRace(state, mine) {
   }
 }
 
+function renderFlappy(state, mine) {
+  const flight = mine.flappy || {};
+  const passed = flight.blockersPassed || 0;
+  const tier = Math.min(4, Math.floor(passed / 6) + 1);
+  root.querySelector('#flappy-count').textContent = passed + ' / 20 BLOCKERS';
+  root.querySelector('#flappy-difficulty').textContent = ['EASY FLIGHT','WIND PICKING UP','TIGHTER GAPS','MAXIMUM TURBULENCE'][tier - 1];
+  root.querySelector('#flappy-progress-fill').style.width = (passed / 20 * 100) + '%';
+  const rocket = root.querySelector('#flappy-rocket');
+  rocket.style.top = (flight.y * 100) + '%';
+  const avatar = root.querySelector('#flappy-avatar');
+  const fallback = root.querySelector('#flappy-default');
+  if (mine.player?.avatar) { avatar.src = mine.player.avatar; avatar.hidden = false; fallback.hidden = true; }
+  else { avatar.hidden = true; avatar.removeAttribute('src'); fallback.hidden = false; }
+  const container = root.querySelector('#flappy-obstacles');
+  const active = new Set();
+  for (const obstacle of flight.obstacles || []) {
+    active.add(obstacle.id);
+    let node = container.querySelector('[data-id="' + obstacle.id + '"]');
+    if (!node) { node = document.createElement('div'); node.className = 'flappy-obstacle'; node.dataset.id = obstacle.id; node.innerHTML = '<div class="flappy-pillar top"></div><div class="flappy-pillar bottom"></div>'; container.append(node); }
+    node.style.left = (obstacle.x * 100) + '%';
+    const gap = Math.max(0.22, 0.38 - Math.floor(passed / 6) * 0.035);
+    node.querySelector('.top').style.height = ((obstacle.gapY - gap / 2) * 100) + '%';
+    node.querySelector('.bottom').style.top = ((obstacle.gapY + gap / 2) * 100) + '%';
+  }
+  for (const node of container.children) if (!active.has(Number(node.dataset.id))) node.remove();
+  if ((flight.crashId || 0) > lastFlappyCrashId) {
+    lastFlappyCrashId = flight.crashId;
+    const overlay = root.querySelector('#flappy-crash');
+    overlay.classList.remove('show'); void overlay.offsetWidth; overlay.classList.add('show');
+  }
+}
+
 function setFeedback(message, kind) {
   const el = document.querySelector('#feedback');
   if (!el) return;
@@ -247,7 +297,8 @@ function readableError(code) {
     STALE_ROUND: 'That dice roll has passed — use the current dice',
     ALREADY_ANSWERED: 'You already answered this dice roll',
     FINISH_NOT_AVAILABLE: 'Level 2 runs until all three places are decided',
-    RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds'
+    RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds',
+    FLAPPY_RECOVERING: 'Rocket recovering — tap again in a moment'
   })[code] || code || 'Something went wrong';
 }
 
