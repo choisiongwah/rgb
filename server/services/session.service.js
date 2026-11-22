@@ -125,7 +125,6 @@ export class SessionService {
     }
     if (session.stage === 2) this.rollNextDiceRound(session);
     else session.diceValues = null;
-    if (session.stage === 3) for (const player of session.players) player.race = createRaceState();
     return session;
   }
 
@@ -227,14 +226,15 @@ export class SessionService {
         if (!player.activeForRound || player.completed) continue;
         const race = player.race;
         race.speedMultiplier = Math.min(2.5, 1 + (race.distanceMeters / RACE_TARGET_METERS) * 1.5);
-        if (race.penaltyMs > 0) race.penaltyMs = Math.max(0, race.penaltyMs - delta * 1000);
+        const wasPenalized = race.penaltyMs > 0;
+        if (wasPenalized) race.penaltyMs = Math.max(0, race.penaltyMs - delta * 1000);
         else race.distanceMeters = Math.min(RACE_TARGET_METERS, race.distanceMeters + 100 * race.speedMultiplier * delta);
 
         const obstacleSpeed = 0.43 * race.speedMultiplier;
         for (const obstacle of race.obstacles) obstacle.progress += obstacleSpeed * delta;
         race.obstacles = race.obstacles.filter((obstacle) => obstacle.progress < 1.08);
 
-        if (race.penaltyMs <= 0) {
+        if (!wasPenalized && race.penaltyMs <= 0) {
           const collision = race.obstacles.find((obstacle) =>
             obstacle.lane === race.lane && obstacle.progress >= 0.82 && obstacle.progress - obstacleSpeed * delta < 0.82
           );
