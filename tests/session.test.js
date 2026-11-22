@@ -592,3 +592,108 @@ describe('SessionService Level 8 Island Crossing', () => {
   it('continues placements until all active players reach the island',()=>{const {service,session,slots}=createLevel8Session();for(let p=0;p<3;p++){slots[p].island.sharks=Array(50).fill('R');for(let i=0;i<50;i++)service.submitInput(session.id,slots[p].token,'R');expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);});
   it('does not advance penalty timer while paused',()=>{const {service,session,slots}=createLevel8Session(1);slots[0].island.penaltyMs=1000;service.setPaused(session.id,true);service.tickIslands(500);expect(slots[0].island.penaltyMs).toBe(1000);});
 });
+
+
+describe('SessionService Level 9 Burger Stack', () => {
+  function createLevel9Session(count = 3, random = () => 0.1) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Chef ' + (index + 1) }));
+    session.stage = 9;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
+  }
+
+  it('initializes an independent 5-to-8 ingredient challenge for each player', () => {
+    const { service, session, slots } = createLevel9Session();
+    for (const slot of slots) {
+      expect(slot.burgerStack.challengeLength).toBeGreaterThanOrEqual(5);
+      expect(slot.burgerStack.challengeLength).toBeLessThanOrEqual(8);
+      expect(slot.burgerStack.recipe).toHaveLength(slot.burgerStack.challengeLength);
+      expect(slot.burgerStack.lane).toBe(1);
+    }
+    const view = service.toPublicView(session);
+    expect(view.burgerStackTarget).toBe(4);
+    expect(view.players[0].burgerStack).not.toBe(view.players[1].burgerStack);
+  });
+
+  it('moves exactly one lane left or right and clamps at the edges', () => {
+    const { service, session, slots } = createLevel9Session(1);
+    expect(service.submitInput(session.id, slots[0].token, 'R').lane).toBe(0);
+    expect(service.submitInput(session.id, slots[0].token, 'R').lane).toBe(0);
+    expect(service.submitInput(session.id, slots[0].token, 'B').lane).toBe(1);
+    expect(service.submitInput(session.id, slots[0].token, 'B').lane).toBe(2);
+    expect(() => service.submitInput(session.id, slots[0].token, 'G')).toThrow('INVALID_INPUT');
+  });
+
+  it('spawns falling ingredients and stacks only when the player is aligned', () => {
+    const { service, slots } = createLevel9Session(1, () => 0.1);
+    const stack = slots[0].burgerStack;
+    stack.recipe = [{ id: 1, ingredient: 'R', lane: 1 }];
+    stack.challengeLength = 1;
+    stack.nextIngredientIndex = 0;
+    stack.drops = [];
+    stack.spawnAccumulator = 1.05;
+    service.tickBurgerStacks(100);
+    expect(stack.drops).toHaveLength(1);
+    stack.drops[0].y = 0.83;
+    service.tickBurgerStacks(100);
+    expect(stack.stacked).toEqual([{ ingredient: 'R', lane: 1 }]);
+    expect(stack.stackFlashId).toBe(1);
+  });
+
+  it('fails a misaligned ingredient, clears the burger and applies a one-second penalty', () => {
+    const { service, session, slots } = createLevel9Session(1, () => 0.1);
+    const stack = slots[0].burgerStack;
+    stack.recipe = [{ id: 1, ingredient: 'R', lane: 0 }];
+    stack.challengeLength = 1;
+    stack.nextIngredientIndex = 1;
+    stack.drops = [{ id: 1, ingredient: 'R', lane: 0, y: 0.83 }];
+    stack.stacked = [{ ingredient: 'G', lane: 1 }];
+    service.tickBurgerStacks(100);
+    expect(stack.penaltyMs).toBe(1000);
+    expect(stack.missId).toBe(1);
+    expect(stack.stacked).toHaveLength(0);
+    expect(stack.challengeNumber).toBe(2);
+    expect(() => service.submitInput(session.id, slots[0].token, 'R')).toThrow('BURGER_STACK_RECOVERING');
+    service.tickBurgerStacks(500);
+    expect(stack.penaltyMs).toBe(500);
+    service.tickBurgerStacks(500);
+    expect(stack.penaltyMs).toBe(0);
+  });
+
+  it('awards first, second and third place after four successful burgers per player', () => {
+    const { service, session, slots } = createLevel9Session(3, () => 0.1);
+    for (let p = 0; p < 3; p += 1) {
+      const stack = slots[p].burgerStack;
+      for (let challenge = 0; challenge < 4; challenge += 1) {
+        stack.challengeLength = 1;
+        stack.recipe = [{ id: 1, ingredient: 'R', lane: 1 }];
+        stack.nextIngredientIndex = 1;
+        stack.drops = [{ id: 1, ingredient: 'R', lane: 1, y: 0.83 }];
+        stack.stacked = [];
+        stack.penaltyMs = 0;
+        service.tickBurgerStacks(100);
+      }
+      expect(slots[p].completed).toBe(true);
+      expect(slots[p].place).toBe(p + 1);
+      expect(session.status).toBe(p === 2 ? 'finished' : 'playing');
+    }
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
+  });
+
+  it('does not advance falling ingredients or penalties while paused', () => {
+    const { service, session, slots } = createLevel9Session(1);
+    const stack = slots[0].burgerStack;
+    const before = stack.spawnAccumulator;
+    service.setPaused(session.id, true);
+    service.tickBurgerStacks(500);
+    expect(stack.spawnAccumulator).toBe(before);
+  });
+
+  it('prevents manual finish until all placements are decided', () => {
+    const { service, session, slots } = createLevel9Session(1);
+    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+  });
+});
