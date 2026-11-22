@@ -12,7 +12,7 @@ const BURGER_TARGET_POINTS = 6;
 const UFO_TARGET_POINTS = 10;
 const PIE_HITS_PER_COLOR = 6;
 const PIE_COLORS = ['R', 'G', 'B'];
-function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = ((-angle % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
+function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
 const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
 function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
 const BURGER_MIN_LENGTH = 4;
@@ -154,19 +154,6 @@ export class SessionService {
     if (session.stage === 5) this.rollNextBurgerRound(session);
     else session.burgerSequence = null;
     if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
-    if (session.stage === 7) {
-      if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
-      const targetColor = pieColorAtStrike(session.pieAngle);
-      if (action !== targetColor) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor}; }
-      slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
-      session.pieTotalHits += 1; session.pieLastHitId += 1; session.pieLastHit={id:session.pieLastHitId,color:action,playerColor:slot.color};
-      session.pieSpeed = Math.min(2.8, 0.9 + Math.floor(session.pieTotalHits / 6) * 0.22);
-      if (session.pieTotalHits >= 12 && !session.pieDirectionChanged) { session.pieDirection = this.random() < 0.5 ? -1 : 1; session.pieDirectionChanged = true; }
-      if (PIE_COLORS.every((color) => slot.pieHits[color] >= PIE_HITS_PER_COLOR)) { slot.completed=true; slot.place=session.nextPlace++; slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0; slot.totalPoints+=slot.pointsEarned; }
-      if (this.allActivePlayersFinished(session)) { session.status='finished'; session.paused=false; }
-      return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1};
-    }
-
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -181,6 +168,19 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 7) {
+      if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
+      const targetColor = pieColorAtStrike(session.pieAngle);
+      if (action !== targetColor) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor}; }
+      slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
+      session.pieTotalHits += 1; session.pieLastHitId += 1; session.pieLastHit={id:session.pieLastHitId,color:action,playerColor:slot.color};
+      session.pieSpeed = Math.min(2.8, 0.9 + Math.floor(session.pieTotalHits / 6) * 0.22);
+      if (session.pieTotalHits >= 12 && !session.pieDirectionChanged) { session.pieDirection = this.random() < 0.5 ? -1 : 1; session.pieDirectionChanged = true; }
+      if (PIE_COLORS.every((color) => slot.pieHits[color] >= PIE_HITS_PER_COLOR)) { slot.completed=true; slot.place=session.nextPlace++; slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0; slot.totalPoints+=slot.pointsEarned; }
+      if (this.allActivePlayersFinished(session)) { session.status='finished'; session.paused=false; }
+      return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1};
+    }
 
     if (session.stage === 6) {
       if (!['R','G','B'].includes(action)) throw new Error('INVALID_INPUT');

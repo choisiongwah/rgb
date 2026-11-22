@@ -186,7 +186,8 @@ function updateController(state) {
   } else if (isPie) { hint.hidden=false; hint.textContent='Watch the pointer · Press the matching colour to throw a knife'; }
   if (isUfo) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
-  } else if (!isRace) {
+  } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
+  else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
   }
