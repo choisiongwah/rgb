@@ -34,7 +34,7 @@ export class SessionService {
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
-        roundFeedback: null, totalPoints: 0,
+        roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
         completed: false, place: null, pointsEarned: 0
       }))
     };
@@ -55,7 +55,14 @@ export class SessionService {
     if (slot.connected) throw new Error('SLOT_OCCUPIED');
 
     const isReturningPlayer = slot.joined;
-    slot.player = { name: String(profile.name || '').trim().slice(0, 20) || slot.player?.name || 'Player' };
+    const avatar = typeof profile.avatar === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(profile.avatar) && profile.avatar.length <= 180000
+      ? profile.avatar : null;
+    const character = ['astronaut', 'racer', 'hazmat'].includes(profile.character) ? profile.character : 'astronaut';
+    slot.player = {
+      name: String(profile.name || '').trim().slice(0, 20) || slot.player?.name || 'Player',
+      character,
+      avatar: avatar || slot.player?.avatar || null
+    };
     slot.connected = true;
     slot.joined = true;
     if (!session.controllerColor) session.controllerColor = slot.color;
@@ -138,6 +145,7 @@ export class SessionService {
       }
 
       slot.successCount += 1;
+      slot.successFeedbackId += 1;
       slot.roundFeedback = 'correct';
       let cycleCompleted = false;
       if (slot.successCount >= session.diceTarget) {
@@ -163,6 +171,7 @@ export class SessionService {
     }
 
     slot.progressIndex += 1;
+    slot.successFeedbackId += 1;
     let cycleCompleted = false;
     if (slot.progressIndex === SEQUENCE.length) {
       slot.progressIndex = 0;
@@ -294,7 +303,7 @@ export class SessionService {
         joined: player.joined, activeForRound: player.activeForRound,
         progressIndex: player.progressIndex, cycles: player.cycles,
         successCount: player.successCount, roundAttempted: player.roundAttempted,
-        roundFeedback: player.roundFeedback,
+        roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))

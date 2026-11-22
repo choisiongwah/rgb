@@ -6,6 +6,7 @@ const inputSchema = z.object({
   inputId: z.number().int().nonnegative(),
   roundId: z.number().int().nonnegative().optional()
 });
+const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume']) }),
   z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
@@ -36,10 +37,12 @@ export function registerSocketHandlers(io, { sessions }) {
 
     socket.on('player:join', (profile, ack = () => {}) => {
       try {
+        const parsedProfile = joinSchema.safeParse(profile);
+        if (!parsedProfile.success) return ack({ ok: false, error: 'INVALID_PROFILE' });
         const { session, slot, isController } = sessions.join(
           socket.data.sessionId,
           socket.data.joinToken,
-          { name: String(profile?.name || '') }
+          parsedProfile.data
         );
         socket.data.playerSessionId = session.id;
         socket.data.playerToken = socket.data.joinToken;
