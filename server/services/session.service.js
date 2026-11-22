@@ -149,7 +149,7 @@ export class SessionService {
     else session.diceValues = null;
     if (session.stage === 5) this.rollNextBurgerRound(session);
     else session.burgerSequence = null;
-    if (session.stage === 6) this.rollNextUfoRound(session);
+    if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
   }

@@ -92,7 +92,7 @@ function renderController(name, color, state) {
           : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
             : 'Wrong colour — sequence restarted', 'warning');
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
-        else if (result.pointAwarded) setFeedback('Perfect burger! +1 point', 'success');
+        else if (result.pointAwarded) setFeedback(latestState?.stage === 6 ? 'Correct UFO! +1 point' : 'Perfect burger! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
         else setFeedback('Good — keep going!', 'success');
       });
