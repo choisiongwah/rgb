@@ -191,7 +191,7 @@ function readableError(code) {
 }
 
 async function resizeAvatar(file) {
-  if (!/^image\\/(png|jpeg|webp)$/.test(file.type)) throw new Error('Unsupported image');
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Unsupported image');
   const source = URL.createObjectURL(file);
   try {
     const image = new Image();
