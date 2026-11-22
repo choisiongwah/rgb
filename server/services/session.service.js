@@ -159,6 +159,22 @@ export class SessionService {
     if (session.stage === 5) this.rollNextBurgerRound(session);
     else session.burgerSequence = null;
 
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
+    if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
+    else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
+    return session;
+  }
+
+  submitInput(id, token, action, diceRoundId = null) {
+    const session = this.get(id);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+    const slot = this.getSlot(id, token);
+    if (!slot || !slot.joined || !slot.connected) throw new Error('PLAYER_NOT_JOINED');
+    if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
+    if (session.paused) throw new Error('GAME_PAUSED');
+    if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
+    if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
     if (session.stage === 8) {
       const island = slot.island;
       if (!ISLAND_COLORS.includes(action)) throw new Error('INVALID_INPUT');
@@ -184,22 +200,6 @@ export class SessionService {
       if (this.allActivePlayersFinished(session)) { session.status = 'finished'; session.paused = false; }
       return { session, slot, correct: true, reset: false, cycleCompleted: slot.completed, progress: island.progress };
     }
-
-    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
-    if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
-    else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
-    return session;
-  }
-
-  submitInput(id, token, action, diceRoundId = null) {
-    const session = this.get(id);
-    if (!session) throw new Error('SESSION_NOT_FOUND');
-    const slot = this.getSlot(id, token);
-    if (!slot || !slot.joined || !slot.connected) throw new Error('PLAYER_NOT_JOINED');
-    if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
-    if (session.paused) throw new Error('GAME_PAUSED');
-    if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
-    if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
 
     if (session.stage === 7) {
       if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
