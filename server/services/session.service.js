@@ -11,7 +11,7 @@ const FLAPPY_TARGET_BLOCKERS = 20;
 const BURGER_TARGET_POINTS = 6;
 const UFO_TARGET_POINTS = 10;
 const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
-function createUfoOptions(random) { const targetId=1+Math.floor(random()*8); const ids=new Set([targetId]); while(ids.size<3)ids.add(1+Math.floor(random()*8)); const options=[...ids]; for(let i=2;i>0;i--){const j=Math.floor(random()*(i+1));[options[i],options[j]]=[options[j],options[i]];} return {targetId,options,correctIndex:options.indexOf(targetId)};}
+function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
 const BURGER_MIN_LENGTH = 4;
 const BURGER_MAX_LENGTH = 8;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
