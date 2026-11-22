@@ -34,3 +34,5 @@
 .rank-points{color:#fff;font-size:clamp(18px,3vw,30px)}
 .results-footer{margin:0;color:#cbd5e1;font-size:clamp(13px,2vw,20px)}
 @media(max-width:560px){#results-page{justify-content:flex-start;padding-top:8vh}.podium{grid-template-columns:1fr;max-width:420px}.podium-card.rank-1{transform:none}.trophy{font-size:44px}.podium-card{flex-direction:row;flex-wrap:wrap;justify-content:space-around}.podium-card h2{width:100%;font-size:22px}}
+
+#game-root[hidden]{display:none!important}
