@@ -24,6 +24,13 @@ app.use('/api/auth', authRouter);
 app.use('/api/sessions', createSessionRouter({ sessions }));
 registerSocketHandlers(io, { sessions });
 
+const raceTicker = setInterval(() => {
+  for (const session of sessions.tickRaces(100)) {
+    io.to('session:' + session.id).emit('game:state', sessions.toPublicView(session));
+  }
+}, 100);
+raceTicker.unref?.();
+
 if (process.env.NODE_ENV === 'production') {
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
   app.use(express.static(dist));
