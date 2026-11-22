@@ -7,6 +7,10 @@ const MIN_TARGET_CYCLES = 1;
 const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 8;
 const RACE_TARGET_METERS = 3000;
+const FLAPPY_TARGET_BLOCKERS = 20;
+function createFlappyState() {
+  return { y: 0.5, velocity: 0, blockersPassed: 0, obstacles: [], crashId: 0, spawnAccumulator: 0, nextObstacleId: 1, penaltyMs: 0 };
+}
 const RACE_VEHICLES = ['🚗', '🚕', '🚙', '🚚', '🚛', '🚌', '🚓'];
 function createRaceState() {
   return { lane: 1, distanceMeters: 0, speedMultiplier: 1, penaltyMs: 0, obstacles: [], crashId: 0, spawnAccumulator: 0, nextObstacleId: 1 };
@@ -41,7 +45,7 @@ export class SessionService {
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, race: createRaceState()
+        completed: false, place: null, pointsEarned: 0, race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -122,6 +126,7 @@ export class SessionService {
       player.place = null;
       player.pointsEarned = 0;
       player.race = createRaceState();
+      player.flappy = createFlappyState();
     }
     if (session.stage === 2) this.rollNextDiceRound(session);
     else session.diceValues = null;
@@ -137,6 +142,13 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 4) {
+      if (action !== 'JUMP') throw new Error('INVALID_INPUT');
+      if (slot.flappy.penaltyMs > 0) throw new Error('FLAPPY_RECOVERING');
+      slot.flappy.velocity = -0.62;
+      return { session, slot, correct: true, jumped: true };
+    }
 
     if (session.stage === 3) {
       if (!['R', 'G', 'B'].includes(action)) throw new Error('INVALID_INPUT');
@@ -274,6 +286,75 @@ export class SessionService {
     return updated;
   }
 
+  tickFlappy(deltaMs = 100) {
+    const delta = Math.max(0, Math.min(500, Number(deltaMs) || 0)) / 1000;
+    if (!delta) return [];
+    const updated = [];
+    for (const session of this.sessions.values()) {
+      if (session.stage !== 4 || session.status !== 'playing' || session.paused) continue;
+      for (const player of session.players) {
+        if (!player.activeForRound || player.completed) continue;
+        const flight = player.flappy;
+        const difficulty = 1 + Math.floor(flight.blockersPassed / 6) * 0.18;
+        if (flight.penaltyMs > 0) {
+          flight.penaltyMs = Math.max(0, flight.penaltyMs - delta * 1000);
+          flight.y = 0.5;
+          flight.velocity = 0;
+        } else {
+          flight.velocity = Math.min(0.82, flight.velocity + 1.35 * delta);
+          flight.y += flight.velocity * delta;
+          for (const obstacle of flight.obstacles) {
+            obstacle.x -= (0.30 * difficulty) * delta;
+            obstacle.gapY += obstacle.drift * delta;
+            if (obstacle.gapY < 0.24 || obstacle.gapY > 0.76) obstacle.drift *= -1;
+          }
+          for (const obstacle of flight.obstacles.filter((item) => !item.passed && item.x < 0.20)) {
+            obstacle.passed = true;
+            flight.blockersPassed += 1;
+            if (flight.blockersPassed >= FLAPPY_TARGET_BLOCKERS) {
+              player.completed = true;
+              player.place = session.nextPlace++;
+              player.pointsEarned = POINTS_BY_PLACE[player.place] || 0;
+              player.totalPoints += player.pointsEarned;
+              break;
+            }
+          }
+          flight.obstacles = flight.obstacles.filter((obstacle) => obstacle.x > -0.12);
+          if (!player.completed && (flight.y < 0.035 || flight.y > 0.965)) {
+            flight.crashId += 1;
+            flight.penaltyMs = 850;
+            flight.y = 0.5;
+            flight.velocity = 0;
+          }
+          if (!player.completed) {
+            const hit = flight.obstacles.find((obstacle) => {
+              const overlapsRocket = Math.abs(obstacle.x - 0.28) < 0.055;
+              const gap = Math.max(0.22, 0.38 - Math.floor(flight.blockersPassed / 6) * 0.035);
+              return overlapsRocket && Math.abs(flight.y - obstacle.gapY) > gap / 2 - 0.035;
+            });
+            if (hit) {
+              flight.crashId += 1;
+              flight.penaltyMs = 850;
+              flight.y = 0.5;
+              flight.velocity = 0;
+              flight.obstacles = flight.obstacles.filter((obstacle) => obstacle.id !== hit.id);
+            }
+          }
+          flight.spawnAccumulator += delta;
+          const spawnInterval = Math.max(0.92, 1.55 / difficulty);
+          if (!player.completed && flight.spawnAccumulator >= spawnInterval && flight.obstacles.length < 3) {
+            flight.spawnAccumulator -= spawnInterval;
+            flight.obstacles.push({ id: flight.nextObstacleId++, x: 1.12, gapY: 0.32 + this.random() * 0.36,
+              drift: (this.random() - 0.5) * 0.16 * difficulty, passed: false });
+          }
+        }
+      }
+      if (this.allActivePlayersFinished(session)) { session.status = 'finished'; session.paused = false; }
+      updated.push(session);
+    }
+    return updated;
+  }
+
   allDicePlayersAttempted(session) {
     const remaining = session.players.filter((player) => player.activeForRound && !player.completed);
     return remaining.length > 0 && remaining.every((player) => !player.connected || player.roundAttempted);
@@ -401,7 +482,7 @@ export class SessionService {
         progressIndex: player.progressIndex, cycles: player.cycles,
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
-        race: player.race, totalPoints: player.totalPoints, completed: player.completed,
+        race: player.race, flappy: player.flappy, totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
     };
