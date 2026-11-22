@@ -36,10 +36,12 @@ export function registerSocketHandlers(io, { sessions }) {
 
     socket.on('player:join', (profile, ack = () => {}) => {
       try {
+        const parsedProfile = joinSchema.safeParse(profile);
+        if (!parsedProfile.success) return ack({ ok: false, error: 'INVALID_PROFILE' });
         const { session, slot, isController } = sessions.join(
           socket.data.sessionId,
           socket.data.joinToken,
-          { name: String(profile?.name || '') }
+          parsedProfile.data
         );
         socket.data.playerSessionId = session.id;
         socket.data.playerToken = socket.data.joinToken;
