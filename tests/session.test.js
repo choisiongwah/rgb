@@ -409,3 +409,78 @@ describe('SessionService Level 4 Rocket Flight', () => {
     expect(slots[0].flappy.y).toBe(0.5);
   });
 });
+
+
+describe('SessionService Level 5 Burger Builder', () => {
+  function createLevel5Session(count = 3, random = () => 0.2) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Chef ' + (index + 1) }));
+    session.stage = 5;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
+  }
+  function completeBurger(service, session, slot) {
+    const roundId = session.burgerRoundId;
+    for (const action of session.burgerSequence) {
+      service.submitInput(session.id, slot.token, action, roundId);
+    }
+  }
+  it('creates a four-ingredient shared recipe and publishes a round id', () => {
+    const { service, session } = createLevel5Session();
+    const view = service.toPublicView(session);
+    expect(session.burgerSequence).toHaveLength(4);
+    expect(session.burgerSequence.every((item) => ['R', 'G', 'B'].includes(item))).toBe(true);
+    expect(view.burgerRoundId).toBe(session.burgerRoundId);
+    expect(view.burgerTarget).toBe(6);
+  });
+  it('maps R/G/B to meat, vegetable and tomato drops for each input', () => {
+    const { service, session, slots } = createLevel5Session(1, () => 0);
+    const roundId = session.burgerRoundId;
+    service.submitInput(session.id, slots[0].token, 'R', roundId);
+    expect(session.burgerLastDrop).toMatchObject({ action: 'R', ingredient: '🥩', color: 'RED' });
+    service.submitInput(session.id, slots[0].token, 'G', roundId);
+    expect(session.burgerLastDrop.ingredient).toBe('🥬');
+    service.submitInput(session.id, slots[0].token, 'B', roundId);
+    expect(session.burgerLastDrop.ingredient).toBe('🍅');
+  });
+  it('disqualifies a wrong answer for that recipe and resets on the next recipe', () => {
+    const { service, session, slots } = createLevel5Session(2, () => 0);
+    const round = session.burgerRoundId;
+    const wrong = service.submitInput(session.id, slots[0].token, 'G', round);
+    expect(wrong.correct).toBe(false);
+    expect(slots[0].burgerRoundAttempted).toBe(true);
+    expect(() => service.submitInput(session.id, slots[0].token, 'R', round)).toThrow('ALREADY_ANSWERED');
+    completeBurger(service, session, slots[1]);
+    expect(session.burgerRoundId).toBe(round + 1);
+    expect(slots[0].burgerRoundAttempted).toBe(false);
+    expect(slots[0].burgerProgressIndex).toBe(0);
+  });
+  it('awards one point to the first player completing the recipe and rejects late taps', () => {
+    const { service, session, slots } = createLevel5Session(2, () => 0);
+    const oldRound = session.burgerRoundId;
+    completeBurger(service, session, slots[0]);
+    expect(slots[0].successCount).toBe(1);
+    expect(slots[0].totalPoints).toBe(1);
+    expect(session.burgerRoundId).toBe(oldRound + 1);
+    expect(() => service.submitInput(session.id, slots[1].token, 'R', oldRound)).toThrow('STALE_BURGER_ROUND');
+  });
+  it('continues to 2nd and 3rd place after each player reaches six burgers', () => {
+    const { service, session, slots } = createLevel5Session();
+    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[0]);
+    expect(slots[0].place).toBe(1);
+    expect(session.status).toBe('playing');
+    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[1]);
+    expect(slots[1].place).toBe(2);
+    expect(session.status).toBe('playing');
+    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[2]);
+    expect(slots.map((slot) => slot.place)).toEqual([1, 2, 3]);
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
+    expect(session.status).toBe('finished');
+  });
+  it('does not allow manual finish before all placements are decided', () => {
+    const { service, session, slots } = createLevel5Session();
+    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+  });
+});

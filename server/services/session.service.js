@@ -8,6 +8,13 @@ const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 8;
 const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
+const BURGER_TARGET_POINTS = 6;
+const BURGER_LENGTH = 4;
+const BURGER_INGREDIENTS = ['R', 'G', 'B'];
+const BURGER_EMOJI = { R: '🥩', G: '🥬', B: '🍅' };
+function createBurgerSequence(random) {
+  return Array.from({ length: BURGER_LENGTH }, () => BURGER_INGREDIENTS[Math.floor(random() * BURGER_INGREDIENTS.length)]);
+}
 function createFlappyState() {
   return { y: 0.5, velocity: 0, blockersPassed: 0, obstacles: [], crashId: 0, spawnAccumulator: 0, nextObstacleId: 1, penaltyMs: 0 };
 }
@@ -40,12 +47,14 @@ export class SessionService {
       stage: 1, nextPlace: 1, controllerColor: null,
       targetCycles: DEFAULT_TARGET_CYCLES, diceTarget: DICE_TARGET,
       diceValues: null, diceRoundId: 0,
+      burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
+      burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -127,9 +136,13 @@ export class SessionService {
       player.pointsEarned = 0;
       player.race = createRaceState();
       player.flappy = createFlappyState();
+      player.burgerProgressIndex = 0;
+      player.burgerRoundAttempted = false;
     }
     if (session.stage === 2) this.rollNextDiceRound(session);
     else session.diceValues = null;
+    if (session.stage === 5) this.rollNextBurgerRound(session);
+    else session.burgerSequence = null;
     return session;
   }
 
@@ -143,8 +156,45 @@ export class SessionService {
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
 
+    if (session.stage === 5) {
+      if (!BURGER_INGREDIENTS.includes(action)) throw new Error('INVALID_INPUT');
+      if (diceRoundId !== session.burgerRoundId) throw new Error('STALE_BURGER_ROUND');
+      if (slot.burgerRoundAttempted) throw new Error('ALREADY_ANSWERED');
+      const expected = session.burgerSequence[slot.burgerProgressIndex];
+      session.burgerLastDropId += 1;
+      session.burgerLastDrop = { id: session.burgerLastDropId, action, ingredient: BURGER_EMOJI[action], color: slot.color, playerName: slot.player?.name || slot.color };
+      if (action !== expected) {
+        slot.burgerRoundAttempted = true;
+        slot.roundFeedback = 'wrong';
+        if (this.allBurgerPlayersAttempted(session)) this.rollNextBurgerRound(session);
+        return { session, slot, correct: false, reset: false, cycleCompleted: false };
+      }
+      slot.burgerProgressIndex += 1;
+      slot.successFeedbackId += 1;
+      slot.roundFeedback = 'correct';
+      if (slot.burgerProgressIndex < session.burgerSequence.length) {
+        return { session, slot, correct: true, reset: false, cycleCompleted: false };
+      }
+      slot.successCount += 1;
+      session.burgerCompletedId += 1;
+      session.burgerWinnerColor = slot.color;
+      session.burgerCompletedSequence = [...session.burgerSequence];
+      slot.burgerRoundAttempted = true;
+      if (slot.successCount >= session.burgerTarget) {
+        slot.completed = true;
+        slot.place = session.nextPlace++;
+        slot.pointsEarned = POINTS_BY_PLACE[slot.place] || 0;
+        slot.totalPoints += slot.pointsEarned;
+      }
+      if (this.allActivePlayersFinished(session)) {
+        session.status = 'finished';
+        session.paused = false;
+      } else this.rollNextBurgerRound(session, slot);
+      return { session, slot, correct: true, reset: false, cycleCompleted: true, pointAwarded: 1 };
+    }
+
     if (session.stage === 4) {
-      if (action !== 'JUMP') throw new Error('INVALID_INPUT');
+      if (action !== 'JUMP' throw new Error('INVALID_INPUT');
       if (slot.flappy.penaltyMs > 0) throw new Error('FLAPPY_RECOVERING');
       slot.flappy.velocity = -0.62;
       return { session, slot, correct: true, jumped: true };
@@ -360,6 +410,22 @@ export class SessionService {
     return remaining.length > 0 && remaining.every((player) => !player.connected || player.roundAttempted);
   }
 
+  rollNextBurgerRound(session, winner = null) {
+    session.burgerSequence = createBurgerSequence(this.random);
+    session.burgerRoundId += 1;
+    for (const player of session.players) {
+      if (!player.activeForRound || player.completed) continue;
+      player.burgerProgressIndex = 0;
+      player.burgerRoundAttempted = false;
+      player.roundFeedback = player === winner ? 'correct' : null;
+    }
+  }
+
+  allBurgerPlayersAttempted(session) {
+    const remaining = session.players.filter((player) => player.activeForRound && !player.completed);
+    return remaining.length > 0 && remaining.every((player) => !player.connected || player.burgerRoundAttempted);
+  }
+
   allActivePlayersFinished(session) {
     const active = session.players.filter((player) => player.activeForRound);
     return active.length > 0 && active.every((player) => player.completed);
@@ -406,6 +472,9 @@ export class SessionService {
     session.paused = false;
     session.nextPlace = 1;
     session.diceValues = null;
+    session.burgerSequence = null;
+    session.burgerWinnerColor = null;
+    session.burgerCompletedSequence = null;
     return session;
   }
 
@@ -419,6 +488,9 @@ export class SessionService {
     session.paused = false;
     session.nextPlace = 1;
     session.diceValues = null;
+    session.burgerSequence = null;
+    session.burgerWinnerColor = null;
+    session.burgerCompletedSequence = null;
     for (const player of session.players) {
       player.activeForRound = false;
       player.progressIndex = 0;
@@ -455,6 +527,9 @@ export class SessionService {
     session.paused = false;
     session.nextPlace = 1;
     session.diceValues = null;
+    session.burgerSequence = null;
+    session.burgerWinnerColor = null;
+    session.burgerCompletedSequence = null;
     for (const player of session.players) {
       player.activeForRound = false;
       player.progressIndex = 0;
@@ -475,6 +550,10 @@ export class SessionService {
       stage: session.stage, targetCycles: session.targetCycles,
       diceTarget: session.diceTarget, diceValues: session.diceValues,
       diceRoundId: session.diceRoundId,
+      burgerTarget: session.burgerTarget, burgerSequence: session.burgerSequence,
+      burgerRoundId: session.burgerRoundId, burgerLastDropId: session.burgerLastDropId,
+      burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
+      burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
         color: player.color, player: player.player, connected: player.connected,
@@ -482,7 +561,9 @@ export class SessionService {
         progressIndex: player.progressIndex, cycles: player.cycles,
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
-        race: player.race, flappy: player.flappy, totalPoints: player.totalPoints, completed: player.completed,
+        race: player.race, flappy: player.flappy,
+        burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted,
+        totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
     };

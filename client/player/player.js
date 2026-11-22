@@ -83,6 +83,7 @@ function renderController(name, color, state) {
       button.classList.add('pressed');
       const payload = { action: button.dataset.a, inputId: thisInput };
       if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
+      if (latestState?.stage === 5) payload.roundId = latestState.burgerRoundId;
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) setFeedback(readableError(result.error), 'warning');
@@ -90,7 +91,7 @@ function renderController(name, color, state) {
           ? '✕ Wrong position — wait for the next dice roll'
           : 'Wrong colour — sequence restarted', 'warning');
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
-        else if (result.pointAwarded) setFeedback('Correct! +1 point', 'success');
+        else if (result.pointAwarded) setFeedback('Perfect burger! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
         else setFeedback('Good — keep going!', 'success');
       });
@@ -159,9 +160,10 @@ function updateController(state) {
   const isDice = state.stage === 2;
   const isRace = state.stage === 3;
   const isFlappy = state.stage === 4;
+  const isBurger = state.stage === 5;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0);
+      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
@@ -174,6 +176,9 @@ function updateController(state) {
   if (isDice) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
+  } else if (isBurger) {
+    sequence.innerHTML = (state.burgerSequence || []).map((action) => '<span>' + ({ R: '🥩', G: '🥬', B: '🍅' }[action]) + '</span>').join('');
+    hint.textContent = 'Build the burger in order · R Meat · G Vegetable · B Tomato';
   } else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
@@ -188,6 +193,9 @@ function updateController(state) {
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
   else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
+  else if (isBurger && mine.burgerRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong ingredient — wait for the next burger', 'warning');
+  else if (isBurger && mine.burgerRoundAttempted) setFeedback('Burger complete! +1 point · Next recipe loading', 'success');
+  else if (isBurger) setFeedback('Match the recipe on the shared screen!', '');
   else if (isDice && mine.roundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong answer — wait for next dice roll', 'warning');
   else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
   else if (isDice && mine.roundAttempted) setFeedback('Answer received — wait for next roll', '');
@@ -297,8 +305,9 @@ function readableError(code) {
     INVALID_TARGET_CYCLES: 'Choose between 1 and 100 cycles',
     DUPLICATE_INPUT: 'Input already received',
     STALE_ROUND: 'That dice roll has passed — use the current dice',
+    STALE_BURGER_ROUND: 'That burger recipe has passed — use the current recipe',
     ALREADY_ANSWERED: 'You already answered this dice roll',
-    FINISH_NOT_AVAILABLE: 'Level 2 runs until all three places are decided',
+    FINISH_NOT_AVAILABLE: 'This level runs until all three places are decided',
     RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds',
     FLAPPY_RECOVERING: 'Rocket recovering — tap again in a moment'
   })[code] || code || 'Something went wrong';

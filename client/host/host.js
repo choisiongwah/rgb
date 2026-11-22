@@ -34,7 +34,8 @@ function renderSlots(state) {
       count.textContent = state.stage === 2
         ? player.successCount + ' / ' + state.diceTarget
         : state.stage === 3 ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' m'
-          : state.stage === 4 ? (player.flappy?.blockersPassed || 0) + ' / 20'
+           : state.stage === 4 ? (player.flappy?.blockersPassed || 0) + ' / 20'
+          : state.stage === 5 ? player.successCount + ' / ' + state.burgerTarget
             : player.cycles + ' / ' + state.targetCycles;
     }
     if (result) {
@@ -60,7 +61,7 @@ function applyState(state) {
 }
 
 class RGBScene extends Phaser.Scene {
-  constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.audioContext = null; }
+  constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.audioContext = null; }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
@@ -68,6 +69,9 @@ class RGBScene extends Phaser.Scene {
     this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
     this.sequenceText = this.add.text(0, 0, 'R     →     G     →     B', { fontSize: '48px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0);
     this.statusText = this.add.text(0, 0, 'Waiting for players…', { fontSize: '22px', color: '#cbd5e1' }).setOrigin(0.5, 0);
+    this.burgerStackText = this.add.text(0, 0, '🥬   🥩   🍅', { fontSize: '64px', color: '#ffffff' }).setOrigin(0.5);
+    this.burgerFallingText = this.add.text(0, 0, '', { fontSize: '58px' }).setOrigin(0.5).setVisible(false);
+    this.burgerTopBunText = this.add.text(0, 0, '🍞', { fontSize: '64px' }).setOrigin(0.5).setVisible(false);
     this.playerTexts = [];
     this.diceGraphics = this.add.graphics();
     this.diceNumbers = [0, 1, 2].map(() => this.add.text(0, 0, '', {
@@ -91,6 +95,9 @@ class RGBScene extends Phaser.Scene {
     this.subtitle?.setPosition(center, height * 0.16).setFontSize(Math.max(12, Math.min(20, width * 0.017)));
     this.stageText?.setPosition(center, height * 0.26).setFontSize(Math.max(16, Math.min(25, width * 0.021)));
     this.sequenceText?.setPosition(center, height * 0.39).setFontSize(Math.max(19, Math.min(48, width * 0.04)));
+    this.burgerStackText?.setPosition(center, height * 0.69).setFontSize(Math.max(38, Math.min(76, width * 0.065)));
+    this.burgerFallingText?.setPosition(center, height * 0.22);
+    this.burgerTopBunText?.setPosition(center, height * 0.62);
     this.statusText?.setPosition(center, height * 0.88).setFontSize(Math.max(13, Math.min(23, width * 0.019)));
     this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, height * 0.53));
     const size = Math.min(height * 0.27, width * 0.15, 170);
@@ -106,6 +113,19 @@ class RGBScene extends Phaser.Scene {
       this.diceNumbers?.[index]?.setPosition(x, y).setFontSize(Math.max(32, size * 0.52));
       this.diceLabels?.[index]?.setPosition(x, y + size * 0.72).setFontSize(Math.max(11, Math.min(19, width * 0.016)));
     }
+  }
+  animateBurgerDrop(ingredient, color) {
+    this.tweens.killTweensOf(this.burgerFallingText);
+    this.burgerFallingText.setText(ingredient || '🥩').setColor(({ RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' })[color] || '#ffffff')
+      .setPosition(this.scale.width / 2, this.scale.height * 0.22).setAlpha(1).setScale(0.7).setVisible(true);
+    this.tweens.add({ targets: this.burgerFallingText, y: this.scale.height * 0.66, scale: 1.15, duration: 430, ease: 'Bounce.Out',
+      onComplete: () => this.burgerFallingText.setVisible(false) });
+  }
+  animateBurgerClose() {
+    this.tweens.killTweensOf(this.burgerTopBunText);
+    this.burgerTopBunText.setPosition(this.scale.width / 2, this.scale.height * 0.48).setScale(0.65).setAlpha(1).setVisible(true);
+    this.tweens.add({ targets: this.burgerTopBunText, y: this.scale.height * 0.64, scale: 1.12, duration: 480, ease: 'Bounce.Out',
+      onComplete: () => this.time.delayedCall(450, () => this.burgerTopBunText.setVisible(false)) });
   }
   flashSuccess(index) {
     const x = this.scale.width * (index + 0.5) / 3;
@@ -169,20 +189,33 @@ class RGBScene extends Phaser.Scene {
     const isDice = state.stage === 2;
     const isRace = state.stage === 3;
     const isFlappy = state.stage === 4;
-    this.title.setText(isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
+    const isBurger = state.stage === 5;
+    this.title.setText(isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isBurger ? 'Build the shown burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
-    this.sequenceText.setText(isFlappy ? 'TAP ANY BUTTON TO BOOST' : isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
+    this.sequenceText.setText(isBurger ? (state.burgerSequence || []).map((a) => ({ R: '🥩', G: '🥬', B: '🍅' }[a])).join('   →   ') : isFlappy ? 'TAP ANY BUTTON TO BOOST' : isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
     this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
       : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
       : state.paused ? 'GAME PAUSED'
       : isFlappy ? 'First to 20 blockers wins · Keep your rocket in the moving gaps!'
       : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
+      : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
+    this.burgerStackText.setVisible(isBurger);
+    if (!isBurger) { this.burgerFallingText.setVisible(false); this.burgerTopBunText.setVisible(false); }
+    if (isBurger && state.burgerLastDrop && state.burgerLastDropId !== this.lastBurgerDrop) {
+      this.lastBurgerDrop = state.burgerLastDropId;
+      this.animateBurgerDrop(state.burgerLastDrop.ingredient, state.burgerLastDrop.color);
+    }
+    if (isBurger && state.burgerCompletedId !== this.lastBurgerComplete) {
+      this.lastBurgerComplete = state.burgerCompletedId;
+      this.animateBurgerClose();
+    }
+    if (isBurger && state.burgerRoundId !== this.lastBurgerRound) this.lastBurgerRound = state.burgerRoundId;
     this.diceNumbers.forEach((item, index) => {
       item.setVisible(isDice);
       item.setText(isDice && state.diceValues ? String(state.diceValues[index]) : '');
@@ -201,6 +234,7 @@ class RGBScene extends Phaser.Scene {
         const progressLine = isFlappy
           ? (player.flappy?.blockersPassed || 0) + ' / 20 blockers\\n' + ['EASY','WIND','TIGHT GAPS','TURBULENCE'][Math.min(3, Math.floor((player.flappy?.blockersPassed || 0) / 6))]
           : isRace ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
+          : isBurger ? player.successCount + ' / ' + state.burgerTarget + ' burgers\\n' + (player.burgerProgressIndex || 0) + ' / 4 ingredients'
           : player.cycles + ' / ' + state.targetCycles + ' cycles';
         const label = (player.player?.name || player.color) +
           '\\n' + progressLine +
