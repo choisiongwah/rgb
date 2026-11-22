@@ -12,6 +12,7 @@ let isController = false;
 let inputId = 0;
 let latestState;
 let lastCrashId = 0;
+const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
   root.textContent = 'Invalid player link';
@@ -193,14 +194,22 @@ function renderRace(state, mine) {
   else { avatar.hidden = true; avatar.removeAttribute('src'); car.hidden = false; playerCar.classList.remove('has-avatar'); }
   playerCar.style.left = ((race.lane ?? 1) * 33.333 + 16.667) + '%';
   const obstacles = root.querySelector('#race-obstacles');
-  obstacles.innerHTML = '';
+  const activeIds = new Set();
   for (const item of race.obstacles || []) {
-    const vehicle = document.createElement('span');
-    vehicle.className = 'race-obstacle';
-    vehicle.textContent = item.type;
+    activeIds.add(item.id);
+    let vehicle = raceObstacleNodes.get(item.id);
+    if (!vehicle) {
+      vehicle = document.createElement('span');
+      vehicle.className = 'race-obstacle';
+      vehicle.textContent = item.type;
+      obstacles.append(vehicle);
+      raceObstacleNodes.set(item.id, vehicle);
+    }
     vehicle.style.left = ((item.lane * 33.333) + 16.667) + '%';
     vehicle.style.top = (item.progress * 100) + '%';
-    obstacles.append(vehicle);
+  }
+  for (const [id, vehicle] of raceObstacleNodes) {
+    if (!activeIds.has(id)) { vehicle.remove(); raceObstacleNodes.delete(id); }
   }
   if ((race.crashId || 0) > lastCrashId) {
     lastCrashId = race.crashId;
