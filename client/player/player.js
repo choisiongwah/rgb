@@ -188,9 +188,10 @@ function renderRace(state, mine) {
   root.querySelector('#race-penalty').textContent = penalty > 0 ? 'RECOVERING ' + penalty.toFixed(1) + 's' : '';
   const avatar = root.querySelector('#race-avatar');
   const car = root.querySelector('#race-car');
-  if (mine.player?.avatar) { avatar.src = mine.player.avatar; avatar.hidden = false; car.hidden = true; }
-  else { avatar.hidden = true; avatar.removeAttribute('src'); car.hidden = false; }
-  root.querySelector('#race-player').style.left = ((race.lane ?? 1) * 33.333 + 16.667) + '%';
+  const playerCar = root.querySelector('#race-player');
+  if (mine.player?.avatar) { avatar.src = mine.player.avatar; avatar.hidden = false; car.hidden = true; playerCar.classList.add('has-avatar'); }
+  else { avatar.hidden = true; avatar.removeAttribute('src'); car.hidden = false; playerCar.classList.remove('has-avatar'); }
+  playerCar.style.left = ((race.lane ?? 1) * 33.333 + 16.667) + '%';
   const obstacles = root.querySelector('#race-obstacles');
   obstacles.innerHTML = '';
   for (const item of race.obstacles || []) {
@@ -207,6 +208,10 @@ function renderRace(state, mine) {
     overlay.classList.remove('show');
     void overlay.offsetWidth;
     overlay.classList.add('show');
+    const playerCar = root.querySelector('#race-player');
+    playerCar.classList.remove('crashed');
+    void playerCar.offsetWidth;
+    playerCar.classList.add('crashed');
   }
 }
 
