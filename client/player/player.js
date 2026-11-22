@@ -111,6 +111,7 @@ function renderControls(state) {
     if (state.status === 'waiting') buttons.push(['start', 'Start level', false, 'primary']);
     if (isPlaying && state.stage === 1) buttons.push(['finish', 'Finish level', false, 'danger']);
     if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', false, 'danger']);
+    if (state.stage > 1 || state.status !== 'waiting') buttons.push(['end', 'End game', false, 'danger']);
     if (state.stage === 1) buttons.push(['config', 'Config', false, 'secondary']);
   }
   if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', false, 'secondary']);
@@ -122,7 +123,9 @@ function renderControls(state) {
     button.className = style;
     button.textContent = label;
     button.addEventListener('click', () => {
-      if (action === 'config') {
+      if (action === 'end') {
+        if (window.confirm('End this game and return everyone to Level 1? All scores from this game will be cleared.')) emitControl('end');
+      } else if (action === 'config') {
         root.querySelector('#target-cycles').value = state.targetCycles;
         root.querySelector('#config-panel').hidden = !root.querySelector('#config-panel').hidden;
       } else emitControl(action);
