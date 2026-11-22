@@ -8,6 +8,7 @@ let token = sessionStorage.getItem('rgb-token');
 let socket;
 let game;
 let currentState;
+let successAudioContext;
 
 function show(user) {
   $('#login').hidden = true;
@@ -116,7 +117,7 @@ class RGBScene extends Phaser.Scene {
     try {
       const AudioCtor = window.AudioContext || window.webkitAudioContext;
       if (AudioCtor) {
-        this.audioContext ||= new AudioCtor();
+        this.audioContext ||= successAudioContext || new AudioCtor();
         if (this.audioContext.state === 'suspended') this.audioContext.resume();
         const oscillator = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
@@ -234,6 +235,10 @@ class RGBScene extends Phaser.Scene {
 function ordinal(place) { return place === 1 ? '1ST' : place === 2 ? '2ND' : place === 3 ? '3RD' : place + 'TH'; }
 
 async function createRoom() {
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtor) { successAudioContext ||= new AudioCtor(); successAudioContext.resume(); }
+  } catch { /* Sound remains optional if the browser blocks audio. */ }
   const response = await fetch('/api/sessions', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
   const session = await response.json();
   if (!response.ok) { $('#error').textContent = session.error || 'Could not create session'; return; }
