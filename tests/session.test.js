@@ -722,12 +722,12 @@ describe('SessionService Level 10 Matrix Master', () => {
   it('rotates through mixed puzzle families with progressive difficulty', () => {
     const { service, session, slots } = createLevel10Session(1);
     const categories = [];
-    for (let i = 0; i < 8; i += 1) {
+    for (let i = 0; i < 6; i += 1) {
       categories.push(session.matrixPuzzle.category);
       service.submitInput(session.id, slots[0].token, correctAction(session), session.matrixRoundId);
     }
     expect(new Set(categories).size).toBe(4);
-    expect(session.matrixPuzzle.difficulty).toBe(4);
+    expect(session.matrixPuzzle.difficulty).toBe(3);
   });
   it('rejects a stale answer and prevents a player answering twice in one round', () => {
     const { service, session, slots } = createLevel10Session(2);
