@@ -97,7 +97,7 @@ function applyState(state) {
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
-  // Individual gameplay scenes belong on each player's game screen, not the admin display.
+  // Keep individual road, flight, knife and island scenes on player screens, not the admin display.
   $('#game-root').hidden = [3, 4, 7, 8].includes(state.stage);
   renderSlots(state);
   renderFinalResults(state);
