@@ -207,26 +207,30 @@ describe('SessionService Level 3 Highway Dodge', () => {
 
   it('advances distance at 100 metres per second and increases race speed', () => {
     const { service, session, slots } = createLevel3Session(1);
-    service.tickRaces(1000);
+    service.tickRaces(500);
+    service.tickRaces(500);
     expect(slots[0].race.distanceMeters).toBeCloseTo(100);
     expect(slots[0].race.speedMultiplier).toBeCloseTo(1);
-    service.tickRaces(1000);
+    service.tickRaces(500);
+    service.tickRaces(500);
     expect(slots[0].race.distanceMeters).toBeGreaterThan(200);
     expect(slots[0].race.speedMultiplier).toBeGreaterThan(1);
   });
 
   it('applies a two-second collision penalty and temporarily locks lane input', () => {
     const { service, session, slots } = createLevel3Session(1, () => 0.4);
-    for (let i = 0; i < 5; i += 1) service.tickRaces(500);
+    for (let i = 0; i < 7; i += 1) service.tickRaces(500);
     expect(slots[0].race.crashId).toBe(1);
     expect(slots[0].race.penaltyMs).toBe(2000);
     expect(() => service.submitInput(session.id, slots[0].token, 'R')).toThrow('RACE_PENALTY_ACTIVE');
     const distanceAtCrash = slots[0].race.distanceMeters;
     slots[0].race.obstacles = [];
-    service.tickRaces(1000);
+    service.tickRaces(500);
+    service.tickRaces(500);
     expect(slots[0].race.penaltyMs).toBe(1000);
     expect(slots[0].race.distanceMeters).toBe(distanceAtCrash);
-    service.tickRaces(1000);
+    service.tickRaces(500);
+    service.tickRaces(500);
     expect(slots[0].race.penaltyMs).toBe(0);
     service.submitInput(session.id, slots[0].token, 'R');
     expect(slots[0].race.lane).toBe(0);
