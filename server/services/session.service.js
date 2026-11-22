@@ -790,7 +790,7 @@ export class SessionService {
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
       islandTarget: ISLAND_TARGET_SHARKS, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieTargetColor: pieColorAtStrike(session.pieAngle),
-      matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
+      matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle ? { roundId: session.matrixPuzzle.roundId, difficulty: session.matrixPuzzle.difficulty, category: session.matrixPuzzle.category, cells: session.matrixPuzzle.cells, options: session.matrixPuzzle.options } : null, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
         color: player.color, player: player.player, connected: player.connected,
