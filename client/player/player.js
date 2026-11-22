@@ -11,6 +11,7 @@ let playerColor;
 let isController = false;
 let inputId = 0;
 let latestState;
+let lastCrashId = 0;
 
 if (!sessionId || !joinToken) {
   root.textContent = 'Invalid player link';
@@ -65,7 +66,8 @@ function renderController(name, color, state) {
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
-    '<div class="pad"><button data-a="R" class="red" aria-label="Red / Left">R</button><button data-a="G" class="green" aria-label="Green / Middle">G</button><button data-a="B" class="blue" aria-label="Blue / Right">B</button></div>' +
+    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
+    '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
     '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
   document.querySelector('#player-name').textContent = name;
@@ -84,6 +86,7 @@ function renderController(name, color, state) {
         else if (!result.correct) setFeedback(latestState?.stage === 2
           ? '✕ Wrong position — wait for the next dice roll'
           : 'Wrong colour — sequence restarted', 'warning');
+        else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
         else if (result.pointAwarded) setFeedback('Correct! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
         else setFeedback('Good — keep going!', 'success');
@@ -139,24 +142,31 @@ function updateController(state) {
   const mine = state.players.find((player) => player.color === playerColor);
   if (!mine) return;
   const isDice = state.stage === 2;
+  const isRace = state.stage === 3;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted);
+      !mine.activeForRound || (isDice && mine.roundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
+  sequence.hidden = isRace;
+  hint.hidden = isRace;
+  root.querySelector('#race-screen').hidden = !isRace;
   if (isDice) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
-  } else {
+  } else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
   }
+  if (isRace) renderRace(state, mine);
   if (mine.completed) setFeedback('You finished — ' + ordinal(mine.place) + ' place!', 'success');
   else if (state.status === 'finished') setFeedback('Level complete. Next level is ready.', 'success');
   else if (state.paused) setFeedback('Game paused', 'warning');
   else if (state.status === 'waiting') setFeedback('Waiting for the game to start', '');
   else if (!mine.activeForRound) setFeedback('Ready for the next level', '');
+  else if (isRace && (mine.race?.penaltyMs || 0) > 0) setFeedback('CRASH! 2-second penalty — hold tight', 'warning');
+  else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
   else if (isDice && mine.roundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong answer — wait for next dice roll', 'warning');
   else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
   else if (isDice && mine.roundAttempted) setFeedback('Answer received — wait for next roll', '');
@@ -165,6 +175,39 @@ function updateController(state) {
   renderControls(state);
   const target = root.querySelector('#target-cycles');
   if (target && document.activeElement !== target) target.value = state.targetCycles;
+}
+
+function renderRace(state, mine) {
+  const race = mine.race || {};
+  const distance = Math.floor(race.distanceMeters || 0);
+  root.querySelector('#race-distance').textContent = distance.toLocaleString() + ' m / 3,000 m';
+  root.querySelector('#race-speed').textContent = (race.speedMultiplier || 1).toFixed(1) + '× SPEED';
+  root.querySelector('#race-progress-fill').style.width = (distance / 3000 * 100) + '%';
+  root.querySelector('#race-lane-label').textContent = ['LEFT LANE', 'CENTRE LANE', 'RIGHT LANE'][race.lane ?? 1];
+  const penalty = Math.ceil((race.penaltyMs || 0) / 100) / 10;
+  root.querySelector('#race-penalty').textContent = penalty > 0 ? 'RECOVERING ' + penalty.toFixed(1) + 's' : '';
+  const avatar = root.querySelector('#race-avatar');
+  const car = root.querySelector('#race-car');
+  if (mine.player?.avatar) { avatar.src = mine.player.avatar; avatar.hidden = false; car.hidden = true; }
+  else { avatar.hidden = true; avatar.removeAttribute('src'); car.hidden = false; }
+  root.querySelector('#race-player').style.left = ((race.lane ?? 1) * 33.333 + 16.667) + '%';
+  const obstacles = root.querySelector('#race-obstacles');
+  obstacles.innerHTML = '';
+  for (const item of race.obstacles || []) {
+    const vehicle = document.createElement('span');
+    vehicle.className = 'race-obstacle';
+    vehicle.textContent = item.type;
+    vehicle.style.left = ((item.lane * 33.333) + 16.667) + '%';
+    vehicle.style.top = (item.progress * 100) + '%';
+    obstacles.append(vehicle);
+  }
+  if ((race.crashId || 0) > lastCrashId) {
+    lastCrashId = race.crashId;
+    const overlay = root.querySelector('#race-crash');
+    overlay.classList.remove('show');
+    void overlay.offsetWidth;
+    overlay.classList.add('show');
+  }
 }
 
 function setFeedback(message, kind) {
@@ -189,7 +232,8 @@ function readableError(code) {
     DUPLICATE_INPUT: 'Input already received',
     STALE_ROUND: 'That dice roll has passed — use the current dice',
     ALREADY_ANSWERED: 'You already answered this dice roll',
-    FINISH_NOT_AVAILABLE: 'Level 2 runs until all three places are decided'
+    FINISH_NOT_AVAILABLE: 'Level 2 runs until all three places are decided',
+    RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds'
   })[code] || code || 'Something went wrong';
 }
 
