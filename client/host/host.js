@@ -97,7 +97,7 @@ function applyState(state) {
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
-  // Individual gameplay scenes belong on each player's game screen, not the admin display.
+  // Keep individual road, flight, knife and island scenes on player screens, not the admin display.
   $('#game-root').hidden = [3, 4, 7, 8].includes(state.stage);
   renderSlots(state);
   renderFinalResults(state);
@@ -268,7 +268,7 @@ class RGBScene extends Phaser.Scene {
     const isMatrix = state.stage === 10;
     this.title.setText(isMatrix ? 'MATRIX MASTER' : isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Hit each rotating colour zone 6 times · First to finish wins.' : isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the shown burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the target burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setVisible(!isMatrix);
@@ -283,7 +283,7 @@ class RGBScene extends Phaser.Scene {
       : isFlappy ? 'First to 20 blockers wins · Keep your rocket in the moving gaps!'
       : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
-      : isPie ? ('PIE SPIN ' + (state.pieSpeed || 0.9).toFixed(1) + '× · ' + (state.pieDirection < 0 ? 'ANTICLOCKWISE' : 'CLOCKWISE')) : isUfo ? (state.ufoPhase === 'flyby' ? 'WATCH THE UFO · ' + (state.ufoDurationMs / 1000).toFixed(1) + ' SECOND PASS' : 'WHICH UFO JUST FLEW PAST? · CYCLE ' + state.ufoCycle)
+      : isPie ? ('KNIFE WHEEL ' + (state.pieSpeed || 0.9).toFixed(1) + '× · THROW ON COLOUR') : isUfo ? (state.ufoPhase === 'flyby' ? 'WATCH THE UFO · ' + (state.ufoDurationMs / 1000).toFixed(1) + ' SECOND PASS' : 'WHICH UFO JUST FLEW PAST? · CYCLE ' + state.ufoCycle)
       : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
@@ -298,10 +298,31 @@ class RGBScene extends Phaser.Scene {
       option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || ''));
     });
     this.burgerStackText.setVisible(isBurger);
-    if (isBurger) this.burgerStackText.setText(['🍞', ...(state.burgerSequence || []).map((a) => ({ R: '🥩', G: '🥬', B: '🍅' }[a] || '')), '🍞'].join('\n'));
-    this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie); if(isPie){ this.pieGraphics.clear(); const radius=Math.min(this.scale.width*.12,this.scale.height*.19,120); const colors=[0xef4444,0x22c55e,0x3b82f6]; for(let sector=0;sector<3;sector++){ const start=-Math.PI/2-Math.PI/3+sector*Math.PI*2/3-state.pieAngle; const end=start+Math.PI*2/3; const points=[{x:0,y:0}]; for(let step=0;step<=24;step++){const a=start+(end-start)*step/24;points.push({x:Math.cos(a)*radius,y:Math.sin(a)*radius});} this.pieGraphics.fillStyle(colors[sector],1); this.pieGraphics.fillPoints(points,true); this.pieGraphics.lineStyle(5,0xffffff,.95); this.pieGraphics.strokePoints(points,true); } this.pieGraphics.fillStyle(0x111827,1); this.pieGraphics.fillCircle(0,0,radius*.16); this.pieHud.setText('HIT THE COLOUR AT THE POINTER'); if(state.pieLastHitId!==this.lastPieHit){this.lastPieHit=state.pieLastHitId;this.pieKnife.setPosition(this.scale.width/2,this.scale.height*.78).setScale(.65).setAlpha(1);this.tweens.add({targets:this.pieKnife,y:this.scale.height*.57,scale:1.05,alpha:0,duration:300,ease:'Cubic.Out'});} } this.ufoWindow.setVisible(isUfo); this.ufoTarget.setVisible(isUfo && state.ufoPhase==='flyby');
-    this.ufoOptions.forEach((o,i)=>{o.setVisible(isUfo && (state.ufoPhase==='choose' || state.ufoPhase==='flyby'));if(state.ufoOptions?.[i])o.setTexture('ufo-'+state.ufoOptions[i]);});
-    this.ufoOptionLabels.forEach(o=>o.setVisible(isUfo && (state.ufoPhase==='choose' || state.ufoPhase==='flyby')));
+    this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
+    if(isPie){
+      this.pieGraphics.clear();
+      const radius=Math.min(this.scale.width*.19,this.scale.height*.29,190);
+      const colors=[0xef4444,0x22c55e,0x3b82f6];
+      for(let sector=0;sector<3;sector++){
+        const start=-Math.PI/2-Math.PI/3+sector*Math.PI*2/3-state.pieAngle;
+        const end=start+Math.PI*2/3; const points=[{x:0,y:0}];
+        for(let step=0;step<=24;step++){const a=start+(end-start)*step/24;points.push({x:Math.cos(a)*radius,y:Math.sin(a)*radius});}
+        this.pieGraphics.fillStyle(colors[sector],1);this.pieGraphics.fillPoints(points,true);
+        this.pieGraphics.lineStyle(4,0x050505,1);this.pieGraphics.strokePoints(points,true);
+      }
+      this.pieGraphics.fillStyle(0x050505,1);this.pieGraphics.fillCircle(0,0,radius*.12);
+      for(const player of state.players.filter(p=>p.joined)){
+        for(const knife of player.pieKnives||[]){
+          const a=knife.angle-state.pieAngle, x=Math.cos(a)*radius*.88, y=Math.sin(a)*radius*.88;
+          this.pieGraphics.lineStyle(5,0xffffff,1);this.pieGraphics.lineBetween(x-Math.cos(a)*22,y-Math.sin(a)*22,x+Math.cos(a)*22,y+Math.sin(a)*22);
+          this.pieGraphics.fillStyle(({R:0xef4444,G:0x22c55e,B:0x3b82f6})[knife.color]||0xffffff,1);this.pieGraphics.fillCircle(x,y,5);
+        }
+      }
+      this.pieHud.setText('R / G / B · TIME YOUR THROW');
+      if(state.pieLastHitId!==this.lastPieHit){this.lastPieHit=state.pieLastHitId;this.pieKnife.setPosition(this.scale.width/2,this.scale.height*.78).setScale(.65).setAlpha(1);this.tweens.add({targets:this.pieKnife,y:this.scale.height*.57,scale:1.05,alpha:0,duration:300,ease:'Cubic.Out'});}
+    } this.ufoWindow.setVisible(isUfo); this.ufoTarget.setVisible(isUfo && state.ufoPhase==='flyby');
+    this.ufoOptions.forEach((o,i)=>{o.setVisible(isUfo && state.ufoPhase==='choose');if(state.ufoOptions?.[i])o.setTexture('ufo-'+state.ufoOptions[i]);});
+    this.ufoOptionLabels.forEach(o=>o.setVisible(isUfo && state.ufoPhase==='choose'));
     if(isUfo && state.ufoRoundId!==this.lastUfoRound){this.lastUfoRound=state.ufoRoundId;this.tweens.killTweensOf(this.ufoTarget);this.ufoTarget.setTexture('ufo-'+(state.ufoTargetId||1)).setPosition(this.scale.width+100,this.scale.height*.46).setVisible(true);this.tweens.add({targets:this.ufoTarget,x:-100,duration:state.ufoDurationMs||2000,ease:'Linear',onComplete:()=>this.ufoTarget.setVisible(false)});}
     if(!isUfo){this.ufoTarget.setVisible(false);this.ufoOptions.forEach(o=>o.setVisible(false));this.ufoOptionLabels.forEach(o=>o.setVisible(false));}
     if (!isBurger) { this.burgerFallingText.setVisible(false); this.burgerTopBunText.setVisible(false); }
@@ -325,7 +346,7 @@ class RGBScene extends Phaser.Scene {
     this.diceLabels.forEach((item) => item.setVisible(isDice));
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
-    if (!isDice && !isBurger && !isUfo && !isPie) {
+    if (!isDice && !isUfo && !isPie) {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
@@ -349,7 +370,7 @@ class RGBScene extends Phaser.Scene {
       });
     }
     for (let index = 0; index < this.playerTexts.length; index += 1) {
-      if (isDice || isBurger || isUfo || isPie || isMatrix || !state.players[index]?.joined) {
+      if (isDice || isUfo || isPie || isMatrix || !state.players[index]?.joined) {
         this.playerTexts[index]?.destroy();
         this.playerTexts[index] = null;
       }
