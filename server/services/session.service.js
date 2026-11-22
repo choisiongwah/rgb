@@ -145,6 +145,7 @@ export class SessionService {
       }
 
       slot.successCount += 1;
+      slot.successFeedbackId += 1;
       slot.roundFeedback = 'correct';
       let cycleCompleted = false;
       if (slot.successCount >= session.diceTarget) {
@@ -170,6 +171,7 @@ export class SessionService {
     }
 
     slot.progressIndex += 1;
+    slot.successFeedbackId += 1;
     let cycleCompleted = false;
     if (slot.progressIndex === SEQUENCE.length) {
       slot.progressIndex = 0;
@@ -301,7 +303,7 @@ export class SessionService {
         joined: player.joined, activeForRound: player.activeForRound,
         progressIndex: player.progressIndex, cycles: player.cycles,
         successCount: player.successCount, roundAttempted: player.roundAttempted,
-        roundFeedback: player.roundFeedback,
+        roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
