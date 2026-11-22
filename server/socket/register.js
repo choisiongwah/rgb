@@ -8,7 +8,7 @@ const inputSchema = z.object({
 });
 const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume']) }),
+  z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
   z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
 ]);
 const room = (id) => 'session:' + id;
@@ -66,6 +66,7 @@ export function registerSocketHandlers(io, { sessions }) {
         let session;
         if (action === 'start') session = sessions.startLevel(id, token);
         else if (action === 'reset') session = sessions.resetLevel(id, token);
+        else if (action === 'end') session = sessions.endGame(id, token);
         else if (action === 'finish') session = sessions.finishLevel(id, token);
         else if (action === 'next') session = sessions.nextLevel(id);
         else if (action === 'pause') session = sessions.setPaused(id, true);
