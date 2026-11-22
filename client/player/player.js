@@ -68,7 +68,8 @@ function renderController(name, color, state) {
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
-    '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +\n    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
+    '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
+    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
     '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
@@ -99,7 +100,8 @@ function renderController(name, color, state) {
     button.addEventListener('lostpointercapture', () => button.classList.remove('pressed'));
   });
   const jump = (event) => {
-    if (latestState?.stage !== 4 || latestState.status !== 'playing' || latestState.paused) return;
+    const mine = latestState?.players?.find((player) => player.color === playerColor);
+    if (latestState?.stage !== 4 || latestState.status !== 'playing' || latestState.paused || mine?.completed) return;
     event?.preventDefault?.();
     if (!socket?.connected) return;
     socket.emit('player:input', { action: 'JUMP', inputId: inputId++ }, (result) => {
@@ -163,8 +165,8 @@ function updateController(state) {
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace;
-  hint.hidden = isRace;
+  sequence.hidden = isRace || isFlappy;
+  hint.hidden = isRace || isFlappy;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#flappy-screen').hidden = !isFlappy;
   root.querySelector('.pad').hidden = isFlappy;
