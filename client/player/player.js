@@ -14,6 +14,8 @@ let latestState;
 let lastCrashId = 0;
 let lastFlappyCrashId = 0;
 let lastIslandBiteId = 0;
+let lastBurgerStackFlashId = 0;
+let lastBurgerStackMissId = 0;
 const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
@@ -70,6 +72,7 @@ function renderController(name, color, state) {
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
     '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
+    '<section id="burger-stack-screen" class="burger-stack-screen" hidden><div class="burger-stack-hud"><strong id="burger-stack-progress">0 / 4 BURGERS</strong><span id="burger-stack-difficulty">EASY STACK</span></div><div class="burger-stack-world"><div class="burger-stack-lanes"><span></span><span></span><span></span></div><div id="burger-stack-drops" class="burger-stack-drops"></div><div id="burger-stack-player" class="burger-stack-player">👨‍🍳</div><div id="burger-stack-base" class="burger-stack-base"><span>🍞</span><div id="burger-stack-layers"></div><span>🍞</span></div><div id="burger-stack-effect" class="burger-stack-effect">PERFECT STACK!</div><div id="burger-stack-miss" class="burger-stack-miss">MISALIGNED! -1 SEC</div></div><div class="burger-stack-status"><span id="burger-stack-challenge">CHALLENGE 1</span><span id="burger-stack-penalty"></span></div></section>' +
     '<section id="island-screen" class="island-screen" hidden><div class="island-hud"><strong id="island-progress">0 / 50 SHARKS</strong><span id="island-milestone">START</span></div><div class="island-world"><div class="island-sky"></div><div class="island-sea"></div><div class="island-destination">🏝️<small>DESTINATION</small></div><div id="island-steps" class="island-steps"></div><div id="island-player" class="island-player">🧑‍🚀</div><div id="island-shark" class="island-shark">🦈</div><div id="island-bite" class="island-bite">CHOMP! -1 SEC</div></div><div class="island-progress"><div id="island-progress-fill"></div></div></section>' +
     '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
@@ -168,16 +171,21 @@ function updateController(state) {
   const isUfo = state.stage === 6;
   const isPie = state.stage === 7;
   const isIsland = state.stage === 8;
+  const isBurgerStack = state.stage === 9;
   root.querySelectorAll('[data-a]').forEach((button) => {
+    button.hidden = isBurgerStack && button.dataset.a === 'G';
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0) || (isIsland && (mine.island?.penaltyMs || 0) > 0);
+      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0) || (isIsland && (mine.island?.penaltyMs || 0) > 0) || (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack;
   hint.hidden = isRace || isFlappy;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#island-screen').hidden = !isIsland;
+  root.querySelector('#burger-stack-screen').hidden = !isBurgerStack;
+  root.querySelector('.pad').classList.toggle('burger-stack-pad', isBurgerStack);
+  if (isBurgerStack) renderBurgerStack(state, mine);
   if (isIsland) renderIsland(state, mine);
   root.querySelector('#flappy-screen').hidden = !isFlappy;
   root.querySelector('.pad').hidden = isFlappy;
@@ -193,6 +201,7 @@ function updateController(state) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
   } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
   else if (isIsland) { hint.hidden=false; hint.textContent='Match the shark colour to cross safely · R Red · G Green · B Blue'; }
+  else if (isBurgerStack) { hint.hidden=false; hint.textContent='Move one lane at a time · R LEFT · B RIGHT · catch every falling ingredient'; }
   else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
@@ -212,6 +221,9 @@ function updateController(state) {
   else if (isIsland && mine.island?.penaltyMs > 0) setFeedback('SHARK BITE! Recovering for 1 second…', 'warning');
   else if (isIsland && mine.roundFeedback === 'bitten') setFeedback('Wrong colour! You fell back to the last island checkpoint.', 'warning');
   else if (isIsland) setFeedback('Cross the sea — match each shark colour!', '');
+  else if (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0) setFeedback('MISALIGNED! Recovering for 1 second…', 'warning');
+  else if (isBurgerStack && mine.burgerStack?.successCount > 0) setFeedback('Burger challenge ' + mine.burgerStack.successCount + ' complete — keep stacking!', 'success');
+  else if (isBurgerStack) setFeedback('Catch each ingredient in the matching lane to build a perfect burger!', '');
   else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
   else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong UFO — wait for the next fly-by', 'warning');
   else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct UFO! +1 point', 'success');
@@ -228,6 +240,34 @@ function updateController(state) {
   renderControls(state);
   const target = root.querySelector('#target-cycles');
   if (target && document.activeElement !== target) target.value = state.targetCycles;
+}
+
+function renderBurgerStack(state, mine) {
+  const stack = mine.burgerStack || {};
+  const successes = stack.successCount || 0;
+  const lane = stack.lane ?? 1;
+  root.querySelector('#burger-stack-progress').textContent = successes + ' / 4 BURGERS';
+  root.querySelector('#burger-stack-difficulty').textContent = ['EASY STACK','QUICKER DROPS','FAST STACKING','MASTER CHEF'][Math.min(3, successes)];
+  root.querySelector('#burger-stack-challenge').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.challengeLength || 5) + ' LAYERS';
+  const remaining = Math.ceil((stack.penaltyMs || 0) / 100) / 10;
+  root.querySelector('#burger-stack-penalty').textContent = remaining > 0 ? 'RECOVERING ' + remaining.toFixed(1) + 's' : '';
+  root.querySelector('#burger-stack-player').style.left = [20,50,80][lane] + '%';
+  const layers = root.querySelector('#burger-stack-layers');
+  layers.innerHTML = (stack.stacked || []).map((item) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🥒'}[item.ingredient] || '🍔') + '</span>').join('');
+  const drops = root.querySelector('#burger-stack-drops');
+  drops.innerHTML = (stack.drops || []).map((drop) => '<span class="burger-stack-drop" style="left:' + [20,50,80][drop.lane] + '%;top:' + (drop.y * 100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🥒'}[drop.ingredient] || '🍔') + '</span>').join('');
+  if ((stack.stackFlashId || 0) > lastBurgerStackFlashId) {
+    lastBurgerStackFlashId = stack.stackFlashId;
+    const base = root.querySelector('#burger-stack-base');
+    base.classList.remove('stack-flash'); void base.offsetWidth; base.classList.add('stack-flash');
+    const effect = root.querySelector('#burger-stack-effect');
+    effect.classList.remove('show'); void effect.offsetWidth; effect.classList.add('show');
+  }
+  if ((stack.missId || 0) > lastBurgerStackMissId) {
+    lastBurgerStackMissId = stack.missId;
+    const overlay = root.querySelector('#burger-stack-miss');
+    overlay.classList.remove('show'); void overlay.offsetWidth; overlay.classList.add('show');
+  }
 }
 
 function renderIsland(state, mine) {
@@ -349,7 +389,8 @@ function readableError(code) {
     ALREADY_ANSWERED: 'You already answered this dice roll',
     FINISH_NOT_AVAILABLE: 'This level runs until all three places are decided',
     RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds',
-    FLAPPY_RECOVERING: 'Rocket recovering — tap again in a moment'
+    FLAPPY_RECOVERING: 'Rocket recovering — tap again in a moment',
+    BURGER_STACK_RECOVERING: 'Recovering from a missed ingredient — wait 1 second'
   })[code] || code || 'Something went wrong';
 }
 
