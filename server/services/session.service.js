@@ -173,6 +173,7 @@ export class SessionService {
       slot.successFeedbackId += 1;
       slot.roundFeedback = 'correct';
       if (slot.burgerProgressIndex < session.burgerSequence.length) {
+        slot.roundFeedback = 'ingredient';
         return { session, slot, correct: true, reset: false, cycleCompleted: false };
       }
       slot.successCount += 1;

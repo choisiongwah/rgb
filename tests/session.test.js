@@ -436,7 +436,9 @@ describe('SessionService Level 5 Burger Builder', () => {
     expect(view.burgerTarget).toBe(6);
   });
   it('maps R/G/B to meat, vegetable and tomato drops for each input', () => {
-    const { service, session, slots } = createLevel5Session(1, () => 0);
+    let randomIndex = 0;
+    const random = () => [0, 0.4, 0.8, 0][randomIndex++ % 4];
+    const { service, session, slots } = createLevel5Session(2, random);
     const roundId = session.burgerRoundId;
     service.submitInput(session.id, slots[0].token, 'R', roundId);
     expect(session.burgerLastDrop).toMatchObject({ action: 'R', ingredient: '🥩', color: 'RED' });
