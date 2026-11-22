@@ -717,7 +717,7 @@ describe('SessionService Level 10 Matrix Master', () => {
     expect(view.matrixPuzzle.cells).toHaveLength(8);
     expect(view.matrixPuzzle.options).toHaveLength(3);
     expect(new Set(view.matrixPuzzle.options).size).toBe(3);
-    expect(view.matrixPuzzle.options[view.matrixPuzzle.correctIndex]).toBeTruthy();
+    expect(view.matrixPuzzle).not.toHaveProperty('correctIndex');
   });
   it('rotates through mixed puzzle families with progressive difficulty', () => {
     const { service, session, slots } = createLevel10Session(1);
