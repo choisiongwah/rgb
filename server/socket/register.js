@@ -6,7 +6,8 @@ const inputSchema = z.object({
   inputId: z.number().int().nonnegative(),
   roundId: z.number().int().nonnegative().optional()
 });
-const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });\nconst controlSchema = z.discriminatedUnion('action', [
+const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
+const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume']) }),
   z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
 ]);
