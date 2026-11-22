@@ -168,6 +168,14 @@ describe('SessionService Level 2 Dice Reaction', () => {
     expect(session.diceTarget).toBe(8);
   });
 
+  it('increments the shared success feedback counter for correct dice answers', () => {
+    const { service, session, slots } = createLevel2Session(1);
+    expect(slots[0].successFeedbackId).toBe(0);
+    answerDice(service, session, slots[0], 'G');
+    expect(slots[0].successFeedbackId).toBe(1);
+    expect(service.toPublicView(session).players[0].successFeedbackId).toBe(1);
+  });
+
   it('awards the point to the first player choosing the largest dice position', () => {
     const { service, session, slots } = createLevel2Session();
     const roundId = session.diceRoundId;
