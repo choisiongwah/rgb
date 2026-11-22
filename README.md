@@ -24,10 +24,10 @@ Node.js + Phaser 3 multiplayer party-game scaffold. A desktop host displays the 
 These are demo credentials committed to a public repository. Replace them before public deployment and never reuse them elsewhere. Supabase Auth is a planned replacement for this temporary whitelist.
 
 ## Game levels
-- Up to three players join using their colour-specific QR code. The first player to join becomes the session controller and keeps controller privileges after reconnecting.
+- Up to three players join using their colour-specific QR code. During join, each player can choose an astronaut, car-racer or hazmat suit and optionally upload a profile photo; the photo is resized in the browser and displayed inside the character's visor. Without a photo, the visor remains black. The first player to join becomes the session controller and keeps controller privileges after reconnecting.
 - The shared host display is split into a 70% upper game area and a 30% lower player strip. Each player column shows a QR code until that slot joins, then shows the player's live result and score.
-- Level 1 is RGB Sequence Rush: complete R → G → B cycles. Config controls the target (1–100; default 20). A wrong button resets only the current cycle.
-- Level 2 is Dice Reaction: three distinct values from 1–6 are rolled. R means left, G means middle, and B means right. The largest value is the correct position. The first correct answer earns +1 and triggers the next roll. A wrong answer displays a red X and disqualifies that player for that roll; if all remaining connected players have answered incorrectly, the dice roll again. First to 8 correct answers places first, and play continues for second and third.
+- Level 1 is RGB Sequence Rush: complete R → G → B cycles. Config controls the target (1–100; default 20). A wrong button resets only the current cycle. Every valid input triggers a green O flash and a short success tone on the host display.
+- Level 2 is Dice Reaction: three distinct values from 1–6 are rolled with a short shuffle animation. R means left, G means middle, and B means right. The largest value is the correct position. Correct answers use the same green O and success tone feedback. The first correct answer earns +1 and triggers the next roll. A wrong answer displays a red X and disqualifies that player for that roll; if all remaining connected players have answered incorrectly, the dice roll again. First to 8 correct answers places first, and play continues for second and third.
 - Both levels award placement points: 1st = 5, 2nd = 3, 3rd = 1. Cumulative points carry between levels.
 - All players can pause/resume and move to the next level once the current level is finished. Only the controller can start/reset a level or configure Level 1. Level 2 runs through all three placements automatically and cannot be manually finished early.
 - Reset removes points awarded in the current level and clears its progress while preserving points from earlier levels.
@@ -43,4 +43,4 @@ Mobile buttons use pointer events so touch input is sent immediately without wai
 - `npm test`
 
 ## Current limitations
-Session state and scores are in memory. Avatar uploads, persistent scores, Supabase Auth, and the wider game library remain future work. Use HTTPS in production, restrict allowed origins, and use persistent/shared session storage before running multiple server instances.
+Session state and scores are in memory. Persistent scores, Supabase Auth, and the wider game library remain future work. Player photos are currently held in in-memory session state and are lost when the server restarts. Use HTTPS in production, restrict allowed origins, and use persistent/shared session storage before running multiple server instances.
