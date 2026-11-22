@@ -57,9 +57,44 @@ function renderSlots(state) {
     }
   }
 }
+function renderFinalResults(state) {
+  const results = state.finalResults || [];
+  const page = $('#results-page');
+  const podium = $('#podium');
+  const review = $('#review-results');
+  const isResults = state.status === 'results' && Array.isArray(results);
+  page.hidden = !isResults;
+  review.hidden = !(state.stage === 10 && state.status === 'finished');
+  if (!isResults) return;
+  const medals = { 1: '🏆', 2: '🥈', 3: '🥉' };
+  const labels = { 1: 'GOLD CHAMPION', 2: 'SILVER', 3: 'BRONZE' };
+  podium.replaceChildren();
+  for (const player of results) {
+    const card = document.createElement('article');
+    card.className = 'podium-card rank-' + player.rank;
+    const trophy = document.createElement('div');
+    trophy.className = 'trophy';
+    trophy.textContent = medals[player.rank] || '🏅';
+    const rank = document.createElement('p');
+    rank.className = 'rank-label';
+    rank.textContent = labels[player.rank] || (player.rank + ' PLACE');
+    const name = document.createElement('h2');
+    name.textContent = player.name;
+    const color = document.createElement('p');
+    color.className = 'rank-color';
+    color.textContent = player.color + ' PLAYER';
+    const points = document.createElement('strong');
+    points.className = 'rank-points';
+    points.textContent = player.totalPoints + ' POINTS';
+    card.append(trophy, rank, name, color, points);
+    podium.append(card);
+  }
+}
+
 function applyState(state) {
   currentState = state;
   renderSlots(state);
+  renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
 }
 
@@ -347,6 +382,8 @@ async function createRoom() {
   const publicBaseUrl = (config.publicBaseUrl || location.origin).replace(/\/$/, '');
 
   $('#room').hidden = false;
+  $('#results-page').hidden = true;
+  $('#review-results').hidden = true;
   $('#session-id').textContent = 'Session ' + session.id;
   $('#dashboard').classList.add('room-active');
   $('#player-strip').innerHTML = '';
@@ -427,6 +464,14 @@ $('#logout').addEventListener('click', async () => {
   location.reload();
 });
 $('#create').addEventListener('click', createRoom);
+$('#review-results').addEventListener('click', () => {
+  $('#review-results').disabled = true;
+  socket?.emit('host:control', { sessionId: currentState?.id, action: 'review' }, (ack) => {
+    $('#review-results').disabled = false;
+    if (!ack?.ok) $('#error').textContent = ack?.error || 'Could not review tournament results';
+    else $('#error').textContent = '';
+  });
+});
 
 if (token) {
   fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })

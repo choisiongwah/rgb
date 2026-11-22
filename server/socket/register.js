@@ -23,6 +23,18 @@ export function registerSocketHandlers(io, { sessions }) {
 
   io.on('connection', (socket) => {
     if (socket.data.user) {
+      socket.on('host:control', ({ sessionId, action }, ack = () => {}) => {
+        if (socket.data.user.role !== 'admin' || action !== 'review') return ack({ ok: false, error: 'ADMIN_ONLY' });
+        try {
+          const session = sessions.reviewResults(sessionId);
+          if (session.host.username !== socket.data.user.username) throw new Error('SESSION_NOT_FOUND');
+          const state = sessions.toHostView(session);
+          io.to(room(session.id)).emit('game:state', state);
+          ack({ ok: true, state });
+        } catch (error) {
+          ack({ ok: false, error: error.message });
+        }
+      });
       socket.on('host:subscribe', ({ sessionId }, ack = () => {}) => {
         const session = sessions.get(sessionId);
         if (!session || session.host.username !== socket.data.user.username) {
