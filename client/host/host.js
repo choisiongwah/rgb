@@ -36,6 +36,7 @@ function renderSlots(state) {
         : state.stage === 3 ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' m'
            : state.stage === 4 ? (player.flappy?.blockersPassed || 0) + ' / 20'
           : state.stage === 5 ? player.successCount + ' / ' + state.burgerTarget
+          : state.stage === 6 ? player.successCount + ' / ' + state.ufoTarget
             : player.cycles + ' / ' + state.targetCycles;
     }
     if (result) {
