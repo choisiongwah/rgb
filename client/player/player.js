@@ -87,9 +87,10 @@ function renderController(name, color, state) {
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) setFeedback(readableError(result.error), 'warning');
-        else if (!result.correct) setFeedback(latestState?.stage === 2
-          ? '✕ Wrong position — wait for the next dice roll'
-          : 'Wrong colour — sequence restarted', 'warning');
+        else if (!result.correct) setFeedback(latestState?.stage === 5
+          ? '✕ Wrong ingredient — wait for the next burger'
+          : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
+            : 'Wrong colour — sequence restarted', 'warning');
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
         else if (result.pointAwarded) setFeedback('Perfect burger! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
@@ -194,7 +195,8 @@ function updateController(state) {
   else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
   else if (isBurger && mine.burgerRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong ingredient — wait for the next burger', 'warning');
-  else if (isBurger && mine.burgerRoundAttempted) setFeedback('Burger complete! +1 point · Next recipe loading', 'success');
+  else if (isBurger && mine.roundFeedback === 'correct') setFeedback('Burger complete! +1 point · Next recipe loading', 'success');
+  else if (isBurger && mine.burgerRoundAttempted) setFeedback('Wrong ingredient — wait for the next burger', 'warning');
   else if (isBurger) setFeedback('Match the recipe on the shared screen!', '');
   else if (isDice && mine.roundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong answer — wait for next dice roll', 'warning');
   else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
