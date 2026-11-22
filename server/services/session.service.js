@@ -666,6 +666,26 @@ export class SessionService {
     return active.length > 0 && active.every((player) => player.completed);
   }
 
+  reviewResults(id) {
+    const session = this.get(id);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+    if (session.stage !== 10 || session.status !== 'finished') throw new Error('RESULTS_NOT_READY');
+    session.finalResults = session.players
+      .filter((player) => player.joined)
+      .map((player) => ({
+        color: player.color,
+        name: player.player?.name || 'Player',
+        totalPoints: player.totalPoints,
+        avatar: player.player?.avatar || null,
+        character: player.player?.character || 'astronaut'
+      }))
+      .sort((a, b) => b.totalPoints - a.totalPoints || a.color.localeCompare(b.color))
+      .map((player, index) => ({ ...player, rank: index + 1 }));
+    session.status = 'results';
+    session.paused = false;
+    return session;
+  }
+
   finishLevel(id, token) {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
@@ -781,7 +801,7 @@ export class SessionService {
 
   toPublicView(session) {
     return {
-      id: session.id, status: session.status, paused: session.paused,
+      id: session.id, status: session.status, paused: session.paused, finalResults: session.finalResults || null,
       stage: session.stage, targetCycles: session.targetCycles,
       diceTarget: session.diceTarget, diceValues: session.diceValues,
       diceRoundId: session.diceRoundId,
