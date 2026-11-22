@@ -493,3 +493,51 @@ describe('SessionService Level 5 Burger Builder', () => {
     expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
   });
 });
+
+
+describe('SessionService Level 6 UFO Spotter', () => {
+  function createLevel6Session(count=3, random=()=>0.37) {
+    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
+    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Pilot '+(i+1)}));
+    session.stage=6; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  }
+  const reveal=(service)=>{for(let i=0;i<4;i++)service.tickUfos(500);};
+  it('starts with a two-second fly-by and three distinct choices',()=>{
+    const {service,session}=createLevel6Session(); const view=service.toPublicView(session);
+    expect(session.ufoPhase).toBe('flyby'); expect(session.ufoDurationMs).toBe(2000);
+    expect(session.ufoOptions).toHaveLength(3); expect(new Set(session.ufoOptions).size).toBe(3);
+    expect(view.ufoRoundId).toBe(session.ufoRoundId);
+  });
+  it('reveals the choices only after the full fly-through',()=>{
+    const {service,session}=createLevel6Session(1);
+    service.tickUfos(500);service.tickUfos(500);service.tickUfos(500);service.tickUfos(499);
+    expect(session.ufoPhase).toBe('flyby');service.tickUfos(1);expect(session.ufoPhase).toBe('choose');
+  });
+  it('increases speed every four cycles and caps at 0.5 seconds',()=>{
+    const {service,session}=createLevel6Session(1);
+    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1500);
+    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1000);
+    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
+    for(let i=0;i<8;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
+  });
+  it('awards a point for the matching option and immediately starts the next cycle',()=>{
+    const {service,session,slots}=createLevel6Session(2);reveal(service);const old=session.ufoRoundId;
+    const result=service.submitInput(session.id,slots[0].token,['R','G','B'][session.ufoCorrectIndex],old);
+    expect(result.correct).toBe(true);expect(result.pointAwarded).toBe(1);expect(slots[0].successCount).toBe(1);expect(session.ufoRoundId).toBe(old+1);
+  });
+  it('disqualifies a wrong answer for the current cycle',()=>{
+    const {service,session,slots}=createLevel6Session(2);reveal(service);
+    const wrong=['R','G','B'].find((_,i)=>i!==session.ufoCorrectIndex);
+    expect(service.submitInput(session.id,slots[0].token,wrong,session.ufoRoundId).correct).toBe(false);
+    expect(slots[0].ufoRoundAttempted).toBe(true);
+    expect(()=>service.submitInput(session.id,slots[0].token,'R',session.ufoRoundId)).toThrow('ALREADY_ANSWERED');
+  });
+  it('continues until all three players reach ten points and receive placements',()=>{
+    const {service,session,slots}=createLevel6Session();
+    for(let p=0;p<3;p++){for(let i=0;i<10;i++){reveal(service);service.submitInput(session.id,slots[p].token,['R','G','B'][session.ufoCorrectIndex],session.ufoRoundId);}expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}
+    expect(slots.map(x=>x.pointsEarned)).toEqual([5,3,1]);
+  });
+  it('does not allow manual finish before all placements are decided',()=>{
+    const {service,session,slots}=createLevel6Session();expect(()=>service.finishLevel(session.id,slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+  });
+});
