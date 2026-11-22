@@ -177,14 +177,6 @@ export class SessionService {
     else session.burgerSequence = null;
 
 
-    if (session.stage === 9) {
-      const stack = slot.burgerStack;
-      if (!['R','B'].includes(action)) throw new Error('INVALID_INPUT');
-      if (stack.penaltyMs > 0) throw new Error('BURGER_STACK_RECOVERING');
-      stack.lane = Math.max(0, Math.min(2, stack.lane + (action === 'R' ? -1 : 1)));
-      return { session, slot, correct:true, laneChanged:true, lane:stack.lane };
-    }
-
     if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
@@ -200,6 +192,14 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 9) {
+      const stack = slot.burgerStack;
+      if (!['R','B'].includes(action)) throw new Error('INVALID_INPUT');
+      if (stack.penaltyMs > 0) throw new Error('BURGER_STACK_RECOVERING');
+      stack.lane = Math.max(0, Math.min(2, stack.lane + (action === 'R' ? -1 : 1)));
+      return { session, slot, correct:true, laneChanged:true, lane:stack.lane };
+    }
 
     if (session.stage === 8) {
       const island = slot.island;
