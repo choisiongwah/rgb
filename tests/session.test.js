@@ -769,3 +769,43 @@ describe('SessionService Level 10 Matrix Master', () => {
     expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
   });
 });
+
+
+describe('Tournament final results review', () => {
+  it('preserves points across levels and ranks players by accumulated points', () => {
+    const service = new SessionService();
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players;
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: ['Alex', 'Blair', 'Casey'][index] }));
+    slots[0].totalPoints = 18;
+    slots[1].totalPoints = 24;
+    slots[2].totalPoints = 12;
+    session.stage = 10;
+    session.status = 'finished';
+    const results = service.reviewResults(session.id);
+    expect(results.status).toBe('results');
+    expect(results.finalResults.map((player) => player.name)).toEqual(['Blair', 'Alex', 'Casey']);
+    expect(results.finalResults.map((player) => player.totalPoints)).toEqual([24, 18, 12]);
+    expect(service.toPublicView(results).finalResults[0]).toMatchObject({ rank: 1, totalPoints: 24 });
+  });
+
+  it('does not allow reviewing before Level 10 is complete', () => {
+    const service = new SessionService();
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    session.stage = 10;
+    session.status = 'playing';
+    expect(() => service.reviewResults(session.id)).toThrow('RESULTS_NOT_READY');
+    session.status = 'finished';
+    session.stage = 9;
+    expect(() => service.reviewResults(session.id)).toThrow('RESULTS_NOT_READY');
+  });
+
+  it('keeps tournament totals when moving to the next level', () => {
+    const { service, session, slots } = createPlayingSession(2);
+    slots[0].totalPoints = 17;
+    session.status = 'finished';
+    service.nextLevel(session.id);
+    expect(slots[0].totalPoints).toBe(17);
+    expect(slots[1].totalPoints).toBe(0);
+  });
+});

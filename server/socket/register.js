@@ -26,8 +26,9 @@ export function registerSocketHandlers(io, { sessions }) {
       socket.on('host:control', ({ sessionId, action }, ack = () => {}) => {
         if (socket.data.user.role !== 'admin' || action !== 'review') return ack({ ok: false, error: 'ADMIN_ONLY' });
         try {
+          const existing = sessions.get(sessionId);
+          if (!existing || existing.host.username !== socket.data.user.username) throw new Error('SESSION_NOT_FOUND');
           const session = sessions.reviewResults(sessionId);
-          if (session.host.username !== socket.data.user.username) throw new Error('SESSION_NOT_FOUND');
           const state = sessions.toHostView(session);
           io.to(room(session.id)).emit('game:state', state);
           ack({ ok: true, state });
