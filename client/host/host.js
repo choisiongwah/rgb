@@ -123,9 +123,12 @@ class RGBScene extends Phaser.Scene {
   }
   animateBurgerClose() {
     this.tweens.killTweensOf(this.burgerTopBunText);
-    this.burgerTopBunText.setPosition(this.scale.width / 2, this.scale.height * 0.48).setScale(0.65).setAlpha(1).setVisible(true);
-    this.tweens.add({ targets: this.burgerTopBunText, y: this.scale.height * 0.64, scale: 1.12, duration: 480, ease: 'Bounce.Out',
-      onComplete: () => this.time.delayedCall(450, () => this.burgerTopBunText.setVisible(false)) });
+    this.time.delayedCall(430, () => {
+      if (!this.burgerTopBunText?.active) return;
+      this.burgerTopBunText.setPosition(this.scale.width / 2, this.scale.height * 0.48).setScale(0.65).setAlpha(1).setVisible(true);
+      this.tweens.add({ targets: this.burgerTopBunText, y: this.scale.height * 0.64, scale: 1.12, duration: 480, ease: 'Bounce.Out',
+        onComplete: () => this.time.delayedCall(450, () => this.burgerTopBunText.setVisible(false)) });
+    });
   }
   flashSuccess(index) {
     const x = this.scale.width * (index + 0.5) / 3;
