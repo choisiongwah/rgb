@@ -585,35 +585,47 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Player '+(i+1)}));
     session.stage=7; service.startLevel(session.id,slots[0].token); return {service,session,slots};
   }
-  it('initializes a rotating pie and independent per-colour hit counts',()=>{
+  it('initializes a rotating RGB wheel and independent per-colour hit counts',()=>{
     const {service,session,slots}=createLevel7Session(); const view=service.toPublicView(session);
-    expect(view.pieSpeed).toBe(0.9); expect(view.pieTargetColor).toBe('R');
+    expect(view.pieSpeed).toBe(0.9); expect(view.pieTargetColor).toBe('R'); expect(view.players[0].pieKnives).toEqual([]);
     expect(slots[0].pieHits).toEqual({R:0,G:0,B:0});
   });
   it('rotates while playing and pauses when paused',()=>{
     const {service,session}=createLevel7Session(); service.tickPies(500); expect(session.pieAngle).toBeCloseTo(0.45);
     service.setPaused(session.id,true); const angle=session.pieAngle; service.tickPies(1000); expect(session.pieAngle).toBe(angle);
   });
-  it('accepts only the colour currently at the strike pointer and counts each colour',()=>{
+  it('accepts matching colour throws and rejects an occupied knife position',()=>{
     const {service,session,slots}=createLevel7Session(1);
     expect(service.submitInput(session.id,slots[0].token,'G').correct).toBe(false);
     expect(service.submitInput(session.id,slots[0].token,'R').correct).toBe(true);
     expect(service.submitInput(session.id,slots[0].token,'R').repeatSpot).toBe(true);
     expect(slots[0].pieHits.R).toBe(1);
     expect(session.pieTotalHits).toBe(1);
+    const collision=service.submitInput(session.id,slots[0].token,'R');
+    expect(collision.correct).toBe(false); expect(collision.occupied).toBe(true);
+    expect(slots[0].pieKnives).toHaveLength(1); expect(session.pieMissId).toBe(2);
   });
-  it('increases speed every six hits and changes direction randomly at twelve',()=>{
+  it('increases speed as knives accumulate and changes direction randomly at twelve',()=>{
     const {service,session,slots}=createLevel7Session(1,()=>0.25);
-    for(let i=0;i<6;i++){session.pieAngle=-0.9+i*0.35;service.submitInput(session.id,slots[0].token,'R');}
+    const angles=[0,0.3,0.6,0.9,Math.PI*2/3,Math.PI*2/3+0.3,Math.PI*2/3+0.6,Math.PI*2/3+0.9,Math.PI*4/3,Math.PI*4/3+0.3,Math.PI*4/3+0.6,Math.PI*4/3+0.9];
+    for(const angle of angles){session.pieAngle=angle;const color=angle<1.2?'R':angle<3.3?'G':'B';service.submitInput(session.id,slots[0].token,color);}
     expect(session.pieSpeed).toBeGreaterThan(0.9);
-    for(let i=0;i<6;i++){session.pieAngle=1.2+i*0.35;service.submitInput(session.id,slots[0].token,'G');}
     expect(session.pieDirectionChanged).toBe(true); expect(session.pieDirection).toBe(-1);
+    expect(slots[0].pieKnives).toHaveLength(12);
   });
-  it('continues until all active players hit every colour six times',()=>{
+  it('continues placements until each player embeds four knives of every colour',()=>{
     const {service,session,slots}=createLevel7Session();
-    for(let p=0;p<3;p++){for(const color of ['R','G','B']){for(let n=0;n<6;n++){session.pieAngle=({R:-0.9,G:1.2,B:3.3})[color]+n*0.35; service.submitInput(session.id,slots[p].token,color);}} expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1); expect(session.status).toBe(p===2?'finished':'playing');}
+    for(let p=0;p<3;p++){
+      for(const [color,base] of [['R',0],['G',Math.PI*2/3],['B',Math.PI*4/3]]){
+        for(let n=0;n<4;n++){session.pieAngle=base+n*0.32;service.submitInput(session.id,slots[p].token,color);}
+      }
+      expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1);
+      expect(slots[p].pieKnives).toHaveLength(12);
+      expect(session.status).toBe(p===2?'finished':'playing');
+    }
     expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);
   });
+
 });
 
 
@@ -623,9 +635,9 @@ describe('SessionService Level 8 Island Crossing', () => {
     const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Sailor '+(i+1)}));
     session.stage=8; service.startLevel(session.id,slots[0].token); return {service,session,slots};
   }
-  it('creates 50 random coloured sharks per player',()=>{const {service,session,slots}=createLevel8Session();expect(slots[0].island.sharks).toHaveLength(50);expect(slots[0].island.sharks.every(c=>['R','G','B'].includes(c))).toBe(true);expect(service.toPublicView(session).islandTarget).toBe(50);});
-  it('moves forward and records the latest completed step as a checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<11;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(11);expect(p.island.milestone).toBe(11);});
-  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(12);expect(p.successCount).toBe(12);expect(p.island.penaltyMs).toBe(1000);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
+  it('creates 50 random coloured sharks per player',()=>{const {service,session,slots}=createLevel8Session();expect(slots[0].island.sharks).toHaveLength(50);expect(slots[0].island.orientations).toHaveLength(50);expect(slots[0].island.orientations.every(o=>['horizontal','vertical'].includes(o))).toBe(true);expect(slots[0].island.sharks.every(c=>['R','G','B'].includes(c))).toBe(true);expect(service.toPublicView(session).islandTarget).toBe(50);});
+  it('moves forward on matching colour and advances milestone every ten sharks',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<10;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(10);expect(p.island.milestone).toBe(10);});
+  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(10);expect(p.island.penaltyMs).toBe(1000);expect(p.island.nudgeId).toBe(1);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
   it('continues placements until all active players reach the island',()=>{const {service,session,slots}=createLevel8Session();for(let p=0;p<3;p++){slots[p].island.sharks=Array(50).fill('R');for(let i=0;i<50;i++)service.submitInput(session.id,slots[p].token,'R');expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);});
   it('does not advance penalty timer while paused',()=>{const {service,session,slots}=createLevel8Session(1);slots[0].island.penaltyMs=1000;service.setPaused(session.id,true);service.tickIslands(500);expect(slots[0].island.penaltyMs).toBe(1000);});
 });
