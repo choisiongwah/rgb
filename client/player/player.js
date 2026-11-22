@@ -14,8 +14,30 @@ let latestState;
 let lastCrashId = 0;
 let lastFlappyCrashId = 0;
 let lastIslandBiteId = 0;
+let lastIslandProgress = -1;
+let lastPieHitId = 0;
 let lastBurgerStackFlashId = 0;
 let lastBurgerStackMissId = 0;
+let errorAudioContext;
+function playErrorSound() {
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    errorAudioContext ||= new AudioCtor();
+    if (errorAudioContext.state === 'suspended') errorAudioContext.resume();
+    const now = errorAudioContext.currentTime;
+    const oscillator = errorAudioContext.createOscillator();
+    const gain = errorAudioContext.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(260, now);
+    oscillator.frequency.exponentialRampToValueAtTime(115, now + 0.18);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    oscillator.connect(gain); gain.connect(errorAudioContext.destination);
+    oscillator.start(now); oscillator.stop(now + 0.23);
+  } catch { /* Audio remains optional when the browser blocks playback. */ }
+}
 const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
@@ -62,13 +84,16 @@ if (!sessionId || !joinToken) {
 function emitControl(action, extra = {}) {
   if (!socket?.connected) return;
   socket.emit('player:control', { action, ...extra }, (result) => {
-    if (!result.ok) setFeedback(readableError(result.error), 'warning');
+    if (!result.ok) { playErrorSound(); setFeedback(readableError(result.error), 'warning'); }
   });
 }
 
 function renderController(name, color, state) {
   root.innerHTML = '<header><div><h1 id="player-name"></h1><p id="player-color"></p></div><span id="connection-state">Connected</span></header>' +
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
+    '<section id="level-intro" class="level-intro" hidden><strong id="level-intro-title"></strong><p id="level-intro-copy"></p><small>Game begins when the player controller starts the level.</small></section>' +
+    '<section id="burger-quiz" class="burger-quiz" hidden><strong>BUILD THIS BURGER</strong><div class="burger-quiz-columns"><div><small>RECIPE</small><div id="burger-quiz-stack" class="burger-quiz-stack"></div></div><div><small>YOUR BURGER</small><div id="burger-built-stack" class="burger-quiz-stack"><span>🍞</span></div></div></div></section>' +
+    '<section id="pie-screen" class="pie-screen" hidden><div class="pie-hud"><strong>KNIFE HIT</strong><span id="pie-score"></span></div><div class="pie-stage"><div id="pie-wheel" class="pie-wheel"><span class="pie-centre"></span></div><div class="pie-pointer"></div><div id="pie-knife" class="pie-knife">🔪</div><div id="pie-reject" class="pie-reject">✕</div></div><p id="pie-next-hint">Match the colour at the pointer</p></section>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
     '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
@@ -93,11 +118,11 @@ function renderController(name, color, state) {
       if (latestState?.stage === 10) payload.roundId = latestState.matrixRoundId;
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
-        if (!result.ok) setFeedback(readableError(result.error), 'warning');
-        else if (!result.correct) setFeedback(latestState?.stage === 5
+        if (!result.ok) { playErrorSound(); setFeedback(readableError(result.error), 'warning'); }
+        else if (!result.correct) { playErrorSound(); if (latestState?.stage === 7) { const reject = root.querySelector('#pie-reject'); reject.classList.remove('show'); void reject.offsetWidth; reject.classList.add('show'); const knife = root.querySelector('#pie-knife'); knife.classList.remove('reject'); void knife.offsetWidth; knife.classList.add('reject'); } setFeedback(latestState?.stage === 5
           ? '✕ Wrong ingredient — wait for the next burger'
           : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
-            : 'Wrong colour — sequence restarted', 'warning');
+            : 'Wrong colour — sequence restarted', 'warning'); }
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
         else if (result.pointAwarded) setFeedback(latestState?.stage === 6 ? 'Correct UFO! +1 point' : latestState?.stage === 7 ? 'Knife hit!' : latestState?.stage === 8 ? 'Safe crossing!' : 'Perfect burger! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');
@@ -174,6 +199,10 @@ function updateController(state) {
   const isIsland = state.stage === 8;
   const isBurgerStack = state.stage === 9;
   const isMatrix = state.stage === 10;
+  const intro = root.querySelector('#level-intro');
+  const introCopy = {3:['HIGHWAY DODGE','Switch between three road lanes using R, G and B. Avoid traffic and reach 3,000 m.'],4:['ROCKET FLIGHT','Tap your screen to boost the rocket through the moving gaps. Each player flies independently.'],5:['BURGER BUILDER','Start with the bottom bread. Stack the falling ingredients in the shown order using R, G and B.'],6:['UFO SPOTTER','Watch each uniquely shaped UFO through the narrow viewing slit, then choose its matching position.'],7:['KNIFE HIT','Watch the rotating pie and throw knives at the matching colour. Avoid repeating the same spot.'],8:['SHARK ISLAND CROSSING','Step forward by matching each shark colour. A wrong move returns you to your latest checkpoint, not the start.']};
+  intro.hidden = state.status !== 'waiting' || !introCopy[state.stage];
+  if (introCopy[state.stage]) { root.querySelector('#level-intro-title').textContent = introCopy[state.stage][0]; root.querySelector('#level-intro-copy').textContent = introCopy[state.stage][1]; }
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.hidden = isBurgerStack && button.dataset.a === 'G';
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
@@ -181,9 +210,13 @@ function updateController(state) {
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack || isMatrix;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurger || isBurgerStack || isMatrix;
   hint.hidden = isRace || isFlappy || isMatrix;
   root.querySelector('#race-screen').hidden = !isRace;
+  root.querySelector('#burger-quiz').hidden = !isBurger;
+  root.querySelector('#pie-screen').hidden = !isPie;
+  if (isPie) renderPie(state, mine);
+  if (isBurger) { root.querySelector('#burger-quiz-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>'), '🍞'].join(''); root.querySelector('#burger-built-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).slice(0, mine.burgerProgressIndex || 0).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>')].join(''); }
   root.querySelector('#island-screen').hidden = !isIsland;
   root.querySelector('#burger-stack-screen').hidden = !isBurgerStack;
   root.querySelector('.pad').classList.toggle('burger-stack-pad', isBurgerStack);
@@ -202,7 +235,7 @@ function updateController(state) {
   if (isUfo) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
   } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
-  else if (isIsland) { hint.hidden=false; hint.textContent='Match the shark colour to cross safely · R Red · G Green · B Blue'; }
+  else if (isIsland) { const nextColor = mine.island?.sharks?.[mine.island?.progress]; const nextLabel = ({R:'RED · PRESS R',G:'GREEN · PRESS G',B:'BLUE · PRESS B'})[nextColor] || 'NEXT SHARK'; hint.hidden=false; hint.textContent='NEXT SHARK: ' + nextLabel + ' · Checkpoint ' + (mine.island?.milestone || 0); }
   else if (isBurgerStack) { hint.hidden=false; hint.textContent='Move one lane at a time · R LEFT · B RIGHT · catch every falling ingredient'; }
   else if (isMatrix) { hint.hidden=false; hint.textContent='Choose the missing square · R LEFT · G MIDDLE · B RIGHT'; }
   else if (!isRace) {
@@ -277,6 +310,20 @@ function renderBurgerStack(state, mine) {
   }
 }
 
+function renderPie(state, mine) {
+  const wheel = root.querySelector('#pie-wheel');
+  wheel.style.transform = 'rotate(' + ((state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+  root.querySelector('#pie-score').textContent = 'R ' + (mine.pieHits?.R || 0) + '/6 · G ' + (mine.pieHits?.G || 0) + '/6 · B ' + (mine.pieHits?.B || 0) + '/6';
+  root.querySelector('#pie-next-hint').textContent = 'Watch the pointer · Press the matching colour';
+  if ((state.pieLastHitId || 0) > lastPieHitId) {
+    lastPieHitId = state.pieLastHitId;
+    if (state.pieLastHit?.playerColor === playerColor) {
+      const knife = root.querySelector('#pie-knife');
+      knife.classList.remove('stick'); void knife.offsetWidth; knife.classList.add('stick');
+    }
+  }
+}
+
 function renderIsland(state, mine) {
   const island = mine.island || { progress:0, milestone:0, sharks:[], penaltyMs:0, biteId:0 };
   const progress = island.progress || 0;
@@ -285,6 +332,7 @@ function renderIsland(state, mine) {
   root.querySelector('#island-progress-fill').style.width = (progress / 50 * 100) + '%';
   const player = root.querySelector('#island-player');
   player.style.left = '50%'; player.style.top = (88 - progress / 50 * 58) + '%';
+  if (progress !== lastIslandProgress) { lastIslandProgress = progress; player.classList.remove('step-forward'); void player.offsetWidth; if (progress > 0 && island.penaltyMs <= 0) player.classList.add('step-forward'); }
   player.classList.toggle('bitten', (island.penaltyMs || 0) > 0);
   const shark = root.querySelector('#island-shark');
   shark.textContent = ({R:'🦈',G:'🦈',B:'🦈'}[island.sharks?.[progress]] || '🦈');

@@ -540,19 +540,19 @@ describe('SessionService Level 6 UFO Spotter', () => {
   const reveal=(service)=>{for(let i=0;i<4;i++)service.tickUfos(500);};
   it('starts with a two-second fly-by and three distinct choices',()=>{
     const {service,session}=createLevel6Session(); const view=service.toPublicView(session);
-    expect(session.ufoPhase).toBe('flyby'); expect(session.ufoDurationMs).toBe(2000);
+    expect(session.ufoPhase).toBe('flyby'); expect(session.ufoDurationMs).toBe(1500);
     expect(session.ufoOptions).toHaveLength(3); expect(new Set(session.ufoOptions).size).toBe(3);
     expect(view.ufoRoundId).toBe(session.ufoRoundId);
   });
   it('reveals the choices only after the full fly-through',()=>{
     const {service,session}=createLevel6Session(1);
-    service.tickUfos(500);service.tickUfos(500);service.tickUfos(500);service.tickUfos(499);
+    service.tickUfos(500);service.tickUfos(500);service.tickUfos(499);
     expect(session.ufoPhase).toBe('flyby');service.tickUfos(1);expect(session.ufoPhase).toBe('choose');
   });
   it('increases speed every four cycles and caps at 0.5 seconds',()=>{
     const {service,session}=createLevel6Session(1);
-    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1500);
-    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1000);
+    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1100);
+    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(800);
     for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
     for(let i=0;i<8;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
   });
@@ -598,19 +598,20 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     const {service,session,slots}=createLevel7Session(1);
     expect(service.submitInput(session.id,slots[0].token,'G').correct).toBe(false);
     expect(service.submitInput(session.id,slots[0].token,'R').correct).toBe(true);
+    expect(service.submitInput(session.id,slots[0].token,'R').repeatSpot).toBe(true);
     expect(slots[0].pieHits.R).toBe(1);
     expect(session.pieTotalHits).toBe(1);
   });
   it('increases speed every six hits and changes direction randomly at twelve',()=>{
     const {service,session,slots}=createLevel7Session(1,()=>0.25);
-    for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
+    for(let i=0;i<6;i++){session.pieAngle=-0.9+i*0.35;service.submitInput(session.id,slots[0].token,'R');}
     expect(session.pieSpeed).toBeGreaterThan(0.9);
-    for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
+    for(let i=0;i<6;i++){session.pieAngle=1.2+i*0.35;service.submitInput(session.id,slots[0].token,'G');}
     expect(session.pieDirectionChanged).toBe(true); expect(session.pieDirection).toBe(-1);
   });
   it('continues until all active players hit every colour six times',()=>{
     const {service,session,slots}=createLevel7Session();
-    for(let p=0;p<3;p++){for(const color of ['R','G','B']){for(let n=0;n<6;n++){session.pieAngle=({R:0,G:Math.PI*2/3,B:Math.PI*4/3})[color]; service.submitInput(session.id,slots[p].token,color);}} expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1); expect(session.status).toBe(p===2?'finished':'playing');}
+    for(let p=0;p<3;p++){for(const color of ['R','G','B']){for(let n=0;n<6;n++){session.pieAngle=({R:-0.9,G:1.2,B:3.3})[color]+n*0.35; service.submitInput(session.id,slots[p].token,color);}} expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1); expect(session.status).toBe(p===2?'finished':'playing');}
     expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);
   });
 });
@@ -623,8 +624,8 @@ describe('SessionService Level 8 Island Crossing', () => {
     session.stage=8; service.startLevel(session.id,slots[0].token); return {service,session,slots};
   }
   it('creates 50 random coloured sharks per player',()=>{const {service,session,slots}=createLevel8Session();expect(slots[0].island.sharks).toHaveLength(50);expect(slots[0].island.sharks.every(c=>['R','G','B'].includes(c))).toBe(true);expect(service.toPublicView(session).islandTarget).toBe(50);});
-  it('moves forward on matching colour and advances milestone every ten sharks',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<10;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(10);expect(p.island.milestone).toBe(10);});
-  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(10);expect(p.island.penaltyMs).toBe(1000);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
+  it('moves forward and records the latest completed step as a checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<11;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(11);expect(p.island.milestone).toBe(11);});
+  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(12);expect(p.successCount).toBe(12);expect(p.island.penaltyMs).toBe(1000);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
   it('continues placements until all active players reach the island',()=>{const {service,session,slots}=createLevel8Session();for(let p=0;p<3;p++){slots[p].island.sharks=Array(50).fill('R');for(let i=0;i<50;i++)service.submitInput(session.id,slots[p].token,'R');expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);});
   it('does not advance penalty timer while paused',()=>{const {service,session,slots}=createLevel8Session(1);slots[0].island.penaltyMs=1000;service.setPaused(session.id,true);service.tickIslands(500);expect(slots[0].island.penaltyMs).toBe(1000);});
 });
