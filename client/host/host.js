@@ -208,6 +208,13 @@ class RGBScene extends Phaser.Scene {
       }
     }
     players.forEach((player) => {
+      const index = state.players.findIndex((slot) => slot.color === player.color);
+      const feedbackId = player.successFeedbackId || 0;
+      const previous = this.successSeen.get(player.color) || 0;
+      if (feedbackId > previous) {
+        this.successSeen.set(player.color, feedbackId);
+        this.flashSuccess(index);
+      }
       if (player.place) {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const key = state.stage + ':' + player.color + ':' + player.place;
