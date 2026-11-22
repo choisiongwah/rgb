@@ -598,10 +598,10 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     const {service,session,slots}=createLevel7Session(1);
     expect(service.submitInput(session.id,slots[0].token,'G').correct).toBe(false);
     expect(service.submitInput(session.id,slots[0].token,'R').correct).toBe(true);
-    expect(service.submitInput(session.id,slots[0].token,'R').repeatSpot).toBe(true);
+    const repeated=service.submitInput(session.id,slots[0].token,'R'); expect(repeated.repeatSpot).toBe(true);
     expect(slots[0].pieHits.R).toBe(1);
     expect(session.pieTotalHits).toBe(1);
-    const collision=service.submitInput(session.id,slots[0].token,'R');
+    const collision=repeated;
     expect(collision.correct).toBe(false); expect(collision.occupied).toBe(true);
     expect(slots[0].pieKnives).toHaveLength(1); expect(session.pieMissId).toBe(2);
   });
