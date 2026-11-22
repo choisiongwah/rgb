@@ -20,7 +20,7 @@ function renderSlots(state) {
     const qr = $('#qr-' + player.color);
     const count = $('#count-' + player.color);
     const result = $('#result-' + player.color);
-    const mascot = $('#mascot-' + player.color);\n    const avatar = $('#avatar-' + player.color);\n    if (mascot) mascot.hidden = !player.joined;\n    if (avatar) { if (player.player?.avatar) avatar.src = player.player.avatar; else avatar.removeAttribute('src'); }
+    const mascot = $('#mascot-' + player.color);\n    const avatar = $('#avatar-' + player.color);\n    if (mascot) { mascot.hidden = !player.joined; mascot.className = 'player-mascot ' + (player.player?.character || 'astronaut'); }\n    if (avatar) { if (player.player?.avatar) avatar.src = player.player.avatar; else avatar.removeAttribute('src'); }
     if (status) status.textContent = player.joined
       ? (player.player?.name || 'Player') + (player.connected ? ' · CONNECTED' : ' · DISCONNECTED')
       : 'SCAN QR TO JOIN';
