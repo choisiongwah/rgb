@@ -9,8 +9,7 @@ const inputSchema = z.object({
 const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
-  z.object({ action: z.literal('configure'), targetCycles: z.number().int() }),
-  z.object({ action: z.literal('challenge'), stage: z.number().int() })
+  z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
 ]);
 const room = (id) => 'session:' + id;
 
