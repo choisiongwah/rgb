@@ -230,7 +230,7 @@ class RGBScene extends Phaser.Scene {
     this.diceLabels.forEach((item) => item.setVisible(isDice));
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
-    if (!isDice) {
+    if (!isDice && !isBurger) {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
@@ -254,7 +254,7 @@ class RGBScene extends Phaser.Scene {
       });
     }
     for (let index = 0; index < this.playerTexts.length; index += 1) {
-      if (isDice || !state.players[index]?.joined) {
+      if (isDice || isBurger || !state.players[index]?.joined) {
         this.playerTexts[index]?.destroy();
         this.playerTexts[index] = null;
       }
