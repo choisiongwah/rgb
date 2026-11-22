@@ -9,7 +9,8 @@ const inputSchema = z.object({
 const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
-  z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
+  z.object({ action: z.literal('configure'), targetCycles: z.number().int() }),
+  z.object({ action: z.literal('challenge'), stage: z.number().int() })
 ]);
 const room = (id) => 'session:' + id;
 
@@ -23,16 +24,30 @@ export function registerSocketHandlers(io, { sessions }) {
 
   io.on('connection', (socket) => {
     if (socket.data.user) {
-      socket.on('host:control', ({ sessionId, action }, ack = () => {}) => {
-        if (socket.data.user.role !== 'admin' || action !== 'review') return ack({ ok: false, error: 'ADMIN_ONLY' });
+      socket.on('host:control', ({ sessionId, action, stage }, ack = () => {}) => {
+        if (socket.data.user.role !== 'admin') return ack({ ok: false, error: 'ADMIN_ONLY' });
         try {
           const existing = sessions.get(sessionId);
           if (!existing || existing.host.username !== socket.data.user.username) throw new Error('SESSION_NOT_FOUND');
-          const session = sessions.reviewResults(sessionId);
+          let session;
+          if (action === 'review') {
+            session = sessions.reviewResults(sessionId);
+          } else if (action === 'challenge') {
+            session = sessions.selectLevel(sessionId, socket.data.user.username, stage);
+            const controller = session.players.find((slot) => slot.color === session.controllerColor);
+            if (!controller) throw new Error('NO_PLAYERS');
+            session = sessions.startLevel(sessionId, controller.token);
+          } else {
+            throw new Error('INVALID_HOST_ACTION');
+          }
           const state = sessions.toHostView(session);
           io.to(room(session.id)).emit('game:state', state);
           ack({ ok: true, state });
         } catch (error) {
+          const session = sessions.get(sessionId);
+          if (session && session.host.username === socket.data.user.username) {
+            io.to(room(session.id)).emit('game:state', sessions.toHostView(session));
+          }
           ack({ ok: false, error: error.message });
         }
       });
