@@ -173,14 +173,14 @@ class RGBScene extends Phaser.Scene {
       : isDice ? 'Tap the colour matching the largest number'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
-    if (isDice && state.diceRoundId !== this.lastDiceRound) {
-      this.lastDiceRound = state.diceRoundId;
-      this.animateDiceRoll(state.diceValues || []);
-    }
     this.diceNumbers.forEach((item, index) => {
       item.setVisible(isDice);
       item.setText(isDice && state.diceValues ? String(state.diceValues[index]) : '');
     });
+    if (isDice && state.diceRoundId !== this.lastDiceRound) {
+      this.lastDiceRound = state.diceRoundId;
+      this.animateDiceRoll(state.diceValues || []);
+    }
     this.diceLabels.forEach((item) => item.setVisible(isDice));
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
