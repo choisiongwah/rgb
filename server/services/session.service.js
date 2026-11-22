@@ -9,11 +9,13 @@ const DICE_TARGET = 8;
 const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
 const BURGER_TARGET_POINTS = 6;
-const BURGER_LENGTH = 4;
+const BURGER_MIN_LENGTH = 4;
+const BURGER_MAX_LENGTH = 8;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
 const BURGER_EMOJI = { R: '🥩', G: '🥬', B: '🍅' };
 function createBurgerSequence(random) {
-  return Array.from({ length: BURGER_LENGTH }, () => BURGER_INGREDIENTS[Math.floor(random() * BURGER_INGREDIENTS.length)]);
+  const length = BURGER_MIN_LENGTH + Math.floor(random() * (BURGER_MAX_LENGTH - BURGER_MIN_LENGTH + 1));
+  return Array.from({ length }, () => BURGER_INGREDIENTS[Math.floor(random() * BURGER_INGREDIENTS.length)]);
 }
 function createFlappyState() {
   return { y: 0.5, velocity: 0, blockersPassed: 0, obstacles: [], crashId: 0, spawnAccumulator: 0, nextObstacleId: 1, penaltyMs: 0 };

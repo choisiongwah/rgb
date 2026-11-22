@@ -427,17 +427,24 @@ describe('SessionService Level 5 Burger Builder', () => {
       service.submitInput(session.id, slot.token, action, roundId);
     }
   }
-  it('creates a four-ingredient shared recipe and publishes a round id', () => {
+  it('creates a random four-to-eight-ingredient shared recipe and publishes a round id', () => {
     const { service, session } = createLevel5Session();
     const view = service.toPublicView(session);
-    expect(session.burgerSequence).toHaveLength(4);
+    expect(session.burgerSequence.length).toBeGreaterThanOrEqual(4);
+    expect(session.burgerSequence.length).toBeLessThanOrEqual(8);
     expect(session.burgerSequence.every((item) => ['R', 'G', 'B'].includes(item))).toBe(true);
     expect(view.burgerRoundId).toBe(session.burgerRoundId);
     expect(view.burgerTarget).toBe(6);
   });
+  it('enforces the four-ingredient minimum and eight-ingredient maximum', () => {
+    const min = createLevel5Session(2, () => 0);
+    expect(min.session.burgerSequence).toHaveLength(4);
+    const max = createLevel5Session(2, () => 0.999999);
+    expect(max.session.burgerSequence).toHaveLength(8);
+  });
   it('maps R/G/B to meat, vegetable and tomato drops for each input', () => {
     let randomIndex = 0;
-    const random = () => [0, 0.4, 0.8, 0][randomIndex++ % 4];
+    const random = () => [0, 0, 0.4, 0.8, 0][randomIndex++ % 5];
     const { service, session, slots } = createLevel5Session(2, random);
     const roundId = session.burgerRoundId;
     service.submitInput(session.id, slots[0].token, 'R', roundId);
