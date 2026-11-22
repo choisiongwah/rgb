@@ -192,7 +192,7 @@ function renderRace(state, mine) {
   const playerCar = root.querySelector('#race-player');
   if (mine.player?.avatar) { avatar.src = mine.player.avatar; avatar.hidden = false; car.hidden = true; playerCar.classList.add('has-avatar'); }
   else { avatar.hidden = true; avatar.removeAttribute('src'); car.hidden = false; playerCar.classList.remove('has-avatar'); }
-  playerCar.style.left = ((race.lane ?? 1) * 33.333 + 16.667) + '%';
+  playerCar.style.left = ([20, 50, 80][race.lane ?? 1]) + '%';
   const obstacles = root.querySelector('#race-obstacles');
   const activeIds = new Set();
   for (const item of race.obstacles || []) {
@@ -205,7 +205,7 @@ function renderRace(state, mine) {
       obstacles.append(vehicle);
       raceObstacleNodes.set(item.id, vehicle);
     }
-    vehicle.style.left = ((item.lane * 33.333) + 16.667) + '%';
+    vehicle.style.left = ([20, 50, 80][item.lane]) + '%';
     vehicle.style.top = (item.progress * 100) + '%';
   }
   for (const [id, vehicle] of raceObstacleNodes) {
