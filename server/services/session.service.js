@@ -182,6 +182,56 @@ export class SessionService {
     if (!slot || session.controllerColor !== slot.color) throw new Error('CONTROLLER_ONLY');
   }
 
+  selectLevel(id, hostUsername, stage) {
+    const session = this.get(id);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+    if (session.host.username !== hostUsername) throw new Error('SESSION_NOT_FOUND');
+    if (!Number.isInteger(stage) || stage < 1 || stage > 10) throw new Error('INVALID_LEVEL');
+
+    for (const player of session.players) {
+      player.totalPoints = Math.max(0, player.totalPoints - player.pointsEarned);
+      player.activeForRound = false;
+      player.progressIndex = 0;
+      player.cycles = 0;
+      player.successCount = 0;
+      player.roundAttempted = false;
+      player.roundFeedback = null;
+      player.completed = false;
+      player.place = null;
+      player.pointsEarned = 0;
+      player.burgerProgressIndex = 0;
+      player.burgerRoundAttempted = false;
+      player.ufoRoundAttempted = false;
+      player.matrixRoundAttempted = false;
+      player.pieHits = { R: 0, G: 0, B: 0 };
+      player.pieTotalHits = 0;
+    }
+
+    session.stage = stage;
+    session.status = 'waiting';
+    session.paused = false;
+    session.nextPlace = 1;
+    session.finalResults = null;
+    session.diceValues = null;
+    session.burgerSequence = null;
+    session.burgerWinnerColor = null;
+    session.burgerCompletedSequence = null;
+    session.burgerLastDrop = null;
+    session.ufoPhase = 'idle';
+    session.ufoTargetId = null;
+    session.ufoOptions = [];
+    session.ufoElapsedMs = 0;
+    session.matrixPuzzle = null;
+    session.pieAngle = 0;
+    session.pieSpeed = 0.9;
+    session.pieDirection = 1;
+    session.pieTotalHits = 0;
+    session.pieDirectionChanged = false;
+    session.pieLastHitId = 0;
+    session.pieLastHit = null;
+    return session;
+  }
+
   startLevel(id, token) {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
