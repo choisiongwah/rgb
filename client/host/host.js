@@ -33,7 +33,8 @@ function renderSlots(state) {
       count.hidden = !player.joined;
       count.textContent = state.stage === 2
         ? player.successCount + ' / ' + state.diceTarget
-        : player.cycles + ' / ' + state.targetCycles;
+        : state.stage === 3 ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' m'
+          : player.cycles + ' / ' + state.targetCycles;
     }
     if (result) {
       result.hidden = !player.joined;
@@ -165,15 +166,17 @@ class RGBScene extends Phaser.Scene {
   updateState(state) {
     if (!this.title) return;
     const isDice = state.stage === 2;
-    this.title.setText(isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
+    const isRace = state.stage === 3;
+    this.title.setText(isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isDice
+    this.subtitle.setText(isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
-    this.sequenceText.setText(isDice ? 'R = LEFT       G = MIDDLE       B = RIGHT' : 'R     →     G     →     B');
+    this.sequenceText.setText(isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
     this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
       : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
       : state.paused ? 'GAME PAUSED'
+      : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
@@ -192,8 +195,11 @@ class RGBScene extends Phaser.Scene {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
+        const progressLine = isRace
+          ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
+          : player.cycles + ' / ' + state.targetCycles + ' cycles';
         const label = (player.player?.name || player.color) +
-          '\\n' + player.cycles + ' / ' + state.targetCycles + ' cycles' +
+          '\\n' + progressLine +
           '\\n' + player.totalPoints + ' TOTAL POINTS' + placeLine +
           (player.activeForRound && !player.connected ? '\\nDISCONNECTED' : '');
         if (!this.playerTexts[index]) {
