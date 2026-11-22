@@ -195,7 +195,7 @@ export class SessionService {
     }
 
     if (session.stage === 4) {
-      if (action !== 'JUMP' throw new Error('INVALID_INPUT');
+      if (action !== 'JUMP') throw new Error('INVALID_INPUT');
       if (slot.flappy.penaltyMs > 0) throw new Error('FLAPPY_RECOVERING');
       slot.flappy.velocity = -0.62;
       return { session, slot, correct: true, jumped: true };
