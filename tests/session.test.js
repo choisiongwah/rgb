@@ -464,7 +464,7 @@ describe('SessionService Level 5 Burger Builder', () => {
     const oldRound = session.burgerRoundId;
     completeBurger(service, session, slots[0]);
     expect(slots[0].successCount).toBe(1);
-    expect(slots[0].totalPoints).toBe(1);
+    expect(slots[0].totalPoints).toBe(0); // Placement bonus is added when the player finishes the level.
     expect(session.burgerRoundId).toBe(oldRound + 1);
     expect(() => service.submitInput(session.id, slots[1].token, 'R', oldRound)).toThrow('STALE_BURGER_ROUND');
   });
