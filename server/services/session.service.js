@@ -525,7 +525,7 @@ export class SessionService {
         if (stack.penaltyMs > 0) { stack.penaltyMs = Math.max(0, stack.penaltyMs - delta * 1000); continue; }
         const difficulty = stack.successCount;
         const fallSpeed = 0.29 + difficulty * 0.035;
-        const spawnInterval = Math.max(0.62, 1.05 - difficulty * 0.08);
+        const spawnInterval = Math.max(0.4, 0.72 - difficulty * 0.08);
         stack.spawnAccumulator += delta;
         while (stack.spawnAccumulator >= spawnInterval && stack.nextIngredientIndex < stack.recipe.length && stack.drops.length < 6) {
           stack.spawnAccumulator -= spawnInterval;
