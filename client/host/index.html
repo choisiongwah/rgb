@@ -14,7 +14,23 @@
     <p id="error" role="alert"></p>
     <div id="room" hidden>
       <h2 id="session-id"></h2>
-      <div id="host-actions"><button id="review-results" hidden>Review Results</button></div>
+      <div id="host-actions">
+        <label for="level-select">Challenge</label>
+        <select id="level-select" aria-label="Select level">
+          <option value="1">Level 1 · RGB Sequence</option>
+          <option value="2">Level 2 · Dice Reaction</option>
+          <option value="3">Level 3 · Highway Dodge</option>
+          <option value="4">Level 4 · Rocket Flight</option>
+          <option value="5">Level 5 · Burger Builder</option>
+          <option value="6">Level 6 · UFO Spotter</option>
+          <option value="7">Level 7 · RGB Knife Hit</option>
+          <option value="8">Level 8 · Shark Crossing</option>
+          <option value="9">Level 9 · Burger Stack</option>
+          <option value="10">Level 10 · Matrix Master</option>
+        </select>
+        <button id="start-level">Start Level</button>
+        <button id="review-results" hidden>Review Results</button>
+      </div>
       <section id="results-page" hidden aria-live="polite">
         <div class="results-heading"><p>RGB TOURNAMENT</p><h1>CHAMPIONS</h1><p>Final leaderboard · All 10 levels</p></div>
         <div id="podium" class="podium"></div>
