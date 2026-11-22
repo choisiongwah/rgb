@@ -28,7 +28,7 @@ function resetBurgerStackChallenge(stack, random) {
   stack.challengeNumber += 1;
   stack.challengeLength = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
   stack.recipe = Array.from({length:stack.challengeLength},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*5)],lane:Math.floor(random()*3)}));
-  stack.nextIngredientIndex=0; stack.drops=[]; stack.stacked=[]; stack.spawnAccumulator=1.05;
+  stack.nextIngredientIndex=0; stack.drops=[]; stack.stacked=[]; stack.spawnAccumulator=0;
 }
 const PIE_HITS_PER_COLOR = 6;
 const PIE_COLORS = ['R', 'G', 'B'];
@@ -537,7 +537,7 @@ export class SessionService {
         if (landed) {
           if (landed.lane !== stack.lane) {
             stack.missId += 1; stack.failedCount += 1; stack.penaltyMs = 1000; stack.completedStack = [];
-            resetBurgerStackChallenge(stack, this.random); player.roundFeedback = 'stack-missed'; continue;
+            resetBurgerStackChallenge(stack, this.random); stack.spawnAccumulator = 1.05; player.roundFeedback = 'stack-missed'; continue;
           }
           stack.stacked.push({ingredient:landed.ingredient,lane:landed.lane});
           stack.stackFlashId += 1;
