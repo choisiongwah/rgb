@@ -19,7 +19,7 @@ function renderSlots(state) {
     const status = $('#slot-status-' + player.color);
     const qr = $('#qr-' + player.color);
     const count = $('#count-' + player.color);
-    const result = $('#result-' + player.color);
+    const result = $('#result-' + player.color);\n    const mascot = $('#mascot-' + player.color);\n    const avatar = $('#avatar-' + player.color);\n    if (mascot) mascot.hidden = !player.joined;\n    if (avatar) { if (player.player?.avatar) avatar.src = player.player.avatar; else avatar.removeAttribute('src'); }
     if (status) status.textContent = player.joined
       ? (player.player?.name || 'Player') + (player.connected ? ' · CONNECTED' : ' · DISCONNECTED')
       : 'SCAN QR TO JOIN';
@@ -53,7 +53,7 @@ function applyState(state) {
 }
 
 class RGBScene extends Phaser.Scene {
-  constructor() { super('RGBScene'); this.celebrated = new Set(); }
+  constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.audioContext = null; }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
@@ -100,6 +100,50 @@ class RGBScene extends Phaser.Scene {
       this.diceLabels?.[index]?.setPosition(x, y + size * 0.72).setFontSize(Math.max(11, Math.min(19, width * 0.016)));
     }
   }
+  flashSuccess(index) {
+    const x = this.scale.width * (index + 0.5) / 3;
+    const y = this.scale.height * 0.48;
+    const marker = this.add.text(x, y, 'O', {
+      fontSize: Math.max(72, Math.min(150, this.scale.width * 0.11)),
+      fontStyle: 'bold', color: '#4ade80', stroke: '#052e16', strokeThickness: 7
+    }).setOrigin(0.5).setScale(0.25).setAlpha(0);
+    this.tweens.add({ targets: marker, scale: 1.25, alpha: 1, duration: 180, yoyo: true,
+      hold: 220, onComplete: () => marker.destroy() });
+    try {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtor) {
+        this.audioContext ||= new AudioCtor();
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+        const oscillator = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(740, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1040, this.audioContext.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.16, this.audioContext.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 0.24);
+        oscillator.connect(gain); gain.connect(this.audioContext.destination);
+        oscillator.start(); oscillator.stop(this.audioContext.currentTime + 0.25);
+      }
+    } catch { /* Audio is optional when the browser blocks playback. */ }
+  }
+  animateDiceRoll(values) {
+    this.diceNumbers.forEach((item, index) => {
+      this.tweens.killTweensOf(item);
+      item.setScale(0.55).setAngle(-12);
+      this.tweens.add({ targets: item, scale: 1, angle: 0, duration: 320, ease: 'Back.Out' });
+      let ticks = 0;
+      const flicker = () => {
+        if (!item.active || ticks >= 7) { item.setText(String(values[index] ?? '')); return; }
+        item.setText(String(1 + Math.floor(Math.random() * 6)));
+        ticks += 1;
+        this.time.delayedCall(45 + ticks * 8, flicker);
+      };
+      flicker();
+    });
+    this.diceGraphics.setAlpha(0.55);
+    this.tweens.add({ targets: this.diceGraphics, alpha: 1, duration: 420, ease: 'Sine.Out' });
+  }
   celebrate(index, place) {
     const x = this.scale.width * (index + 0.5) / 3;
     const y = this.scale.height * 0.5;
@@ -128,6 +172,10 @@ class RGBScene extends Phaser.Scene {
       : isDice ? 'Tap the colour matching the largest number'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
+    if (isDice && state.diceRoundId !== this.lastDiceRound) {
+      this.lastDiceRound = state.diceRoundId;
+      this.animateDiceRoll(state.diceValues || []);
+    }
     this.diceNumbers.forEach((item, index) => {
       item.setVisible(isDice);
       item.setText(isDice && state.diceValues ? String(state.diceValues[index]) : '');
@@ -191,6 +239,22 @@ async function createRoom() {
     card.className = 'player-panel ' + player.color.toLowerCase();
     const title = document.createElement('h3');
     title.textContent = player.color;
+    const mascot = document.createElement('div');
+    mascot.id = 'mascot-' + player.color;
+    mascot.className = 'player-mascot ' + (player.player?.character || 'astronaut');
+    mascot.hidden = true;
+    const head = document.createElement('div');
+    head.className = 'mascot-head';
+    const visor = document.createElement('div');
+    visor.className = 'mascot-visor';
+    const avatar = document.createElement('img');
+    avatar.id = 'avatar-' + player.color;
+    avatar.alt = 'Player profile';
+    visor.append(avatar);
+    head.append(visor);
+    const body = document.createElement('div');
+    body.className = 'mascot-body';
+    mascot.append(head, body);
     const qr = document.createElement('img');
     qr.id = 'qr-' + player.color;
     qr.alt = 'Join ' + player.color;
@@ -206,7 +270,7 @@ async function createRoom() {
     const result = document.createElement('div');
     result.id = 'result-' + player.color;
     result.className = 'player-result';
-    card.append(title, qr, status, count, result);
+    card.append(title, mascot, qr, status, count, result);
     $('#player-strip').append(card);
   }
 
