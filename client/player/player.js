@@ -252,8 +252,9 @@ function renderBurgerStack(state, mine) {
   const remaining = Math.ceil((stack.penaltyMs || 0) / 100) / 10;
   root.querySelector('#burger-stack-penalty').textContent = remaining > 0 ? 'RECOVERING ' + remaining.toFixed(1) + 's' : '';
   root.querySelector('#burger-stack-player').style.left = [20,50,80][lane] + '%';
+  root.querySelector('#burger-stack-base').style.left = [20,50,80][lane] + '%';
   const layers = root.querySelector('#burger-stack-layers');
-  layers.innerHTML = (stack.stacked || []).map((item) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🥒'}[item.ingredient] || '🍔') + '</span>').join('');
+  layers.innerHTML = ((stack.stacked && stack.stacked.length ? stack.stacked : stack.completedStack) || []).map((item) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🥒'}[item.ingredient] || '🍔') + '</span>').join('');
   const drops = root.querySelector('#burger-stack-drops');
   drops.innerHTML = (stack.drops || []).map((drop) => '<span class="burger-stack-drop" style="left:' + [20,50,80][drop.lane] + '%;top:' + (drop.y * 100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🥒'}[drop.ingredient] || '🍔') + '</span>').join('');
   if ((stack.stackFlashId || 0) > lastBurgerStackFlashId) {
