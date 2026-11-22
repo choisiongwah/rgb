@@ -22,7 +22,7 @@ function createBurgerStackState(random) {
   const length = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
   return { lane:1, challengeNumber:1, challengeLength:length,
     recipe:Array.from({length},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*5)],lane:Math.floor(random()*3)})),
-    nextIngredientIndex:0,drops:[],stacked:[],spawnAccumulator:1.05,penaltyMs:0,stackFlashId:0,missId:0,successCount:0,failedCount:0 };
+    nextIngredientIndex:0,drops:[],stacked:[],completedStack:[],spawnAccumulator:1.05,penaltyMs:0,stackFlashId:0,missId:0,successCount:0,failedCount:0 };
 }
 function resetBurgerStackChallenge(stack, random) {
   stack.challengeNumber += 1;
@@ -529,13 +529,14 @@ export class SessionService {
         stack.spawnAccumulator += delta;
         while (stack.spawnAccumulator >= spawnInterval && stack.nextIngredientIndex < stack.recipe.length && stack.drops.length < 6) {
           stack.spawnAccumulator -= spawnInterval;
+          stack.completedStack = [];
           stack.drops.push({ ...stack.recipe[stack.nextIngredientIndex++], y:0.02 });
         }
         for (const drop of stack.drops) drop.y += fallSpeed * delta;
         const landed = stack.drops.find((drop) => drop.y >= 0.84);
         if (landed) {
           if (landed.lane !== stack.lane) {
-            stack.missId += 1; stack.failedCount += 1; stack.penaltyMs = 1000;
+            stack.missId += 1; stack.failedCount += 1; stack.penaltyMs = 1000; stack.completedStack = [];
             resetBurgerStackChallenge(stack, this.random); player.roundFeedback = 'stack-missed'; continue;
           }
           stack.stacked.push({ingredient:landed.ingredient,lane:landed.lane});
@@ -545,6 +546,7 @@ export class SessionService {
           if (stack.stacked.length === stack.challengeLength && stack.nextIngredientIndex === stack.recipe.length && stack.drops.length === 0) {
             stack.successCount += 1; player.successCount = stack.successCount; player.successFeedbackId += 1;
             player.roundFeedback = 'stack-challenge-complete';
+            stack.completedStack = [...stack.stacked];
             if (stack.successCount >= BURGER_STACK_TARGET) {
               player.completed = true; player.place = session.nextPlace++;
               player.pointsEarned = POINTS_BY_PLACE[player.place] || 0; player.totalPoints += player.pointsEarned;
