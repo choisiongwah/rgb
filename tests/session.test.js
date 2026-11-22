@@ -639,7 +639,7 @@ describe('SessionService Level 9 Burger Stack', () => {
     expect(stack.drops).toHaveLength(1);
     stack.drops[0].y = 0.83;
     service.tickBurgerStacks(100);
-    expect(stack.stacked).toEqual([{ ingredient: 'R', lane: 1 }]);
+    expect(stack.completedStack).toEqual([{ ingredient: 'R', lane: 1 }]);
     expect(stack.stackFlashId).toBe(1);
   });
 
