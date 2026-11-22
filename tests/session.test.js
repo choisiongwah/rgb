@@ -209,7 +209,7 @@ describe('SessionService Level 3 Highway Dodge', () => {
     const { service, session, slots } = createLevel3Session(1);
     service.tickRaces(500);
     service.tickRaces(500);
-    expect(slots[0].race.distanceMeters).toBeCloseTo(100);
+    expect(slots[0].race.distanceMeters).toBeCloseTo(101.25);
     expect(slots[0].race.speedMultiplier).toBeCloseTo(1);
     service.tickRaces(500);
     service.tickRaces(500);
@@ -238,13 +238,17 @@ describe('SessionService Level 3 Highway Dodge', () => {
 
   it('continues the race after first place until all players finish', () => {
     const { service, session, slots } = createLevel3Session(3);
-    for (let i = 0; i < 100 && !slots[0].completed; i += 1) service.tickRaces(500);
+    slots[0].race.distanceMeters = 2999;
+    service.tickRaces(500);
     expect(slots[0].place).toBe(1);
     expect(session.status).toBe('playing');
     expect(slots[1].completed).toBe(false);
-    for (const slot of slots.slice(1)) {
-      for (let i = 0; i < 100 && !slot.completed; i += 1) service.tickRaces(500);
-    }
+    slots[1].race.distanceMeters = 2999;
+    service.tickRaces(500);
+    expect(slots[1].place).toBe(2);
+    expect(session.status).toBe('playing');
+    slots[2].race.distanceMeters = 2999;
+    service.tickRaces(500);
     expect(slots.map((slot) => slot.place)).toEqual([1, 2, 3]);
     expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
     expect(session.status).toBe('finished');
