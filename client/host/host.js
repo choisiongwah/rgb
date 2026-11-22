@@ -167,15 +167,17 @@ class RGBScene extends Phaser.Scene {
     if (!this.title) return;
     const isDice = state.stage === 2;
     const isRace = state.stage === 3;
-    this.title.setText(isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
+    const isFlappy = state.stage === 4;
+    this.title.setText(isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
-    this.sequenceText.setText(isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
+    this.sequenceText.setText(isFlappy ? 'TAP ANY BUTTON TO BOOST' : isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
     this.statusText.setText(state.status === 'waiting' ? 'Waiting for players'
       : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
       : state.paused ? 'GAME PAUSED'
+      : isFlappy ? 'First to 20 blockers wins · Keep your rocket in the moving gaps!'
       : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
@@ -195,8 +197,9 @@ class RGBScene extends Phaser.Scene {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
-        const progressLine = isRace
-          ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
+        const progressLine = isFlappy
+          ? (player.flappy?.blockersPassed || 0) + ' / 20 blockers\\n' + ['EASY','WIND','TIGHT GAPS','TURBULENCE'][Math.min(3, Math.floor((player.flappy?.blockersPassed || 0) / 6))]
+          : isRace ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
           : player.cycles + ' / ' + state.targetCycles + ' cycles';
         const label = (player.player?.name || player.color) +
           '\\n' + progressLine +
