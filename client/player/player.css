@@ -57,3 +57,53 @@ body:has(.burger-stack-screen:not([hidden])) .pad button[hidden]{display:none}
 .pie-screen[hidden],.level-intro[hidden],.burger-quiz[hidden]{display:none!important}
 
 .burger-quiz-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.burger-quiz-columns>div{min-width:0;padding:6px;border-radius:10px;background:#11182766}.burger-quiz-columns small{display:block;color:#cbd5e1;font-weight:900;letter-spacing:1px;margin-bottom:6px}.burger-quiz-stack{min-height:72px}
+
+
+/* Level 5 — recipe and live burger builder */
+.burger-builder-screen{display:flex;flex:1;min-height:0;flex-direction:column;gap:10px;color:#e5e7eb}
+.burger-builder-hud{display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:clamp(16px,4vw,22px)}
+.burger-builder-hud strong{font-weight:500}
+.burger-builder-board{position:relative;flex:1;min-height:230px;background:#000;border:1px solid #1f2937;border-radius:10px;overflow:hidden}
+.burger-builder-current,.burger-builder-target{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;width:44%;height:48%;border:0;border-radius:0;background:transparent;padding:8px}
+.burger-caption{position:absolute;top:8px;font-size:10px;letter-spacing:.12em;color:#94a3b8;font-weight:900}
+.burger-builder-current{left:7%;bottom:4%}.burger-builder-target{right:5%;top:4%}.burger-builder-current .burger-builder-layers{justify-content:flex-end;padding-bottom:8px}.burger-builder-target .burger-builder-layers{justify-content:flex-start;padding-top:28px}
+.burger-builder-layers{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;max-width:100%;padding-top:22px}
+.burger-layer,.burger-builder-layers .bun{display:flex;align-items:center;justify-content:center;width:clamp(74px,24vw,120px);height:clamp(20px,5vh,30px);border:2px solid #111;border-radius:8px;font-size:clamp(18px,5vw,26px);line-height:1}
+.burger-layer.r{background:#b91c1c}.burger-layer.g{background:#15803d}.burger-layer.b{background:#2563eb}
+.burger-builder-layers .bun{background:#fcd783;border-radius:10px}
+.burger-builder-result{text-align:center;color:#facc15;font:700 12px monospace;min-height:18px}
+body:has(.burger-builder-screen:not([hidden])) #app{justify-content:flex-start;padding:10px;gap:8px;min-height:100dvh}
+body:has(.burger-builder-screen:not([hidden])) .pad button{height:13vh;min-height:62px;max-height:92px;font-size:36px}
+
+/* Level 7 — rotating RGB knife wheel */
+.knife-wheel-screen{display:flex;flex:1;min-height:0;flex-direction:column;gap:10px;color:#e5e7eb}
+.knife-wheel-hud{display:flex;justify-content:space-between;align-items:center;font:600 clamp(12px,3.5vw,18px) monospace;gap:8px}
+.knife-wheel-hud strong{font-weight:500;white-space:nowrap}
+.knife-wheel-world{position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:300px;overflow:hidden;background:#000}
+.knife-wheel{position:relative;width:min(62vw,48vh,290px);aspect-ratio:1;border-radius:50%;background:conic-gradient(from -60deg,#f00 0 33.333%,#00e51b 33.333% 66.666%,#0800ff 66.666% 100%);border:3px solid #050505;transition:transform .08s linear}
+.knife-wheel-core{position:absolute;left:50%;top:50%;width:8%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:#050505}
+.knife-wheel-knives{position:absolute;inset:0;pointer-events:none}
+.embedded-knife{position:absolute;left:50%;top:50%;width:18px;height:clamp(44px,13vw,66px);display:flex;align-items:center;justify-content:center;font-size:clamp(27px,8vw,40px);transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(min(31vw,24vh,145px) * -1));transform-origin:center}
+.embedded-knife.r{filter:drop-shadow(0 0 3px #f00)}.embedded-knife.g{filter:drop-shadow(0 0 3px #0f0)}.embedded-knife.b{filter:drop-shadow(0 0 3px #22f)}
+.knife-launch{position:absolute;bottom:5%;left:50%;transform:translateX(-50%);font-size:clamp(34px,10vw,52px);filter:grayscale(1) brightness(2)}
+.knife-wheel-miss{position:absolute;top:18%;left:0;right:0;text-align:center;font-size:clamp(20px,6vw,30px);font-weight:1000;color:#f87171;text-shadow:0 3px #7f1d1d;opacity:0;pointer-events:none}
+.knife-wheel-miss.show{animation:crash-pop .8s ease-out}
+body:has(.knife-wheel-screen:not([hidden])) #app{justify-content:flex-start;padding:10px;gap:8px;min-height:100dvh}
+body:has(.knife-wheel-screen:not([hidden])) .pad button{height:13vh;min-height:62px;max-height:92px;font-size:36px}
+
+/* Level 8 — previewable colour sharks */
+.island-world{background:linear-gradient(#c8efff 0 52%,#e8f8ff 52% 100%);border:0;border-radius:0}
+.island-sky{background:linear-gradient(#c8efff,#e8f8ff)}
+.island-sea{inset:50% 0 0;background:linear-gradient(180deg,#b8e9f7,#e1f7ff)}
+.island-preview{position:absolute;z-index:4;top:43%;left:0;right:0;display:flex;justify-content:space-evenly;align-items:center;gap:4px;padding:4px}
+.shark-preview{display:flex;align-items:center;justify-content:center;width:clamp(36px,10vw,58px);height:clamp(34px,9vh,52px);border:3px solid #111;background:var(--shark-color);color:#fff;font-size:clamp(24px,7vw,38px);filter:saturate(1.4);text-shadow:0 2px 2px #000}
+.shark-preview.vertical{transform:rotate(90deg)}
+.island-player{top:94%;font-size:clamp(32px,9vw,48px)}
+.island-shark{top:83%;font-size:clamp(35px,10vw,52px);transition:top .2s ease;filter:drop-shadow(0 2px 3px #334155)}
+.island-shark.vertical{transform:translate(-50%,-50%) rotate(90deg)}
+.island-nudge .island-player{animation:island-yellow-nudge .45s ease}
+@keyframes island-yellow-nudge{0%,100%{filter:drop-shadow(0 4px 3px #0008)}30%,70%{filter:drop-shadow(0 0 16px #facc15) brightness(1.8);transform:translate(-50%,-100%) translateX(14px)}}
+.island-destination{top:0}
+
+.knife-launch.throw{animation:knife-launch-throw .32s cubic-bezier(.2,.75,.35,1)}
+@keyframes knife-launch-throw{0%{bottom:5%;opacity:1;transform:translateX(-50%) scale(1)}75%{bottom:44%;opacity:1;transform:translateX(-50%) scale(.82)}100%{bottom:44%;opacity:0;transform:translateX(-50%) scale(.75)}}
