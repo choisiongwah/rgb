@@ -52,6 +52,47 @@ function createRaceState() {
 }
 const POINTS_BY_PLACE = { 1: 5, 2: 3, 3: 1 };
 
+const MATRIX_TARGET_POINTS = 6;
+const MATRIX_ARROWS = ['↑', '→', '↓', '←'];
+const MATRIX_SHAPES = ['▲', '◆', '●', '■'];
+function createMatrixPuzzle(random, roundId) {
+  const difficulty = Math.min(4, Math.floor((roundId - 1) / 2) + 1);
+  const family = (roundId - 1) % 4;
+  let cells = [], answer = '', category = '', distractors = [];
+  if (family === 0) {
+    category = 'ROTATION + COUNT';
+    const grid = Array.from({ length: 3 }, (_, r) => Array.from({ length: 3 }, (_, c) => MATRIX_ARROWS[(r + c + difficulty - 1) % 4] + '\\n' + '•'.repeat(c + 1)));
+    cells = grid.flat().slice(0, 8); answer = grid[2][2];
+    distractors = MATRIX_ARROWS.flatMap((arrow) => [1,2,3].map((count) => arrow + '\\n' + '•'.repeat(count)));
+  } else if (family === 1) {
+    category = 'SHAPE SEQUENCE';
+    const grid = Array.from({ length: 3 }, (_, r) => Array.from({ length: 3 }, (_, c) => MATRIX_SHAPES[(r * 2 + c + difficulty - 1) % 4] + '\\n' + '×'.repeat(1 + ((r + c) % 3))));
+    cells = grid.flat().slice(0, 8); answer = grid[2][2];
+    distractors = MATRIX_SHAPES.flatMap((shape) => [1,2,3].map((count) => shape + '\\n' + '×'.repeat(count)));
+  } else if (family === 2) {
+    category = 'NUMBER RELATIONSHIP';
+    const base = 2 + Math.floor(random() * 8) + difficulty;
+    const across = 2 + difficulty;
+    const down = 3 + Math.floor(random() * 3);
+    const grid = Array.from({ length: 3 }, (_, r) => Array.from({ length: 3 }, (_, c) => String(base + r * down + c * across)));
+    cells = grid.flat().slice(0, 8); answer = grid[2][2];
+    distractors = [String(Number(answer) + 1), String(Number(answer) - 1), String(Number(answer) + across), String(Number(answer) - down)];
+  } else {
+    category = 'COMBINED PATTERN';
+    const grid = Array.from({ length: 3 }, (_, r) => Array.from({ length: 3 }, (_, c) => {
+      const shape = MATRIX_SHAPES[(r + c + difficulty) % 4];
+      const count = ((r * 2 + c + difficulty) % 3) + 1;
+      return shape.repeat(count);
+    }));
+    cells = grid.flat().slice(0, 8); answer = grid[2][2];
+    distractors = MATRIX_SHAPES.flatMap((shape) => [1,2,3].map((count) => shape.repeat(count)));
+  }
+  const options = [answer, ...distractors.filter((value) => value !== answer).slice(0, 2)];
+  for (let i = options.length - 1; i > 0; i -= 1) { const j = Math.floor(random() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
+  return { roundId, difficulty, category, cells, options, correctIndex: options.indexOf(answer) };
+}
+
+
 function createDiceRoll() {
   const values = [];
   while (values.length < 3) {
@@ -77,14 +118,14 @@ export class SessionService {
       diceValues: null, diceRoundId: 0,
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
-      ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
+      matrixTarget: MATRIX_TARGET_POINTS, matrixRoundId: 0, matrixPuzzle: null, ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
       pieAngle: 0, pieSpeed: 0.9, pieDirection: 1, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, island: createIslandState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, island: createIslandState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -171,6 +212,7 @@ export class SessionService {
       player.island = createIslandState(this.random);
       player.burgerStack = createBurgerStackState(this.random);
     }
+    if (session.stage === 10) this.rollNextMatrixRound(session);
     if (session.stage === 2) this.rollNextDiceRound(session);
     else session.diceValues = null;
     if (session.stage === 5) this.rollNextBurgerRound(session);
@@ -192,6 +234,27 @@ export class SessionService {
     if (session.paused) throw new Error('GAME_PAUSED');
     if (!slot.activeForRound) throw new Error('NOT_IN_THIS_LEVEL');
     if (slot.completed) throw new Error('PLAYER_ALREADY_FINISHED');
+
+    if (session.stage === 10) {
+      if (!['R','G','B'].includes(action)) throw new Error('INVALID_INPUT');
+      if (diceRoundId !== session.matrixRoundId) throw new Error('STALE_MATRIX_ROUND');
+      if (slot.matrixRoundAttempted) throw new Error('ALREADY_ANSWERED');
+      slot.matrixRoundAttempted = true;
+      const positions = { R: 0, G: 1, B: 2 };
+      if (positions[action] !== session.matrixPuzzle.correctIndex) {
+        slot.roundFeedback = 'wrong';
+        if (this.allMatrixPlayersAttempted(session)) this.rollNextMatrixRound(session);
+        return { session, slot, correct: false, reset: false, cycleCompleted: false };
+      }
+      slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback = 'correct';
+      if (slot.successCount >= session.matrixTarget) {
+        slot.completed = true; slot.place = session.nextPlace++;
+        slot.pointsEarned = POINTS_BY_PLACE[slot.place] || 0; slot.totalPoints += slot.pointsEarned;
+      }
+      if (this.allActivePlayersFinished(session)) { session.status = 'finished'; session.paused = false; }
+      else this.rollNextMatrixRound(session, slot);
+      return { session, slot, correct: true, reset: false, cycleCompleted: slot.completed, pointAwarded: 1 };
+    }
 
     if (session.stage === 9) {
       const stack = slot.burgerStack;
@@ -364,6 +427,21 @@ export class SessionService {
       session.paused = false;
     }
     return { session, slot, correct: true, reset: false, cycleCompleted };
+  }
+
+  rollNextMatrixRound(session, winner = null) {
+    session.matrixRoundId += 1;
+    session.matrixPuzzle = createMatrixPuzzle(this.random, session.matrixRoundId);
+    for (const player of session.players) {
+      if (!player.activeForRound || player.completed) continue;
+      player.matrixRoundAttempted = false;
+      player.roundFeedback = player === winner ? 'correct' : null;
+    }
+  }
+
+  allMatrixPlayersAttempted(session) {
+    const remaining = session.players.filter((player) => player.activeForRound && !player.completed);
+    return remaining.length > 0 && remaining.every((player) => !player.connected || player.matrixRoundAttempted);
   }
 
   rollNextDiceRound(session, winner = null) {
@@ -592,7 +670,7 @@ export class SessionService {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
     this.assertController(session, this.getSlot(id, token));
-    if (session.stage === 2 || session.stage === 4 || session.stage === 5 || session.stage === 6 || session.stage === 7 || session.stage === 8 || session.stage === 9) throw new Error('FINISH_NOT_AVAILABLE');
+    if (session.stage === 2 || session.stage === 4 || session.stage === 5 || session.stage === 6 || session.stage === 7 || session.stage === 8 || session.stage === 9 || session.stage === 10) throw new Error('FINISH_NOT_AVAILABLE');
     if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
     session.status = 'finished';
     session.paused = false;
@@ -712,7 +790,7 @@ export class SessionService {
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
       islandTarget: ISLAND_TARGET_SHARKS, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieTargetColor: pieColorAtStrike(session.pieAngle),
-      ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
+      matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
         color: player.color, player: player.player, connected: player.connected,
@@ -721,7 +799,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        island: player.island, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted,
+        island: player.island, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))

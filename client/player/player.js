@@ -90,6 +90,7 @@ function renderController(name, color, state) {
       if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
       if (latestState?.stage === 5) payload.roundId = latestState.burgerRoundId;
       if (latestState?.stage === 6) payload.roundId = latestState.ufoRoundId;
+      if (latestState?.stage === 10) payload.roundId = latestState.matrixRoundId;
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) setFeedback(readableError(result.error), 'warning');
@@ -172,15 +173,16 @@ function updateController(state) {
   const isPie = state.stage === 7;
   const isIsland = state.stage === 8;
   const isBurgerStack = state.stage === 9;
+  const isMatrix = state.stage === 10;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.hidden = isBurgerStack && button.dataset.a === 'G';
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0) || (isIsland && (mine.island?.penaltyMs || 0) > 0) || (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0);
+      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isMatrix && mine.matrixRoundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0) || (isIsland && (mine.island?.penaltyMs || 0) > 0) || (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack;
-  hint.hidden = isRace || isFlappy;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack || isMatrix;
+  hint.hidden = isRace || isFlappy || isMatrix;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#island-screen').hidden = !isIsland;
   root.querySelector('#burger-stack-screen').hidden = !isBurgerStack;
@@ -202,6 +204,7 @@ function updateController(state) {
   } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
   else if (isIsland) { hint.hidden=false; hint.textContent='Match the shark colour to cross safely · R Red · G Green · B Blue'; }
   else if (isBurgerStack) { hint.hidden=false; hint.textContent='Move one lane at a time · R LEFT · B RIGHT · catch every falling ingredient'; }
+  else if (isMatrix) { hint.hidden=false; hint.textContent='Choose the missing square · R LEFT · G MIDDLE · B RIGHT'; }
   else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
@@ -236,6 +239,9 @@ function updateController(state) {
   else if (isDice && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point', 'success');
   else if (isDice && mine.roundAttempted) setFeedback('Answer received — wait for next roll', '');
   else if (isDice) setFeedback('Which position has the biggest number?', '');
+  else if (isMatrix && mine.matrixRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Incorrect — wait for the next puzzle', 'warning');
+  else if (isMatrix && mine.roundFeedback === 'correct') setFeedback('Correct pattern! +1 point', 'success');
+  else if (isMatrix) setFeedback('Find the missing square in the matrix', '');
   else setFeedback('Tap R → G → B in order', '');
   renderControls(state);
   const target = root.querySelector('#target-cycles');

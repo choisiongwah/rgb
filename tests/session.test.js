@@ -697,3 +697,75 @@ describe('SessionService Level 9 Burger Stack', () => {
     expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
   });
 });
+
+
+describe('SessionService Level 10 Matrix Master', () => {
+  function createLevel10Session(count = 3, random = () => 0.37) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Solver ' + (index + 1) }));
+    session.stage = 10;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
+  }
+  const correctAction = (session) => ['R', 'G', 'B'][session.matrixPuzzle.correctIndex];
+  it('publishes a 3x3 matrix with a missing final cell and three distinct choices', () => {
+    const { service, session } = createLevel10Session();
+    const view = service.toPublicView(session);
+    expect(view.matrixTarget).toBe(6);
+    expect(view.matrixPuzzle.cells).toHaveLength(8);
+    expect(view.matrixPuzzle.options).toHaveLength(3);
+    expect(new Set(view.matrixPuzzle.options).size).toBe(3);
+    expect(view.matrixPuzzle.options[view.matrixPuzzle.correctIndex]).toBeTruthy();
+  });
+  it('rotates through mixed puzzle families with progressive difficulty', () => {
+    const { service, session, slots } = createLevel10Session(1);
+    const categories = [];
+    for (let i = 0; i < 8; i += 1) {
+      categories.push(session.matrixPuzzle.category);
+      service.submitInput(session.id, slots[0].token, correctAction(session), session.matrixRoundId);
+    }
+    expect(new Set(categories).size).toBe(4);
+    expect(session.matrixPuzzle.difficulty).toBe(4);
+  });
+  it('rejects a stale answer and prevents a player answering twice in one round', () => {
+    const { service, session, slots } = createLevel10Session(2);
+    const roundId = session.matrixRoundId;
+    const wrong = ['R', 'G', 'B'].find((action) => action !== correctAction(session));
+    expect(service.submitInput(session.id, slots[0].token, wrong, roundId).correct).toBe(false);
+    expect(() => service.submitInput(session.id, slots[0].token, wrong, roundId)).toThrow('ALREADY_ANSWERED');
+    expect(() => service.submitInput(session.id, slots[1].token, correctAction(session), roundId - 1)).toThrow('STALE_MATRIX_ROUND');
+  });
+  it('starts a new shared puzzle after a correct answer and clears other players round elimination', () => {
+    const { service, session, slots } = createLevel10Session(2);
+    const oldRound = session.matrixRoundId;
+    const wrong = ['R', 'G', 'B'].find((action) => action !== correctAction(session));
+    service.submitInput(session.id, slots[1].token, wrong, oldRound);
+    service.submitInput(session.id, slots[0].token, correctAction(session), oldRound);
+    expect(session.matrixRoundId).toBe(oldRound + 1);
+    expect(slots[1].matrixRoundAttempted).toBe(false);
+    expect(slots[0].successCount).toBe(1);
+  });
+  it('awards first, second and third place after six correct answers each', () => {
+    const { service, session, slots } = createLevel10Session();
+    for (let player = 0; player < 3; player += 1) {
+      for (let answer = 0; answer < 6; answer += 1) {
+        service.submitInput(session.id, slots[player].token, correctAction(session), session.matrixRoundId);
+      }
+      expect(slots[player].completed).toBe(true);
+      expect(slots[player].place).toBe(player + 1);
+      expect(session.status).toBe(player === 2 ? 'finished' : 'playing');
+    }
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
+  });
+  it('advances when all remaining players answer incorrectly and blocks manual finish', () => {
+    const { service, session, slots } = createLevel10Session(2);
+    const round = session.matrixRoundId;
+    const wrong = ['R', 'G', 'B'].find((action) => action !== correctAction(session));
+    service.submitInput(session.id, slots[0].token, wrong, round);
+    service.submitInput(session.id, slots[1].token, wrong, round);
+    expect(session.matrixRoundId).toBe(round + 1);
+    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+  });
+});
