@@ -144,6 +144,29 @@ describe('SessionService RGB Sequence Rush', () => {
     expect(slots[0].cycles).toBe(0);
     expect(session.status).toBe('waiting');
   });
+  it('ends the game and returns everyone to Level 1 with a clean score', () => {
+    const { service, session, slots } = createLevel2Session(2);
+    slots[0].totalPoints = 5;
+    slots[0].pointsEarned = 5;
+    slots[0].successCount = 3;
+    slots[1].totalPoints = 3;
+    slots[1].pointsEarned = 3;
+    slots[1].completed = true;
+    slots[1].place = 2;
+    session.status = 'finished';
+
+    const result = service.endGame(session.id, slots[0].token);
+
+    expect(result.stage).toBe(1);
+    expect(result.status).toBe('waiting');
+    expect(result.paused).toBe(false);
+    expect(result.diceValues).toBeNull();
+    expect(slots.map((player) => player.totalPoints)).toEqual([0, 0]);
+    expect(slots.every((player) => player.joined)).toBe(true);
+    expect(slots.every((player) => !player.completed && player.place === null)).toBe(true);
+    expect(() => service.endGame(session.id, slots[1].token)).toThrow('CONTROLLER_ONLY');
+  });
+
   it('supports configuring the cycle target before a level starts', () => {
     const { service, session, slots } = createPlayingSession(1);
     service.resetLevel(session.id, slots[0].token);
