@@ -354,7 +354,7 @@ export class SessionService {
       if (occupied || action !== targetColor) {
         slot.roundFeedback='wrong'; session.pieMissId += 1;
         session.pieLastMiss={id:session.pieMissId,color:action,occupied,playerColor:slot.color};
-        return {session,slot,correct:false,reset:false,cycleCompleted:false,occupied,targetColor};
+        return {session,slot,correct:false,reset:false,cycleCompleted:false,occupied,repeatSpot:occupied,targetColor};
       }
       slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
       session.pieTotalHits += 1; session.pieLastHitId += 1;
