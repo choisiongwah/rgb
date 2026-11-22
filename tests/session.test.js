@@ -555,7 +555,7 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     expect(slots[0].pieHits).toEqual({R:0,G:0,B:0});
   });
   it('rotates while playing and pauses when paused',()=>{
-    const {service,session}=createLevel7Session(); service.tickPies(1000); expect(session.pieAngle).toBeCloseTo(0.9);
+    const {service,session}=createLevel7Session(); service.tickPies(500); expect(session.pieAngle).toBeCloseTo(0.45);
     service.setPaused(session.id,true); const angle=session.pieAngle; service.tickPies(1000); expect(session.pieAngle).toBe(angle);
   });
   it('accepts only the colour currently at the strike pointer and counts each colour',()=>{
@@ -566,7 +566,7 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     expect(session.pieTotalHits).toBe(1);
   });
   it('increases speed every six hits and changes direction randomly at twelve',()=>{
-    const {service,session,slots}=createLevel7Session(1,()=>0.75);
+    const {service,session,slots}=createLevel7Session(1,()=>0.25);
     for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
     expect(session.pieSpeed).toBeGreaterThan(0.9);
     for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
