@@ -5,7 +5,13 @@
 
 .player-mascot .mascot-head:before{content:"";position:absolute;top:-5px;left:34%;width:32%;height:8px;border-radius:8px;background:#f97316;box-shadow:0 2px 2px #0003}.player-mascot.racer .mascot-head:before{left:18%;width:64%;height:12px;background:repeating-linear-gradient(90deg,#fff 0 8px,#111827 8px 16px);border:2px solid #111827}.player-mascot.hazmat .mascot-head:before{background:#f97316}.player-mascot .mascot-body:after{content:"★";display:block;text-align:center;font-size:clamp(12px,2vh,18px);line-height:1.4;color:#f59e0b}.player-mascot.racer .mascot-body:after{content:"🏁";color:#fff}.player-mascot.hazmat .mascot-body:after{content:"☣";color:#111827}
 
-#host-actions{display:flex;justify-content:center;padding:10px;background:#111827}
+#host-actions{position:absolute;z-index:6;top:10px;right:12px;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0f172acc;border:1px solid #475569;border-radius:12px;backdrop-filter:blur(8px)}
+#host-actions label{font-size:13px;font-weight:800;color:#e2e8f0}
+#level-select{width:auto;min-width:190px;padding:9px 10px;border-radius:8px;background:#1e293b;color:#fff;border:1px solid #64748b;font:600 13px system-ui}
+#start-level{padding:10px 16px;border-radius:8px;font:800 14px system-ui;white-space:nowrap}
+#start-level:disabled{opacity:.55;cursor:wait}
+#review-results{font:700 15px system-ui;padding:10px 16px;border-radius:8px;background:#d97706;color:#fff;box-shadow:0 5px 18px #0006}
+@media(max-width:620px){#host-actions{left:8px;right:8px;top:8px;justify-content:center;gap:5px;padding:6px}#host-actions label{display:none}#level-select{min-width:0;flex:1;font-size:11px;padding:8px 5px}#start-level{font-size:12px;padding:8px 10px}#review-results{font-size:12px;padding:8px 10px}}
 #review-results{font:700 18px system-ui;padding:12px 28px;border-radius:12px;background:#d97706;color:#fff;box-shadow:0 5px 18px #0006}
 #review-results[hidden]{display:none}
 #results-page{position:absolute;z-index:10;inset:0;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,3vh,28px);padding:clamp(16px,4vw,48px);background:radial-gradient(ellipse at 50% 0%,#334155 0%,#111827 65%);text-align:center}
