@@ -30,6 +30,27 @@ function answerDice(service, session, slot, action = 'G') {
 }
 
 describe('SessionService RGB Sequence Rush', () => {
+  it('stores an optional avatar and selected character on the player profile', () => {
+    const service = new SessionService();
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slot = session.players[0];
+    const avatar = 'data:image/jpeg;base64,AAAA';
+    service.join(session.id, slot.token, { name: 'Explorer', character: 'hazmat', avatar });
+    const player = service.toPublicView(session).players[0];
+    expect(player.player).toMatchObject({ name: 'Explorer', character: 'hazmat', avatar });
+  });
+
+  it('increments success feedback for every valid input but not wrong inputs', () => {
+    const { service, session, slots } = createPlayingSession(1);
+    expect(slots[0].successFeedbackId).toBe(0);
+    service.submitInput(session.id, slots[0].token, 'R');
+    expect(slots[0].successFeedbackId).toBe(1);
+    service.submitInput(session.id, slots[0].token, 'B');
+    expect(slots[0].successFeedbackId).toBe(1);
+    service.submitInput(session.id, slots[0].token, 'G');
+    expect(slots[0].successFeedbackId).toBe(2);
+  });
+
   it('creates three distinct player slots and join tokens', () => {
     const service = new SessionService();
     const session = service.create({ host: { username: 'admin', role: 'admin' } });
