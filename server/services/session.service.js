@@ -13,7 +13,11 @@ const UFO_TARGET_POINTS = 10;
 const ISLAND_TARGET_SHARKS = 50;
 const ISLAND_MILESTONE_SIZE = 10;
 const ISLAND_COLORS = ['R','G','B'];
-function createIslandState(random) { return { sharks: Array.from({length:ISLAND_TARGET_SHARKS},()=>ISLAND_COLORS[Math.floor(random()*3)]), progress:0, milestone:0, penaltyMs:0, biteId:0 }; }
+function createIslandState(random) { return { sharks: Array.from({length:ISLAND_TARGET_SHARKS},()=>ISLAND_COLORS[Math.floor(random()*3)]), orientations: Array.from({length:ISLAND_TARGET_SHARKS},()=>random()<0.5?'horizontal':'vertical'), progress:0, milestone:0, penaltyMs:0, biteId:0, nudgeId:0 }; }
+function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
+function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
+function pieImpactAngle(wheelAngle) { return normalizeAngle(wheelAngle); }
+function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<0.24); }
 const BURGER_STACK_TARGET = 4;
 const BURGER_STACK_MIN_LENGTH = 5;
 const BURGER_STACK_MAX_LENGTH = 8;
@@ -30,7 +34,7 @@ function resetBurgerStackChallenge(stack, random) {
   stack.recipe = Array.from({length:stack.challengeLength},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*5)],lane:Math.floor(random()*3)}));
   stack.nextIngredientIndex=0; stack.drops=[]; stack.stacked=[]; stack.spawnAccumulator=0;
 }
-const PIE_HITS_PER_COLOR = 6;
+const PIE_HITS_PER_COLOR = 4;
 const PIE_COLORS = ['R', 'G', 'B'];
 function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
 const UFO_DURATIONS_MS = [1500, 1100, 800, 500];
@@ -119,7 +123,7 @@ export class SessionService {
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
       matrixTarget: MATRIX_TARGET_POINTS, matrixRoundId: 0, matrixPuzzle: null, ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
-      pieAngle: 0, pieSpeed: 0.9, pieDirection: 1, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null,
+      pieAngle: 0, pieSpeed: 0.9, pieDirection: 1, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null, pieKnives: [], pieMissId: 0, pieLastMiss: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
@@ -229,6 +233,7 @@ export class SessionService {
     session.pieDirectionChanged = false;
     session.pieLastHitId = 0;
     session.pieLastHit = null;
+    session.pieKnives = []; session.pieMissId = 0; session.pieLastMiss = null;
     return session;
   }
 
@@ -269,7 +274,7 @@ export class SessionService {
     else session.burgerSequence = null;
 
 
-    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieHitAngles=[]; } }
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; session.pieKnives=[]; session.pieMissId=0; session.pieLastMiss=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieKnives=[]; } }
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -319,7 +324,7 @@ export class SessionService {
       if (!ISLAND_COLORS.includes(action)) throw new Error('INVALID_INPUT');
       if (island.penaltyMs > 0) throw new Error('ISLAND_RECOVERING');
       if (action !== island.sharks[island.progress]) {
-        island.biteId += 1;
+        island.biteId += 1; island.nudgeId += 1;
         island.penaltyMs = 1000;
         island.progress = island.milestone;
         slot.successCount = island.progress;
@@ -343,18 +348,23 @@ export class SessionService {
 
     if (session.stage === 7) {
       if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
-      const targetColor = pieColorAtStrike(session.pieAngle);
-      const hitAngle = ((session.pieAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      const repeatsSpot = (slot.pieHitAngles || []).some((previous) => { const delta = Math.abs(previous - hitAngle); return Math.min(delta, Math.PI * 2 - delta) < Math.PI / 15; });
-      if (action !== targetColor || repeatsSpot) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor,repeatSpot:repeatsSpot}; }
-      slot.pieHitAngles.push(hitAngle);
+      const impactAngle = pieImpactAngle(session.pieAngle);
+      const targetColor = pieColorAtStrike(impactAngle);
+      const occupied = pieOccupied(slot.pieKnives || [], impactAngle);
+      if (occupied || action !== targetColor) {
+        slot.roundFeedback='wrong'; session.pieMissId += 1;
+        session.pieLastMiss={id:session.pieMissId,color:action,occupied,playerColor:slot.color};
+        return {session,slot,correct:false,reset:false,cycleCompleted:false,occupied,targetColor};
+      }
       slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
-      session.pieTotalHits += 1; session.pieLastHitId += 1; session.pieLastHit={id:session.pieLastHitId,color:action,playerColor:slot.color};
-      session.pieSpeed = Math.min(2.8, 0.9 + Math.floor(session.pieTotalHits / 6) * 0.22);
-      if (session.pieTotalHits >= 12 && !session.pieDirectionChanged) { session.pieDirection = this.random() < 0.5 ? -1 : 1; session.pieDirectionChanged = true; }
-      if (PIE_COLORS.every((color) => slot.pieHits[color] >= PIE_HITS_PER_COLOR)) { slot.completed=true; slot.place=session.nextPlace++; slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0; slot.totalPoints+=slot.pointsEarned; }
-      if (this.allActivePlayersFinished(session)) { session.status='finished'; session.paused=false; }
-      return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1};
+      session.pieTotalHits += 1; session.pieLastHitId += 1;
+      const knife={id:session.pieLastHitId,angle:impactAngle,color:action,playerColor:slot.color};
+      slot.pieKnives ||= []; slot.pieKnives.push(knife); session.pieLastHit=knife;
+      session.pieSpeed=Math.min(2.8,0.9+Math.floor(session.pieTotalHits/6)*0.22);
+      if(session.pieTotalHits>=12&&!session.pieDirectionChanged){session.pieDirection=this.random()<0.5?-1:1;session.pieDirectionChanged=true;}
+      if(PIE_COLORS.every((color)=>slot.pieHits[color]>=PIE_HITS_PER_COLOR)){slot.completed=true;slot.place=session.nextPlace++;slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0;slot.totalPoints+=slot.pointsEarned;}
+      if(this.allActivePlayersFinished(session)){session.status='finished';session.paused=false;}
+      return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1,knife};
     }
 
     if (session.stage === 6) {
@@ -863,7 +873,7 @@ export class SessionService {
       burgerRoundId: session.burgerRoundId, burgerLastDropId: session.burgerLastDropId,
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
-      islandTarget: ISLAND_TARGET_SHARKS, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieTargetColor: pieColorAtStrike(session.pieAngle),
+      islandTarget: ISLAND_TARGET_SHARKS, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
       matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle ? { roundId: session.matrixPuzzle.roundId, difficulty: session.matrixPuzzle.difficulty, category: session.matrixPuzzle.category, cells: session.matrixPuzzle.cells, options: session.matrixPuzzle.options } : null, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
@@ -873,7 +883,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        island: player.island, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
+        island: player.island, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
