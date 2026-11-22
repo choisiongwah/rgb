@@ -541,3 +541,40 @@ describe('SessionService Level 6 UFO Spotter', () => {
     const {service,session,slots}=createLevel6Session();expect(()=>service.finishLevel(session.id,slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
   });
 });
+
+
+describe('SessionService Level 7 RGB Knife Hit', () => {
+  function createLevel7Session(count=3, random=()=>0.25) {
+    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
+    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Player '+(i+1)}));
+    session.stage=7; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  }
+  it('initializes a rotating pie and independent per-colour hit counts',()=>{
+    const {service,session,slots}=createLevel7Session(); const view=service.toPublicView(session);
+    expect(view.pieSpeed).toBe(0.9); expect(view.pieTargetColor).toBe('R');
+    expect(slots[0].pieHits).toEqual({R:0,G:0,B:0});
+  });
+  it('rotates while playing and pauses when paused',()=>{
+    const {service,session}=createLevel7Session(); service.tickPies(1000); expect(session.pieAngle).toBeCloseTo(0.9);
+    service.setPaused(session.id,true); const angle=session.pieAngle; service.tickPies(1000); expect(session.pieAngle).toBe(angle);
+  });
+  it('accepts only the colour currently at the strike pointer and counts each colour',()=>{
+    const {service,session,slots}=createLevel7Session(1);
+    expect(service.submitInput(session.id,slots[0].token,'G').correct).toBe(false);
+    expect(service.submitInput(session.id,slots[0].token,'R').correct).toBe(true);
+    expect(slots[0].pieHits.R).toBe(1);
+    expect(session.pieTotalHits).toBe(1);
+  });
+  it('increases speed every six hits and changes direction randomly at twelve',()=>{
+    const {service,session,slots}=createLevel7Session(1,()=>0.75);
+    for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
+    expect(session.pieSpeed).toBeGreaterThan(0.9);
+    for(let i=0;i<6;i++){session.pieAngle=0;service.submitInput(session.id,slots[0].token,'R');}
+    expect(session.pieDirectionChanged).toBe(true); expect(session.pieDirection).toBe(-1);
+  });
+  it('continues until all active players hit every colour six times',()=>{
+    const {service,session,slots}=createLevel7Session();
+    for(let p=0;p<3;p++){for(const color of ['R','G','B']){for(let n=0;n<6;n++){session.pieAngle=({R:0,G:Math.PI*2/3,B:Math.PI*4/3})[color]; service.submitInput(session.id,slots[p].token,color);}} expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1); expect(session.status).toBe(p===2?'finished':'playing');}
+    expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);
+  });
+});

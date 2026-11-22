@@ -10,6 +10,9 @@ const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
 const BURGER_TARGET_POINTS = 6;
 const UFO_TARGET_POINTS = 10;
+const PIE_HITS_PER_COLOR = 6;
+const PIE_COLORS = ['R', 'G', 'B'];
+function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = ((-angle % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
 const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
 function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
 const BURGER_MIN_LENGTH = 4;
@@ -55,12 +58,13 @@ export class SessionService {
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
       ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
+      pieAngle: 0, pieSpeed: 0.9, pieDirection: 1, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -149,6 +153,20 @@ export class SessionService {
     else session.diceValues = null;
     if (session.stage === 5) this.rollNextBurgerRound(session);
     else session.burgerSequence = null;
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
+    if (session.stage === 7) {
+      if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
+      const targetColor = pieColorAtStrike(session.pieAngle);
+      if (action !== targetColor) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor}; }
+      slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
+      session.pieTotalHits += 1; session.pieLastHitId += 1; session.pieLastHit={id:session.pieLastHitId,color:action,playerColor:slot.color};
+      session.pieSpeed = Math.min(2.8, 0.9 + Math.floor(session.pieTotalHits / 6) * 0.22);
+      if (session.pieTotalHits >= 12 && !session.pieDirectionChanged) { session.pieDirection = this.random() < 0.5 ? -1 : 1; session.pieDirectionChanged = true; }
+      if (PIE_COLORS.every((color) => slot.pieHits[color] >= PIE_HITS_PER_COLOR)) { slot.completed=true; slot.place=session.nextPlace++; slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0; slot.totalPoints+=slot.pointsEarned; }
+      if (this.allActivePlayersFinished(session)) { session.status='finished'; session.paused=false; }
+      return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1};
+    }
+
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -436,6 +454,8 @@ export class SessionService {
     const {targetId,options,correctIndex}=createUfoOptions(this.random); session.ufoRoundId++;session.ufoCycle++;session.ufoTargetId=targetId;session.ufoOptions=options;session.ufoCorrectIndex=correctIndex;session.ufoDurationMs=UFO_DURATIONS_MS[Math.min(3,Math.floor((session.ufoCycle-1)/4))];session.ufoElapsedMs=0;session.ufoPhase='flyby';
     for(const player of session.players){if(!player.activeForRound||player.completed)continue;player.ufoRoundAttempted=false;player.roundFeedback=player===winner?'correct':null;}
   }
+  tickPies(deltaMs=100) { const delta=Math.max(0,Math.min(500,Number(deltaMs)||0))/1000; if(!delta)return[]; const updated=[]; for(const session of this.sessions.values()){if(session.stage!==7||session.status!=='playing'||session.paused)continue;session.pieAngle=(session.pieAngle+session.pieSpeed*session.pieDirection*delta)%(Math.PI*2);updated.push(session);}return updated; }
+
   tickUfos(deltaMs=100){const delta=Math.max(0,Math.min(500,Number(deltaMs)||0));if(!delta)return[];const updated=[];for(const session of this.sessions.values()){if(session.stage!==6||session.status!=='playing'||session.paused||session.ufoPhase!=='flyby')continue;session.ufoElapsedMs=Math.min(session.ufoDurationMs,session.ufoElapsedMs+delta);if(session.ufoElapsedMs>=session.ufoDurationMs)session.ufoPhase='choose';updated.push(session);}return updated;}
   allUfoPlayersAttempted(session){const remaining=session.players.filter(p=>p.activeForRound&&!p.completed);return remaining.length>0&&remaining.every(p=>!p.connected||p.ufoRoundAttempted);}
 
@@ -464,7 +484,7 @@ export class SessionService {
     const session = this.get(id);
     if (!session) throw new Error('SESSION_NOT_FOUND');
     this.assertController(session, this.getSlot(id, token));
-    if (session.stage === 2 || session.stage === 4 || session.stage === 5 || session.stage === 6) throw new Error('FINISH_NOT_AVAILABLE');
+    if (session.stage === 2 || session.stage === 4 || session.stage === 5 || session.stage === 6 || session.stage === 7) throw new Error('FINISH_NOT_AVAILABLE');
     if (session.status !== 'playing') throw new Error('LEVEL_NOT_RUNNING');
     session.status = 'finished';
     session.paused = false;
@@ -583,6 +603,7 @@ export class SessionService {
       burgerRoundId: session.burgerRoundId, burgerLastDropId: session.burgerLastDropId,
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
+      pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieTargetColor: pieColorAtStrike(session.pieAngle),
       ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
@@ -592,7 +613,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted,
+        pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))

@@ -62,7 +62,7 @@ function applyState(state) {
 }
 
 class RGBScene extends Phaser.Scene {
-  constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.audioContext = null; }
+  constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.lastPieHit = 0; this.audioContext = null; }
   preload() { for(let id=1;id<=8;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
@@ -74,6 +74,7 @@ class RGBScene extends Phaser.Scene {
     this.burgerStackText = this.add.text(0, 0, '🥬   🥩   🍅', { fontSize: '64px', color: '#ffffff' }).setOrigin(0.5);
     this.burgerFallingText = this.add.text(0, 0, '', { fontSize: '58px' }).setOrigin(0.5).setVisible(false);
     this.burgerTopBunText = this.add.text(0, 0, '🍞', { fontSize: '64px' }).setOrigin(0.5).setVisible(false);
+    this.pieContainer=this.add.container(0,0).setVisible(false); this.pieGraphics=this.add.graphics(); this.pieContainer.add(this.pieGraphics); this.piePointer=this.add.triangle(0,0,0,22,14,0,28,22,0xf8fafc).setVisible(false); this.pieKnife=this.add.text(0,0,'🔪',{fontSize:'48px'}).setOrigin(.5).setVisible(false); this.pieHud=this.add.text(0,0,'R 0/6   G 0/6   B 0/6',{fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setVisible(false);
     this.ufoWindow=this.add.rectangle(0,0,100,40,0x0b1020).setStrokeStyle(3,0x93c5fd).setVisible(false);
     this.ufoTarget=this.add.image(0,0,'ufo-1').setVisible(false);
     this.ufoOptions=[0,1,2].map(()=>this.add.image(0,0,'ufo-1').setVisible(false));
@@ -98,7 +99,7 @@ class RGBScene extends Phaser.Scene {
   layout(width, height) {
     const center = width / 2;
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
-    this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(34,height*.075)); this.ufoTarget?.setPosition(center,height*.46);
+    this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78); this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(34,height*.075)); this.ufoTarget?.setPosition(center,height*.46);
     this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.72).setDisplaySize(Math.min(width*.2,150),Math.min(height*.19,100)));
     this.ufoOptionLabels?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.9));
     this.subtitle?.setPosition(center, height * 0.16).setFontSize(Math.max(12, Math.min(20, width * 0.017)));
@@ -203,9 +204,10 @@ class RGBScene extends Phaser.Scene {
     const isFlappy = state.stage === 4;
     const isBurger = state.stage === 5;
     const isUfo = state.stage === 6;
-    this.title.setText(isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
+    const isPie = state.stage === 7;
+    this.title.setText(isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the shown burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isPie ? 'Hit each rotating colour zone 6 times · First to finish wins.' : isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the shown burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setText(isBurger ? (state.burgerSequence || []).map((a) => ({ R: '🥩', G: '🥬', B: '🍅' }[a])).join('  →  ') : isFlappy ? 'TAP ANY BUTTON TO BOOST' : isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
@@ -219,12 +221,12 @@ class RGBScene extends Phaser.Scene {
       : isFlappy ? 'First to 20 blockers wins · Keep your rocket in the moving gaps!'
       : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
-      : isUfo ? (state.ufoPhase === 'flyby' ? 'WATCH THE UFO · ' + (state.ufoDurationMs / 1000).toFixed(1) + ' SECOND PASS' : 'WHICH UFO JUST FLEW PAST? · CYCLE ' + state.ufoCycle)
+      : isPie ? ('PIE SPIN ' + (state.pieSpeed || 0.9).toFixed(1) + '× · ' + (state.pieDirection < 0 ? 'ANTICLOCKWISE' : 'CLOCKWISE')) : isUfo ? (state.ufoPhase === 'flyby' ? 'WATCH THE UFO · ' + (state.ufoDurationMs / 1000).toFixed(1) + ' SECOND PASS' : 'WHICH UFO JUST FLEW PAST? · CYCLE ' + state.ufoCycle)
       : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
     this.burgerStackText.setVisible(isBurger);
-    this.ufoWindow.setVisible(isUfo); this.ufoTarget.setVisible(isUfo && state.ufoPhase==='flyby');
+    this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie); if(isPie){ this.pieGraphics.clear(); const radius=Math.min(this.scale.width*.19,this.scale.height*.29,190); const colors=[0xef4444,0x22c55e,0x3b82f6]; for(let sector=0;sector<3;sector++){ const start=-Math.PI/2+sector*Math.PI*2/3+state.pieAngle; const end=start+Math.PI*2/3; const points=[{x:0,y:0}]; for(let step=0;step<=24;step++){const a=start+(end-start)*step/24;points.push({x:Math.cos(a)*radius,y:Math.sin(a)*radius});} this.pieGraphics.fillStyle(colors[sector],1); this.pieGraphics.fillPoints(points,true); this.pieGraphics.lineStyle(5,0xffffff,.95); this.pieGraphics.strokePoints(points,true); } this.pieGraphics.fillStyle(0x111827,1); this.pieGraphics.fillCircle(0,0,radius*.16); const counts=state.players.map(p=>p.pieHits).find(Boolean)||{R:0,G:0,B:0}; this.pieHud.setText('R '+(counts.R||0)+'/6     G '+(counts.G||0)+'/6     B '+(counts.B||0)+'/6'); if(state.pieLastHitId!==this.lastPieHit){this.lastPieHit=state.pieLastHitId;this.pieKnife.setScale(.5).setAlpha(1);this.tweens.add({targets:this.pieKnife,scale:1.15,alpha:0,duration:360});} } this.ufoWindow.setVisible(isUfo); this.ufoTarget.setVisible(isUfo && state.ufoPhase==='flyby');
     this.ufoOptions.forEach((o,i)=>{o.setVisible(isUfo && state.ufoPhase==='choose');if(state.ufoOptions?.[i])o.setTexture('ufo-'+state.ufoOptions[i]);});
     this.ufoOptionLabels.forEach(o=>o.setVisible(isUfo && state.ufoPhase==='choose'));
     if(isUfo && state.ufoRoundId!==this.lastUfoRound){this.lastUfoRound=state.ufoRoundId;this.tweens.killTweensOf(this.ufoTarget);this.ufoTarget.setTexture('ufo-'+(state.ufoTargetId||1)).setPosition(this.scale.width+100,this.scale.height*.46).setVisible(true);this.tweens.add({targets:this.ufoTarget,x:-100,duration:state.ufoDurationMs||2000,ease:'Linear',onComplete:()=>this.ufoTarget.setVisible(false)});}
@@ -250,7 +252,7 @@ class RGBScene extends Phaser.Scene {
     this.diceLabels.forEach((item) => item.setVisible(isDice));
     const players = state.players.filter((player) => player.joined);
     const colors = { RED: '#f87171', GREEN: '#4ade80', BLUE: '#60a5fa' };
-    if (!isDice && !isBurger && !isUfo) {
+    if (!isDice && !isBurger && !isUfo && !isPie) {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
@@ -274,7 +276,7 @@ class RGBScene extends Phaser.Scene {
       });
     }
     for (let index = 0; index < this.playerTexts.length; index += 1) {
-      if (isDice || isBurger || isUfo || !state.players[index]?.joined) {
+      if (isDice || isBurger || isUfo || isPie || !state.players[index]?.joined) {
         this.playerTexts[index]?.destroy();
         this.playerTexts[index] = null;
       }

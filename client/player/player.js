@@ -164,13 +164,14 @@ function updateController(state) {
   const isFlappy = state.stage === 4;
   const isBurger = state.stage === 5;
   const isUfo = state.stage === 6;
+  const isPie = state.stage === 7;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
       !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie;
   hint.hidden = isRace || isFlappy;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#flappy-screen').hidden = !isFlappy;
@@ -182,7 +183,8 @@ function updateController(state) {
   } else if (isBurger) {
     sequence.innerHTML = (state.burgerSequence || []).map((action) => '<span>' + ({ R: '🥩', G: '🥬', B: '🍅' }[action]) + '</span>').join('');
     hint.textContent = 'Build the burger in order · R Meat · G Vegetable · B Tomato';
-  } else if (isUfo) {
+  } else if (isPie) { hint.hidden=false; hint.textContent='Watch the pointer · Press the matching colour to throw a knife'; }
+  if (isUfo) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
   } else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
@@ -198,6 +200,8 @@ function updateController(state) {
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
   else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
+  else if (isPie && mine.roundFeedback === 'wrong') setFeedback('Missed the colour — watch the pointer and try again', 'warning');
+  else if (isPie) setFeedback('Hit R, G or B when that colour reaches the pointer', '');
   else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
   else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong UFO — wait for the next fly-by', 'warning');
   else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct UFO! +1 point', 'success');
