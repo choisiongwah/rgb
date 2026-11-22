@@ -41,6 +41,42 @@ function answerDice(service, session, slot, action = 'G') {
 }
 
 describe('SessionService RGB Sequence Rush', () => {
+  it('lets the admin jump to any level and start it while preserving earlier level points', () => {
+    const service = new SessionService();
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const [slot] = session.players;
+    service.join(session.id, slot.token, { name: 'Tester' });
+    slot.totalPoints = 5;
+    slot.pointsEarned = 0;
+    session.stage = 4;
+    session.status = 'finished';
+
+    service.selectLevel(session.id, 'admin', 9);
+    expect(session.stage).toBe(9);
+    expect(session.status).toBe('waiting');
+    expect(slot.totalPoints).toBe(5);
+    expect(() => service.selectLevel(session.id, 'other-admin', 2)).toThrow('SESSION_NOT_FOUND');
+    expect(() => service.selectLevel(session.id, 'admin', 11)).toThrow('INVALID_LEVEL');
+
+    service.startLevel(session.id, slot.token);
+    expect(session.stage).toBe(9);
+    expect(session.status).toBe('playing');
+    expect(slot.activeForRound).toBe(true);
+  });
+
+  it('removes only the current level award when the admin switches to a test level', () => {
+    const service = new SessionService();
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const [slot] = session.players;
+    service.join(session.id, slot.token, { name: 'Tester' });
+    slot.totalPoints = 8;
+    slot.pointsEarned = 3;
+    service.selectLevel(session.id, 'admin', 3);
+    expect(slot.totalPoints).toBe(5);
+    expect(slot.pointsEarned).toBe(0);
+    expect(session.status).toBe('waiting');
+  });
+
   it('stores an optional avatar and selected character on the player profile', () => {
     const service = new SessionService();
     const session = service.create({ host: { username: 'admin', role: 'admin' } });
