@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { authService } from '../middleware/auth.js';
 
 const inputSchema = z.object({
-  action: z.enum(['R', 'G', 'B']),
+  action: z.enum(['R', 'G', 'B', 'JUMP']),
   inputId: z.number().int().nonnegative(),
   roundId: z.number().int().nonnegative().optional()
 });
