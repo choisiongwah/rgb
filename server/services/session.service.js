@@ -33,7 +33,7 @@ function resetBurgerStackChallenge(stack, random) {
 const PIE_HITS_PER_COLOR = 6;
 const PIE_COLORS = ['R', 'G', 'B'];
 function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
-const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
+const UFO_DURATIONS_MS = [1500, 1100, 800, 500];
 function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
 const BURGER_MIN_LENGTH = 4;
 const BURGER_MAX_LENGTH = 8;
@@ -125,7 +125,7 @@ export class SessionService {
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, island: createIslandState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], island: createIslandState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -269,7 +269,7 @@ export class SessionService {
     else session.burgerSequence = null;
 
 
-    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; } }
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieHitAngles=[]; } }
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -322,11 +322,12 @@ export class SessionService {
         island.biteId += 1;
         island.penaltyMs = 1000;
         island.progress = island.milestone;
+        slot.successCount = island.progress;
         slot.roundFeedback = 'bitten';
         return { session, slot, correct: false, reset: true, penaltyMs: 1000, milestone: island.milestone };
       }
       island.progress += 1;
-      if (island.progress % ISLAND_MILESTONE_SIZE === 0) island.milestone = island.progress;
+      island.milestone = island.progress;
       slot.successCount = island.progress;
       slot.successFeedbackId += 1;
       slot.roundFeedback = 'correct';
@@ -343,7 +344,10 @@ export class SessionService {
     if (session.stage === 7) {
       if (!PIE_COLORS.includes(action)) throw new Error('INVALID_INPUT');
       const targetColor = pieColorAtStrike(session.pieAngle);
-      if (action !== targetColor) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor}; }
+      const hitAngle = ((session.pieAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const repeatsSpot = (slot.pieHitAngles || []).some((previous) => { const delta = Math.abs(previous - hitAngle); return Math.min(delta, Math.PI * 2 - delta) < Math.PI / 15; });
+      if (action !== targetColor || repeatsSpot) { slot.roundFeedback='wrong'; return {session,slot,correct:false,reset:false,cycleCompleted:false,targetColor,repeatSpot:repeatsSpot}; }
+      slot.pieHitAngles.push(hitAngle);
       slot.pieHits[action] += 1; slot.pieTotalHits += 1; slot.successCount += 1; slot.successFeedbackId += 1; slot.roundFeedback='correct';
       session.pieTotalHits += 1; session.pieLastHitId += 1; session.pieLastHit={id:session.pieLastHitId,color:action,playerColor:slot.color};
       session.pieSpeed = Math.min(2.8, 0.9 + Math.floor(session.pieTotalHits / 6) * 0.22);
