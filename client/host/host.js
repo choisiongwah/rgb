@@ -93,6 +93,10 @@ function renderFinalResults(state) {
 
 function applyState(state) {
   currentState = state;
+  const levelSelect = $('#level-select');
+  const startLevelButton = $('#start-level');
+  if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
+  if (startLevelButton) startLevelButton.disabled = state.status === 'playing';
   renderSlots(state);
   renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
@@ -464,6 +468,16 @@ $('#logout').addEventListener('click', async () => {
   location.reload();
 });
 $('#create').addEventListener('click', createRoom);
+$('#start-level').addEventListener('click', () => {
+  const stage = Number($('#level-select').value);
+  $('#start-level').disabled = true;
+  $('#error').textContent = '';
+  socket?.emit('host:control', { sessionId: currentState?.id, action: 'challenge', stage }, (ack) => {
+    $('#start-level').disabled = false;
+    if (!ack?.ok) $('#error').textContent = ack?.error || 'Could not start selected level';
+    else $('#error').textContent = '';
+  });
+});
 $('#review-results').addEventListener('click', () => {
   $('#review-results').disabled = true;
   socket?.emit('host:control', { sessionId: currentState?.id, action: 'review' }, (ack) => {
