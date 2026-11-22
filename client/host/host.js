@@ -34,7 +34,8 @@ function renderSlots(state) {
       count.textContent = state.stage === 2
         ? player.successCount + ' / ' + state.diceTarget
         : state.stage === 3 ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' m'
-          : player.cycles + ' / ' + state.targetCycles;
+          : state.stage === 4 ? (player.flappy?.blockersPassed || 0) + ' / 20'
+            : player.cycles + ' / ' + state.targetCycles;
     }
     if (result) {
       result.hidden = !player.joined;
