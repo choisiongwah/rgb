@@ -210,7 +210,7 @@ describe('SessionService Level 3 Highway Dodge', () => {
     service.tickRaces(500);
     service.tickRaces(500);
     expect(slots[0].race.distanceMeters).toBeCloseTo(101.25);
-    expect(slots[0].race.speedMultiplier).toBeCloseTo(1);
+    expect(slots[0].race.speedMultiplier).toBeCloseTo(1.025);
     service.tickRaces(500);
     service.tickRaces(500);
     expect(slots[0].race.distanceMeters).toBeGreaterThan(200);
