@@ -84,6 +84,7 @@ function renderController(name, color, state) {
       const payload = { action: button.dataset.a, inputId: thisInput };
       if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
       if (latestState?.stage === 5) payload.roundId = latestState.burgerRoundId;
+      if (latestState?.stage === 6) payload.roundId = latestState.ufoRoundId;
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) setFeedback(readableError(result.error), 'warning');
@@ -162,13 +163,14 @@ function updateController(state) {
   const isRace = state.stage === 3;
   const isFlappy = state.stage === 4;
   const isBurger = state.stage === 5;
+  const isUfo = state.stage === 6;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0);
+      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy;
+  sequence.hidden = isRace || isFlappy || isUfo;
   hint.hidden = isRace || isFlappy;
   root.querySelector('#race-screen').hidden = !isRace;
   root.querySelector('#flappy-screen').hidden = !isFlappy;
@@ -180,6 +182,8 @@ function updateController(state) {
   } else if (isBurger) {
     sequence.innerHTML = (state.burgerSequence || []).map((action) => '<span>' + ({ R: '🥩', G: '🥬', B: '🍅' }[action]) + '</span>').join('');
     hint.textContent = 'Build the burger in order · R Meat · G Vegetable · B Tomato';
+  } else if (isUfo) {
+    hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
   } else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
@@ -194,6 +198,10 @@ function updateController(state) {
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
   else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
+  else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
+  else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong UFO — wait for the next fly-by', 'warning');
+  else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct UFO! +1 point', 'success');
+  else if (isUfo) setFeedback('Choose the matching UFO', '');
   else if (isBurger && mine.burgerRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong ingredient — wait for the next burger', 'warning');
   else if (isBurger && mine.roundFeedback === 'correct') setFeedback('Burger complete! +1 point · Next recipe loading', 'success');
   else if (isBurger && mine.burgerRoundAttempted) setFeedback('Wrong ingredient — wait for the next burger', 'warning');
