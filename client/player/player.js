@@ -13,6 +13,7 @@ let inputId = 0;
 let latestState;
 let lastCrashId = 0;
 let lastFlappyCrashId = 0;
+let lastIslandBiteId = 0;
 const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
@@ -69,7 +70,8 @@ function renderController(name, color, state) {
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
     '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
-    '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
+    '<section id="island-screen" class="island-screen" hidden><div class="island-hud"><strong id="island-progress">0 / 50 SHARKS</strong><span id="island-milestone">START</span></div><div class="island-world"><div class="island-sky"></div><div class="island-sea"></div><div class="island-destination">🏝️<small>DESTINATION</small></div><div id="island-steps" class="island-steps"></div><div id="island-player" class="island-player">🧑‍🚀</div><div id="island-shark" class="island-shark">🦈</div><div id="island-bite" class="island-bite">CHOMP! -1 SEC</div></div><div class="island-progress"><div id="island-progress-fill"></div></div></section>' +
+    '<section id="race-screen"' class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
     '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
@@ -165,15 +167,18 @@ function updateController(state) {
   const isBurger = state.stage === 5;
   const isUfo = state.stage === 6;
   const isPie = state.stage === 7;
+  const isIsland = state.stage === 8;
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
       !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isRace && (mine.race?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie;
+  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland;
   hint.hidden = isRace || isFlappy;
   root.querySelector('#race-screen').hidden = !isRace;
+  root.querySelector('#island-screen').hidden = !isIsland;
+  if (isIsland) renderIsland(state, mine);
   root.querySelector('#flappy-screen').hidden = !isFlappy;
   root.querySelector('.pad').hidden = isFlappy;
   if (isFlappy) renderFlappy(state, mine);
@@ -187,6 +192,7 @@ function updateController(state) {
   if (isUfo) {
     hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
   } else if (isPie) { hint.hidden=false; hint.textContent='R '+(mine.pieHits?.R||0)+'/6  ·  G '+(mine.pieHits?.G||0)+'/6  ·  B '+(mine.pieHits?.B||0)+'/6'; }
+  else if (isIsland) { hint.hidden=false; hint.textContent='Match the shark colour to cross safely · R Red · G Green · B Blue'; }
   else if (!isRace) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
@@ -203,6 +209,9 @@ function updateController(state) {
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
   else if (isPie && mine.roundFeedback === 'wrong') setFeedback('Missed the colour — watch the pointer and try again', 'warning');
   else if (isPie) setFeedback('Hit R, G or B when that colour reaches the pointer', '');
+  else if (isIsland && mine.island?.penaltyMs > 0) setFeedback('SHARK BITE! Recovering for 1 second…', 'warning');
+  else if (isIsland && mine.roundFeedback === 'bitten') setFeedback('Wrong colour! You fell back to the last island checkpoint.', 'warning');
+  else if (isIsland) setFeedback('Cross the sea — match each shark colour!', '');
   else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
   else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong UFO — wait for the next fly-by', 'warning');
   else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct UFO! +1 point', 'success');
@@ -219,6 +228,22 @@ function updateController(state) {
   renderControls(state);
   const target = root.querySelector('#target-cycles');
   if (target && document.activeElement !== target) target.value = state.targetCycles;
+}
+
+function renderIsland(state, mine) {
+  const island = mine.island || { progress:0, milestone:0, sharks:[], penaltyMs:0, biteId:0 };
+  const progress = island.progress || 0;
+  root.querySelector('#island-progress').textContent = progress + ' / 50 SHARKS';
+  root.querySelector('#island-milestone').textContent = island.milestone ? 'CHECKPOINT ' + island.milestone : 'START ISLAND';
+  root.querySelector('#island-progress-fill').style.width = (progress / 50 * 100) + '%';
+  const player = root.querySelector('#island-player');
+  player.style.left = (8 + progress / 50 * 76) + '%';
+  player.classList.toggle('bitten', (island.penaltyMs || 0) > 0);
+  const shark = root.querySelector('#island-shark');
+  shark.textContent = ({R:'🦈',G:'🦈',B:'🦈'}[island.sharks?.[progress]] || '🦈');
+  shark.style.filter = ({R:'drop-shadow(0 0 12px #ef4444) hue-rotate(320deg) saturate(2)',G:'drop-shadow(0 0 12px #22c55e) hue-rotate(70deg) saturate(2)',B:'drop-shadow(0 0 12px #3b82f6)'}[island.sharks?.[progress]] || 'none');
+  shark.style.left = Math.min(88, 8 + progress / 50 * 76 + 5) + '%';
+  if (island.biteId !== lastIslandBiteId) { lastIslandBiteId=island.biteId; const bite=root.querySelector('#island-bite'); bite.classList.remove('show'); void bite.offsetWidth; bite.classList.add('show'); player.classList.add('bitten'); }
 }
 
 function renderRace(state, mine) {

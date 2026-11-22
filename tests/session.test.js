@@ -578,3 +578,17 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);
   });
 });
+
+
+describe('SessionService Level 8 Island Crossing', () => {
+  function createLevel8Session(count=3, random=()=>0.1) {
+    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
+    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Sailor '+(i+1)}));
+    session.stage=8; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  }
+  it('creates 50 random coloured sharks per player',()=>{const {service,slots}=createLevel8Session();expect(slots[0].island.sharks).toHaveLength(50);expect(slots[0].island.sharks.every(c=>['R','G','B'].includes(c))).toBe(true);expect(service.toPublicView(service.get(slots[0].token))?.islandTarget).toBeUndefined();});
+  it('moves forward on matching colour and advances milestone every ten sharks',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<10;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(10);expect(p.island.milestone).toBe(10);});
+  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(10);expect(p.island.penaltyMs).toBe(1000);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
+  it('continues placements until all active players reach the island',()=>{const {service,session,slots}=createLevel8Session();for(let p=0;p<3;p++){slots[p].island.sharks=Array(50).fill('R');for(let i=0;i<50;i++)service.submitInput(session.id,slots[p].token,'R');expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);});
+  it('does not advance penalty timer while paused',()=>{const {service,session,slots}=createLevel8Session(1);slots[0].island.penaltyMs=1000;service.setPaused(session.id,true);service.tickIslands(500);expect(slots[0].island.penaltyMs).toBe(1000);});
+});
