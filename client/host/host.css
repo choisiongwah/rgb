@@ -36,3 +36,35 @@
 @media(max-width:560px){#results-page{justify-content:flex-start;padding-top:8vh}.podium{grid-template-columns:1fr;max-width:420px}.podium-card.rank-1{transform:none}.trophy{font-size:44px}.podium-card{flex-direction:row;flex-wrap:wrap;justify-content:space-around}.podium-card h2{width:100%;font-size:22px}}
 
 #game-root[hidden]{display:none!important}
+
+/* Level 3 — three independent vertical highway screens on the shared host display */
+#player-strip[hidden],#game-root[hidden],#race-display[hidden]{display:none!important}
+#race-display{width:100%;height:100dvh;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;background:#0b1220;overflow:hidden}
+.race-column{min-width:0;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:12px 10px;background:linear-gradient(180deg,#1e293b,#0f172a);border-top:5px solid #64748b;overflow:hidden}
+.race-column.red{border-top-color:#ef4444}.race-column.green{border-top-color:#22c55e}.race-column.blue{border-top-color:#3b82f6}
+.race-column-header{display:flex;align-items:center;justify-content:space-between;gap:5px;min-height:32px}
+.race-player-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(13px,1.5vw,22px);font-weight:950}
+.race-column.red .race-player-name{color:#fca5a5}.race-column.green .race-player-name{color:#86efac}.race-column.blue .race-player-name{color:#93c5fd}
+.race-distance{white-space:nowrap;color:#f8fafc;font-size:clamp(10px,1.2vw,17px);font-variant-numeric:tabular-nums}
+.race-player-status{text-align:center;margin:0;min-height:18px;color:#cbd5e1;font-size:clamp(10px,1vw,14px);font-weight:800}
+.race-join-qr{align-self:center;width:min(36vw,24vh,210px);max-height:30vh;object-fit:contain;background:#fff;border-radius:8px;padding:5px}
+.race-join-qr[hidden]{display:none}
+.host-race-road{position:relative;flex:1;min-height:0;overflow:hidden;border:3px solid #94a3b8;border-radius:14px;background:linear-gradient(90deg,#36523d 0 5%,#334155 5% 95%,#36523d 95% 100%);box-shadow:inset 0 0 26px #020617}
+.host-race-road[hidden]{display:none}
+.host-race-road:before{content:"";position:absolute;inset:0 5%;background:linear-gradient(90deg,#334155,#475569 50%,#334155)}
+.host-road-lane{position:absolute;z-index:1;top:0;bottom:0;width:2px;background:repeating-linear-gradient(to bottom,#f8fafc 0 22px,transparent 22px 42px);opacity:.8;animation:host-road-dash .42s linear infinite}
+.host-road-lane.lane-a{left:35%}.host-road-lane.lane-b{left:68%}
+@keyframes host-road-dash{to{background-position:0 42px}}
+.host-race-obstacles{position:absolute;z-index:2;inset:0 5%}
+.host-race-obstacle{position:absolute;transform:translate(-50%,-50%) rotate(90deg);font-size:clamp(22px,4.5vw,54px);line-height:1;filter:drop-shadow(0 4px 3px #0009);transition:top .1s linear,left .1s ease}
+.host-race-car{position:absolute;z-index:3;bottom:7%;left:50%;transform:translateX(-50%) rotate(90deg);width:clamp(34px,5vw,66px);height:clamp(48px,7vw,82px);display:grid;place-items:center;font-size:clamp(34px,5vw,62px);filter:drop-shadow(0 5px 4px #000b);transition:left .12s ease}
+.host-race-car.has-avatar{transform:translateX(-50%);border:3px solid #fff;border-radius:50%;overflow:hidden;background:#0f172a;padding:2px}
+.host-race-car img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.host-race-crash{position:absolute;z-index:5;inset:40% 0 auto;text-align:center;color:#fff;font-size:clamp(18px,3vw,34px);font-weight:1000;text-shadow:0 3px #991b1b;pointer-events:none}
+.host-race-crash[hidden]{display:none}
+.race-player-footer{text-align:center;color:#cbd5e1;font-size:clamp(9px,.9vw,12px);font-weight:850;letter-spacing:.04em;white-space:nowrap}
+.race-column.completed .host-race-road{border-color:#facc15;box-shadow:0 0 18px #facc1544}
+.race-column.disconnected .host-race-road{filter:grayscale(.8);opacity:.65}
+@media(max-width:700px){.race-column{padding:6px 4px;gap:4px}.race-column-header{display:block;text-align:center}.race-distance{display:block;margin-top:2px}.race-player-footer{font-size:8px;letter-spacing:0}}
+
+#room{position:relative}#race-display{position:absolute;inset:0;height:100%;z-index:1}

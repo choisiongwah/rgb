@@ -214,7 +214,7 @@ function updateController(state) {
   const hint = root.querySelector('#input-hint');
   sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack || isMatrix || isBurger;
   hint.hidden = isRace || isFlappy || isMatrix || isBurger || isPie;
-  root.querySelector('#race-screen').hidden = !isRace;
+  root.querySelector('#race-screen').hidden = true;
   root.querySelector('#burger-quiz').hidden = !isBurger;
   root.querySelector('#pie-screen').hidden = !isPie;
   if (isPie) renderPie(state, mine);
@@ -245,7 +245,7 @@ function updateController(state) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'Tap R → G → B in order';
   }
-  if (isRace) renderRace(state, mine);
+
   if (mine.completed) setFeedback('You finished — ' + ordinal(mine.place) + ' place!', 'success');
   else if (state.status === 'finished') setFeedback('Level complete. Next level is ready.', 'success');
   else if (state.paused) setFeedback('Game paused', 'warning');
