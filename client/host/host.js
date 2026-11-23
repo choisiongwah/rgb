@@ -116,7 +116,7 @@ function ensureRaceDisplay() {
     qr.alt = 'Join ' + color;
     const road = document.createElement('div');
     road.className = 'host-race-road';
-    road.innerHTML = '<div class="host-road-lane lane-a"></div><div class="host-road-lane lane-b"></div><div class="host-race-obstacles"></div><div class="host-race-car">🚗</div><div class="host-race-crash">CRASH!</div>';
+    road.innerHTML = '<div class="host-road-lane lane-a"></div><div class="host-road-lane lane-b"></div><div class="host-race-obstacles"></div><div class="host-race-car">🚗</div><div class="host-race-crash">CRASH!</div><div class="host-individual-scene"><strong class="host-individual-icon"></strong><span class="host-individual-detail"></span></div>';
     const footer = document.createElement('footer');
     footer.className = 'race-player-footer';
     footer.textContent = 'R  LEFT  ·  G  CENTRE  ·  B  RIGHT';
@@ -140,6 +140,9 @@ function renderRaceDisplay(state) {
     const car = column.querySelector('.host-race-car');
     const obstacles = column.querySelector('.host-race-obstacles');
     const crash = column.querySelector('.host-race-crash');
+    const scene = column.querySelector('.host-individual-scene');
+    const sceneIcon = column.querySelector('.host-individual-icon');
+    const sceneDetail = column.querySelector('.host-individual-detail');
     name.textContent = player.player?.name || player.color;
     status.textContent = player.joined
       ? (player.connected ? 'CONNECTED' : 'DISCONNECTED') + (player.completed ? ' · ' + ordinal(player.place) + ' PLACE' : '')
@@ -148,10 +151,41 @@ function renderRaceDisplay(state) {
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
     road.hidden = !player.joined;
-    distance.textContent = player.joined
-      ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m'
-      : 'WAITING';
+    const individual = state.stage >= 4 && state.stage <= 9;
+    const race = player.race || {};
+    const stageProgress = {
+      4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
+      5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
+      6: (player.successCount || 0) + ' / ' + state.ufoTarget + ' UFOs',
+      7: 'R ' + (player.pieHits?.R || 0) + '/6 · G ' + (player.pieHits?.G || 0) + '/6 · B ' + (player.pieHits?.B || 0) + '/6',
+      8: (player.island?.progress || 0) + ' / 50 SHARKS',
+      9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
+    };
+    distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m';
     if (!player.joined) continue;
+    if (individual) {
+      const icons = {4:'🚀',5:'🍔',6:'🛸',7:'🥧',8:'🏝️',9:'🍔'};
+      const details = {
+        4: (player.flappy?.blockersPassed || 0) + ' blockers cleared',
+        5: (player.burgerProgressIndex || 0) + ' ingredients stacked',
+        6: state.ufoPhase === 'flyby' ? 'WATCH THE UFO' : 'CHOOSE THE MATCH',
+        7: (player.pieTotalHits || 0) + ' successful knife hits',
+        8: 'Checkpoint ' + (player.island?.milestone || 0) + ' · ' + (player.island?.progress || 0) + ' crossed',
+        9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
+      };
+      scene.hidden = false;
+      sceneIcon.textContent = icons[state.stage] || '🎮';
+      sceneDetail.textContent = details[state.stage] || '';
+      car.hidden = true;
+      obstacles.hidden = true;
+      crash.hidden = true;
+      column.classList.toggle('completed', Boolean(player.completed));
+      column.classList.toggle('disconnected', !player.connected);
+      continue;
+    }
+    scene.hidden = true;
+    car.hidden = false;
+    obstacles.hidden = false;
     const race = player.race || {};
     car.style.left = ([20, 50, 80][race.lane ?? 1]) + '%';
     car.textContent = player.player?.avatar ? '' : '🚗';
@@ -190,12 +224,12 @@ function applyState(state) {
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
-  const isRaceDisplay = state.stage === 3;
-  $('#race-display').hidden = !isRaceDisplay;
-  $('#game-root').hidden = isRaceDisplay || [4, 7, 8].includes(state.stage);
-  $('#player-strip').hidden = isRaceDisplay;
+  const isIndividualDisplay = state.stage >= 3 && state.stage <= 9;
+  $('#race-display').hidden = !isIndividualDisplay;
+  $('#game-root').hidden = isIndividualDisplay;
+  $('#player-strip').hidden = isIndividualDisplay;
   $('#host-actions').hidden = false;
-  if (isRaceDisplay) renderRaceDisplay(state);
+  if (isIndividualDisplay) renderRaceDisplay(state);
   renderSlots(state);
   renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
