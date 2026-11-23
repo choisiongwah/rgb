@@ -8,7 +8,7 @@ const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 8;
 const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
-const BURGER_TARGET_POINTS = 6;
+const BURGER_TARGET_POINTS = 5;
 const UFO_TARGET_POINTS = 10;
 const ISLAND_TARGET_SHARKS = 50;
 const ISLAND_MILESTONE_SIZE = 10;
@@ -44,7 +44,6 @@ const PIE_COLORS = ['R', 'G', 'B'];
 function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
 const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
 function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8,9]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
-const BURGER_TARGET_POINTS = 5;
 const BURGER_MIN_LENGTH = 3;
 const BURGER_MAX_LENGTH = 7;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
