@@ -246,22 +246,8 @@ function updateController(state) {
   } else if (isMatrix) {
     sequence.hidden = false;
     hint.hidden = false;
+    hint.textContent = 'Choose the missing square · R LEFT · G MIDDLE · B RIGHT';
   }
-  if (isDice) {
-    sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
-    hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
-  } else if (isBurger) { hint.hidden = true; } else if (isPie) { hint.hidden = true; }
-  if (isUfo) {
-    hint.hidden = false; hint.textContent = state.ufoPhase === 'flyby' ? 'Watch carefully — memorise the UFO!' : 'Which UFO did you see? R = LEFT · G = MIDDLE · B = RIGHT';
-  } else if (isPie) { hint.hidden = true; }
-  else if (isIsland) { const nextColor = mine.island?.sharks?.[mine.island?.progress]; const nextLabel = ({R:'RED · PRESS R',G:'GREEN · PRESS G',B:'BLUE · PRESS B'})[nextColor] || 'NEXT SHARK'; hint.hidden=false; hint.textContent='NEXT SHARK: ' + nextLabel + ' · Checkpoint ' + (mine.island?.milestone || 0); }
-  else if (isBurgerStack) { hint.hidden=false; hint.textContent='Move one lane at a time · R LEFT · B RIGHT · catch every falling ingredient'; }
-  else if (isMatrix) { hint.hidden=false; hint.textContent='Choose the missing square · R LEFT · G MIDDLE · B RIGHT'; }
-  else if (!isRace) {
-    sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
-    hint.textContent = 'Tap R → G → B in order';
-  }
-
   if (mine.completed) setFeedback('You finished — ' + ordinal(mine.place) + ' place!', 'success');
   else if (state.status === 'finished') setFeedback('Level complete. Next level is ready.', 'success');
   else if (state.paused) setFeedback('Game paused', 'warning');
@@ -269,7 +255,7 @@ function updateController(state) {
   else if (!mine.activeForRound) setFeedback('Ready for the next level', '');
   else if (isRace && (mine.race?.penaltyMs || 0) > 0) setFeedback('CRASH! 2-second penalty — hold tight', 'warning');
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
-  else if (isFlappy) setFeedback('Tap anywhere to boost your rocket!', '');
+  else if (isFlappy) setFeedback('Tap R, G or B to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
   else if (isPie && mine.roundFeedback === 'wrong') setFeedback(state.pieLastMiss?.occupied ? 'Knife collision! That position is already occupied.' : 'Wrong colour — time your throw with the rotating wheel.', 'warning');
   else if (isPie) setFeedback('Throw when the matching colour reaches the top. Avoid embedded knives!', '');
