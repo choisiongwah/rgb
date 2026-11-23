@@ -346,9 +346,9 @@ function renderIndividualBoard(board, state, player) {
         node = document.createElement('span');
         node.className = 'stack-drop';
         node.dataset.dropId = String(drop.id);
-        node.textContent = food[drop.ingredient] || '🍅';
         dropsHost.append(node);
       }
+      node.textContent = food[drop.ingredient] || '🍅';
       node.style.left = ([16.5,50,83.5][drop.lane] ?? 50) + '%';
       node.style.top = (Math.max(0,Math.min(1,drop.y))*100) + '%';
     }
