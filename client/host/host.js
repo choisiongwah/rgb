@@ -136,7 +136,7 @@ function footerText(column, stage) {
     4: 'TAP ANY COLOUR TO BOOST',
     5: 'R MEAT  ·  G LETTUCE  ·  B TOMATO',
     7: 'R RED  ·  G GREEN  ·  B BLUE',
-    8: 'MATCH THE SHARK COLOUR',
+    8: 'MATCH THE NEXT PIPE COLOUR',
     9: 'R MOVE LEFT  ·  B MOVE RIGHT'
   };
   footer.textContent = labels[stage] || '';
@@ -174,7 +174,7 @@ function renderRaceDisplay(state) {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
       7: 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4',
-      8: (player.island?.progress || 0) + ' / 50 SHARKS',
+      8: (player.tri?.score || 0) + ' / ' + state.triTarget + ' PIPES',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
     distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m' : '';
@@ -186,7 +186,7 @@ function renderRaceDisplay(state) {
         4: (player.flappy?.blockersPassed || 0) + ' blockers cleared',
         5: (player.burgerProgressIndex || 0) + ' ingredients stacked',
         7: (player.pieTotalHits || 0) + ' successful knife hits',
-        8: 'Checkpoint ' + (player.island?.milestone || 0) + ' · ' + (player.island?.progress || 0) + ' crossed',
+        8: 'Pipe score ' + (player.tri?.score || 0),
         9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
       };
             car.hidden = true;
@@ -232,7 +232,7 @@ function renderRaceDisplay(state) {
 }
 
 function ensureIndividualBoard(scene, stage) {
-  const type = ({4:'flappy',5:'burger',7:'pie',8:'island',9:'stack'})[stage] || 'other';
+  const type = ({4:'flappy',5:'burger',7:'pie',8:'tri',9:'stack'})[stage] || 'other';
   let board = scene.querySelector('.individual-board');
   if (!board || board.dataset.type !== type) {
     board = document.createElement('div');
@@ -246,8 +246,8 @@ function ensureIndividualBoard(scene, stage) {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
       board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="board-caption"></div>';
-    } else if (type === 'island') {
-      board.innerHTML = '<div class="island-board-title">SHARK ISLAND CROSSING</div><div class="island-sea-host"><div class="island-start-host">START</div><div class="island-sharks-host"></div><div class="island-destination-host">🏝️</div><div class="island-player-host">🧑‍🚀</div></div><div class="board-caption"></div>';
+    } else if (type === 'tri') {
+      board.innerHTML = '<div class="tri-board-title">TRI COLOUR RUN</div><div class="tri-world-host"><div class="tri-pipes-host"></div><div class="tri-runner-host">🛸</div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
       board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">👨‍🍳</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
@@ -275,19 +275,23 @@ function renderIndividualBoard(board, state, player) {
     const sequence = state.burgerSequence || [];
     const progress = Math.max(0, Math.min(sequence.length, player.burgerProgressIndex || 0));
     const labels = {R:'🥩',G:'🥬',B:'🍅'};
-    board.querySelector('.burger-recipe').innerHTML = sequence.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
-    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + sequence[index] + '">' + labels[sequence[index]] + '</span>').join('');
+    const targetOrder = [...sequence].reverse();
+    board.querySelector('.burger-recipe').innerHTML = targetOrder.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
+    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + targetOrder[index] + '">' + labels[targetOrder[index]] + '</span>').join('');
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
     wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
     board.querySelector('.pie-knives-host').innerHTML = (player.pieKnives || []).map(item => '<i style="transform:rotate(' + (Number(item.angle || 0)*180/Math.PI) + 'deg)"></i>').join('');
-    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (state.pieSpeed > 1.5 ? 'FAST SPIN' : 'SPINNING');
+    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (Math.abs(state.pieSpeed) > 4.7 ? 'FAST SPIN' : 'SPINNING');
   } else if (state.stage === 8) {
-    const island = player.island || {sharks:[],progress:0,orientations:[]};
-    board.querySelector('.island-sharks-host').innerHTML = (island.sharks || []).slice(0,50).map((color,index) => '<span class="island-shark-host ' + color.toLowerCase() + ' ' + ((island.orientations || [])[index] || 'horizontal') + (index < island.progress ? ' crossed' : '') + '" title="Shark ' + (index + 1) + ': ' + color + '">' + color + '</span>').join('');
-    board.querySelector('.island-player-host').style.left = (4 + Math.min(50,island.progress || 0)*1.75) + '%';
-    board.querySelector('.board-caption').textContent = (island.progress || 0) + ' / 50 SHARKS · ' + ((island.penaltyMs || 0)>0 ? 'SHARK BITE · RECOVERING' : 'MATCH THE SHARK COLOUR');
+    const tri = player.tri || {pipes:[],score:0};
+    const colorClass = {R:'red',G:'green',B:'blue'};
+    board.querySelector('.tri-pipes-host').innerHTML = (tri.pipes || []).map(pipe =>
+      '<div class="tri-pipe-pair ' + (colorClass[pipe.color] || 'red') + '" style="left:' + (pipe.x * 100) + '%"><i class="tri-pipe top"></i><i class="tri-pipe bottom"></i></div>'
+    ).join('');
+    board.querySelector('.tri-runner-host').classList.toggle('wrong', player.roundFeedback === 'wrong');
+    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
