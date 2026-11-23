@@ -287,9 +287,24 @@ function renderIndividualBoard(board, state, player) {
   } else if (state.stage === 8) {
     const tri = player.tri || {pipes:[],score:0};
     const colorClass = {R:'red',G:'green',B:'blue'};
-    board.querySelector('.tri-pipes-host').innerHTML = (tri.pipes || []).map(pipe =>
-      '<div class="tri-pipe-pair ' + (colorClass[pipe.color] || 'red') + '" style="left:' + (pipe.x * 100) + '%"><i class="tri-pipe top"></i><i class="tri-pipe bottom"></i></div>'
-    ).join('');
+    const pipesHost = board.querySelector('.tri-pipes-host');
+    const activePipeIds = new Set();
+    for (const pipe of tri.pipes || []) {
+      activePipeIds.add(String(pipe.id));
+      let pair = pipesHost.querySelector('[data-pipe-id="' + pipe.id + '"]');
+      if (!pair) {
+        pair = document.createElement('div');
+        pair.className = 'tri-pipe-pair';
+        pair.dataset.pipeId = String(pipe.id);
+        pair.innerHTML = '<i class="tri-pipe top"></i><i class="tri-pipe bottom"></i>';
+        pipesHost.append(pair);
+      }
+      pair.className = 'tri-pipe-pair ' + (colorClass[pipe.color] || 'red');
+      pair.style.left = (pipe.x * 100) + '%';
+    }
+    for (const node of pipesHost.querySelectorAll('[data-pipe-id]')) {
+      if (!activePipeIds.has(node.dataset.pipeId)) node.remove();
+    }
     board.querySelector('.tri-runner-host').classList.toggle('wrong', player.roundFeedback === 'wrong');
     board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
   } else if (state.stage === 9) {
