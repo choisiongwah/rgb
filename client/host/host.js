@@ -151,12 +151,11 @@ function renderRaceDisplay(state) {
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
     road.hidden = !player.joined;
-    const individual = state.stage >= 4 && state.stage <= 9;
+    const individual = [4,5,7,8,9].includes(state.stage);
     const race = player.race || {};
     const stageProgress = {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
-      6: (player.successCount || 0) + ' / ' + state.ufoTarget + ' UFOs',
       7: 'R ' + (player.pieHits?.R || 0) + '/6 · G ' + (player.pieHits?.G || 0) + '/6 · B ' + (player.pieHits?.B || 0) + '/6',
       8: (player.island?.progress || 0) + ' / 50 SHARKS',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
@@ -164,11 +163,10 @@ function renderRaceDisplay(state) {
     distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m';
     if (!player.joined) continue;
     if (individual) {
-      const icons = {4:'🚀',5:'🍔',6:'🛸',7:'🥧',8:'🏝️',9:'🍔'};
+      const icons = {4:'🚀',5:'🍔',7:'🥧',8:'🏝️',9:'🍔'};
       const details = {
         4: (player.flappy?.blockersPassed || 0) + ' blockers cleared',
         5: (player.burgerProgressIndex || 0) + ' ingredients stacked',
-        6: state.ufoPhase === 'flyby' ? 'WATCH THE UFO' : 'CHOOSE THE MATCH',
         7: (player.pieTotalHits || 0) + ' successful knife hits',
         8: 'Checkpoint ' + (player.island?.milestone || 0) + ' · ' + (player.island?.progress || 0) + ' crossed',
         9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
@@ -220,7 +218,7 @@ function renderRaceDisplay(state) {
 }
 
 function ensureIndividualBoard(scene, stage) {
-  const type = ({4:'flappy',5:'burger',6:'ufo',7:'pie',8:'island',9:'stack'})[stage] || 'other';
+  const type = ({4:'flappy',5:'burger',7:'pie',8:'island',9:'stack'})[stage] || 'other';
   let board = scene.querySelector('.individual-board');
   if (!board || board.dataset.type !== type) {
     board = document.createElement('div');
@@ -265,13 +263,6 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.burger-recipe').innerHTML = sequence.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
     board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + sequence[index] + '">' + labels[sequence[index]] + '</span>').join('');
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
-  } else if (state.stage === 6) {
-    const options = state.ufoOptions || [];
-    const target = board.querySelector('.ufo-target');
-    target.textContent = state.ufoPhase === 'flyby' ? '🛸' : 'TARGET HIDDEN';
-    target.classList.toggle('flying', state.ufoPhase === 'flyby');
-    board.querySelector('.ufo-options').innerHTML = options.map((id,index) => '<span class="ufo-option">' + '<b>' + ['R','G','B'][index] + '</b><strong>🛸</strong><small>UFO ' + id + '</small></span>').join('');
-    board.querySelector('.board-caption').textContent = state.ufoPhase === 'flyby' ? 'WATCH THE FLYBY · ' + Math.max(0,Math.ceil((state.ufoDurationMs-state.ufoElapsedMs)/1000)) + 's' : 'CHOOSE THE MATCHING UFO';
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
     wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
@@ -297,7 +288,7 @@ function applyState(state) {
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
-  const isIndividualDisplay = state.stage >= 3 && state.stage <= 9;
+  const isIndividualDisplay = [3,4,5,7,8,9].includes(state.stage);
   $('#race-display').hidden = !isIndividualDisplay;
   $('#game-root').hidden = isIndividualDisplay;
   $('#player-strip').hidden = isIndividualDisplay;
@@ -353,7 +344,7 @@ class RGBScene extends Phaser.Scene {
   layout(width, height) {
     const center = width / 2;
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
-    this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78); this.ufoWindow?.setPosition(center,height*.46).setSize(Math.max(34,width*.075),height*.58); this.ufoTarget?.setPosition(center,height*.46);
+    this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78); this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(22,height*.055)); this.ufoTarget?.setPosition(center,height*.46);
     this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.72).setDisplaySize(Math.min(width*.2,150),Math.min(height*.19,100)));
     this.ufoOptionLabels?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.9));
     const matrixCellSize = Math.min(width * 0.19, height * 0.145, 138);
