@@ -186,7 +186,6 @@ function renderRaceDisplay(state) {
     scene.hidden = true;
     car.hidden = false;
     obstacles.hidden = false;
-    const race = player.race || {};
     car.style.left = ([20, 50, 80][race.lane ?? 1]) + '%';
     car.textContent = player.player?.avatar ? '' : '🚗';
     car.classList.toggle('has-avatar', Boolean(player.player?.avatar));
