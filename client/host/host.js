@@ -91,14 +91,111 @@ function renderFinalResults(state) {
   }
 }
 
+function ensureRaceDisplay() {
+  const display = $('#race-display');
+  if (!display || display.dataset.ready) return;
+  display.dataset.ready = 'true';
+  for (const color of ['RED', 'GREEN', 'BLUE']) {
+    const column = document.createElement('section');
+    column.className = 'race-column ' + color.toLowerCase();
+    column.dataset.color = color;
+    const header = document.createElement('header');
+    header.className = 'race-column-header';
+    const name = document.createElement('strong');
+    name.className = 'race-player-name';
+    name.textContent = color;
+    const distance = document.createElement('strong');
+    distance.className = 'race-distance';
+    distance.textContent = '0 / 3,000 m';
+    header.append(name, distance);
+    const status = document.createElement('p');
+    status.className = 'race-player-status';
+    status.textContent = 'SCAN QR TO JOIN';
+    const qr = document.createElement('img');
+    qr.className = 'race-join-qr';
+    qr.alt = 'Join ' + color;
+    const road = document.createElement('div');
+    road.className = 'host-race-road';
+    road.innerHTML = '<div class="host-road-lane lane-a"></div><div class="host-road-lane lane-b"></div><div class="host-race-obstacles"></div><div class="host-race-car">🚗</div><div class="host-race-crash">CRASH!</div>';
+    const footer = document.createElement('footer');
+    footer.className = 'race-player-footer';
+    footer.textContent = 'R  LEFT  ·  G  CENTRE  ·  B  RIGHT';
+    column.append(header, status, qr, road, footer);
+    display.append(column);
+  }
+}
+
+function renderRaceDisplay(state) {
+  const display = $('#race-display');
+  if (!display) return;
+  ensureRaceDisplay();
+  for (const player of state.players) {
+    const column = display.querySelector('[data-color="' + player.color + '"]');
+    if (!column) continue;
+    const name = column.querySelector('.race-player-name');
+    const distance = column.querySelector('.race-distance');
+    const status = column.querySelector('.race-player-status');
+    const qr = column.querySelector('.race-join-qr');
+    const road = column.querySelector('.host-race-road');
+    const car = column.querySelector('.host-race-car');
+    const obstacles = column.querySelector('.host-race-obstacles');
+    const crash = column.querySelector('.host-race-crash');
+    name.textContent = player.player?.name || player.color;
+    status.textContent = player.joined
+      ? (player.connected ? 'CONNECTED' : 'DISCONNECTED') + (player.completed ? ' · ' + ordinal(player.place) + ' PLACE' : '')
+      : 'SCAN QR TO JOIN';
+    qr.hidden = player.joined;
+    const sourceQr = $('#qr-' + player.color);
+    if (sourceQr?.src) qr.src = sourceQr.src;
+    road.hidden = !player.joined;
+    distance.textContent = player.joined
+      ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m'
+      : 'WAITING';
+    if (!player.joined) continue;
+    const race = player.race || {};
+    car.style.left = ([20, 50, 80][race.lane ?? 1]) + '%';
+    car.textContent = player.player?.avatar ? '' : '🚗';
+    car.classList.toggle('has-avatar', Boolean(player.player?.avatar));
+    if (player.player?.avatar) {
+      let avatar = car.querySelector('img');
+      if (!avatar) { avatar = document.createElement('img'); avatar.alt = 'Player avatar'; car.append(avatar); }
+      avatar.src = player.player.avatar;
+    } else car.querySelector('img')?.remove();
+    const activeIds = new Set();
+    for (const item of race.obstacles || []) {
+      activeIds.add(String(item.id));
+      let vehicle = obstacles.querySelector('[data-obstacle-id="' + item.id + '"]');
+      if (!vehicle) {
+        vehicle = document.createElement('span');
+        vehicle.className = 'host-race-obstacle';
+        vehicle.dataset.obstacleId = String(item.id);
+        obstacles.append(vehicle);
+      }
+      vehicle.textContent = item.type || '🚙';
+      vehicle.style.left = ([20, 50, 80][item.lane] || 50) + '%';
+      vehicle.style.top = (Math.max(0, Math.min(1, item.progress)) * 100) + '%';
+    }
+    for (const node of obstacles.querySelectorAll('[data-obstacle-id]')) {
+      if (!activeIds.has(node.dataset.obstacleId)) node.remove();
+    }
+    crash.hidden = !(race.penaltyMs > 0);
+    column.classList.toggle('completed', Boolean(player.completed));
+    column.classList.toggle('disconnected', !player.connected);
+  }
+}
+
 function applyState(state) {
   currentState = state;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
-  // Keep individual road, flight, knife and island scenes on player screens, not the admin display.
-  $('#game-root').hidden = [3, 4, 7, 8].includes(state.stage);
+  const isRaceDisplay = state.stage === 3;
+  $('#race-display').hidden = !isRaceDisplay;
+  $('#game-root').hidden = isRaceDisplay || [4, 7, 8].includes(state.stage);
+  $('#player-strip').hidden = isRaceDisplay;
+  $('#host-actions').hidden = false;
+  if (isRaceDisplay) renderRaceDisplay(state);
   renderSlots(state);
   renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
@@ -415,6 +512,8 @@ async function createRoom() {
   $('#session-id').textContent = 'Session ' + session.id;
   $('#dashboard').classList.add('room-active');
   $('#player-strip').innerHTML = '';
+  $('#race-display').replaceChildren();
+  delete $('#race-display').dataset.ready;
   for (const player of session.players) {
     const card = document.createElement('article');
     card.className = 'player-panel ' + player.color.toLowerCase();
