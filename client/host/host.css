@@ -161,3 +161,11 @@
 .island-shark-host.vertical{border-radius:3px;transform:rotate(90deg) scale(.82)}
 .individual-board.stack{justify-content:space-around;padding:clamp(10px,2vh,18px)}
 .stack-world-host{width:min(100%,440px);height:auto;min-height:0;flex:1;max-height:58vh}
+
+
+/* Explicitly switch the host viewport between individual and shared presentations. */
+#room.shared-mode #race-display{display:none!important}
+#room.shared-mode #game-root{display:block!important;flex:0 0 70dvh;height:70dvh;min-height:0;position:relative;z-index:2}
+#room.shared-mode #player-strip{display:grid!important;flex:0 0 30dvh;height:30dvh;min-height:0;position:relative;z-index:2}
+#room.individual-mode #race-display{display:grid!important;position:absolute;inset:0;width:100%;height:100%;z-index:3}
+#room.individual-mode #game-root,#room.individual-mode #player-strip{display:none!important}
