@@ -212,3 +212,6 @@
 .pie-miss-host{position:absolute;inset:0;pointer-events:none;z-index:8}
 .pie-fallen-knife{position:absolute;left:50%;bottom:4%;font-size:clamp(25px,4vw,42px);color:var(--miss-color);filter:drop-shadow(0 3px 2px #0008);animation:pie-knife-fall .55s cubic-bezier(.5,.05,.8,.5) forwards}
 @keyframes pie-knife-fall{0%{opacity:1;transform:translate(-50%,0) rotate(0)}100%{opacity:0;transform:translate(45px,120px) rotate(65deg)}}
+
+.pie-knives-host i{animation:pie-knife-stick .15s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pie-knife-stick{from{opacity:.25;transform:translateY(45px) rotate(var(--knife-angle))}to{opacity:1;transform:rotate(var(--knife-angle))}}
