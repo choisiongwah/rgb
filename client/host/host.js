@@ -368,17 +368,11 @@ function renderIndividualBoard(board, state, player) {
         builtHost.append(layer);
       }
       layer.textContent = food[item.ingredient] || '🍅';
+      layer.className = item.ingredient === 'T' ? 'stack-top-layer' : 'stack-layer';
     });
     for (const node of builtHost.querySelectorAll('[data-layer-index]')) {
       if (!activeLayerIndexes.has(node.dataset.layerIndex)) node.remove();
     }
-    let bun = builtHost.querySelector('.stack-top-bun');
-    if (stack.completedStack?.length && !bun) {
-      bun = document.createElement('b');
-      bun.className = 'stack-top-bun';
-      bun.textContent = '🍞';
-      builtHost.append(bun);
-    } else if (!stack.completedStack?.length && bun) bun.remove();
     board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
 }
