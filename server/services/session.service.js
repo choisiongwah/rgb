@@ -8,39 +8,47 @@ const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 8;
 const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
-const BURGER_TARGET_POINTS = 6;
+const BURGER_TARGET_POINTS = 5;
 const UFO_TARGET_POINTS = 10;
 const ISLAND_TARGET_SHARKS = 50;
 const ISLAND_MILESTONE_SIZE = 10;
 const ISLAND_COLORS = ['R','G','B'];
 function createIslandState(random) { return { sharks: Array.from({length:ISLAND_TARGET_SHARKS},()=>ISLAND_COLORS[Math.floor(random()*3)]), orientations: Array.from({length:ISLAND_TARGET_SHARKS},()=>random()<0.5?'horizontal':'vertical'), progress:0, milestone:0, penaltyMs:0, biteId:0, nudgeId:0 }; }
+const TRI_TARGET_SCORE = 30;
+const TRI_COLORS = ['R','G','B'];
+function createTriState(random) {
+  return { pipes: Array.from({length:6},(_,index)=>({id:index+1,color:TRI_COLORS[Math.floor(random()*3)],x:0.25+index*0.25})), nextId:7, score:0, shift:0, lastCorrectId:0 };
+}
 function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
 function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
 function pieImpactAngle(wheelAngle) { return normalizeAngle(wheelAngle); }
-function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<0.24); }
-const BURGER_STACK_TARGET = 4;
-const BURGER_STACK_MIN_LENGTH = 5;
-const BURGER_STACK_MAX_LENGTH = 8;
-const BURGER_STACK_INGREDIENTS = ['R','G','B','Y','P'];
+function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<(10*Math.PI/180)); }
+const BURGER_STACK_TARGET = 5;
+const BURGER_STACK_MIN_LENGTH = 3;
+const BURGER_STACK_MAX_LENGTH = 7;
+const BURGER_STACK_INGREDIENTS = ['R','G','B'];
 function createBurgerStackState(random) {
-  const length = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
-  return { lane:1, challengeNumber:1, challengeLength:length,
-    recipe:Array.from({length},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*5)],lane:Math.floor(random()*3)})),
-    nextIngredientIndex:0,drops:[],stacked:[],completedStack:[],spawnAccumulator:1.05,penaltyMs:0,stackFlashId:0,missId:0,successCount:0,failedCount:0 };
+  const ingredientCount = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
+  const recipe = Array.from({length:ingredientCount},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*3)],lane:Math.floor(random()*3)}));
+  recipe.push({id:ingredientCount+1,ingredient:'T',lane:Math.floor(random()*3)});
+  return { lane:1, challengeNumber:1, challengeLength:recipe.length,
+    recipe,nextIngredientIndex:0,drops:[],stacked:[],completedStack:[],spawnAccumulator:0.8,penaltyMs:0,stackFlashId:0,missId:0,successCount:0,failedCount:0 };
 }
 function resetBurgerStackChallenge(stack, random) {
   stack.challengeNumber += 1;
-  stack.challengeLength = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
-  stack.recipe = Array.from({length:stack.challengeLength},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*5)],lane:Math.floor(random()*3)}));
-  stack.nextIngredientIndex=0; stack.drops=[]; stack.stacked=[]; stack.spawnAccumulator=0;
+  const ingredientCount = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
+  stack.recipe = Array.from({length:ingredientCount},(_,index)=>({id:index+1,ingredient:BURGER_STACK_INGREDIENTS[Math.floor(random()*3)],lane:Math.floor(random()*3)}));
+  stack.recipe.push({id:ingredientCount+1,ingredient:'T',lane:Math.floor(random()*3)});
+  stack.challengeLength = stack.recipe.length;
+  stack.nextIngredientIndex=0; stack.drops=[]; stack.stacked=[]; stack.spawnAccumulator=0.8;
 }
 const PIE_HITS_PER_COLOR = 4;
 const PIE_COLORS = ['R', 'G', 'B'];
 function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
-const UFO_DURATIONS_MS = [1500, 1100, 800, 500];
-function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
-const BURGER_MIN_LENGTH = 4;
-const BURGER_MAX_LENGTH = 8;
+const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
+function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8,9]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
+const BURGER_MIN_LENGTH = 3;
+const BURGER_MAX_LENGTH = 7;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
 const BURGER_EMOJI = { R: '🥩', G: '🥬', B: '🍅' };
 function createBurgerSequence(random) {
@@ -123,13 +131,13 @@ export class SessionService {
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
       matrixTarget: MATRIX_TARGET_POINTS, matrixRoundId: 0, matrixPuzzle: null, ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
-      pieAngle: 0, pieSpeed: 0.9, pieDirection: 1, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null, pieKnives: [], pieMissId: 0, pieLastMiss: null,
+      pieAngle: 0, pieSpeed: 4.1887902047863905, pieTargetSpeed: 4.1887902047863905, pieDirection: 1, pieSpeedAccumulator: 0, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null, pieKnives: [], pieMissId: 0, pieLastMiss: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], island: createIslandState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], island: createIslandState(this.random), tri: createTriState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -209,6 +217,9 @@ export class SessionService {
       player.matrixRoundAttempted = false;
       player.pieHits = { R: 0, G: 0, B: 0 };
       player.pieTotalHits = 0;
+      player.tri = createTriState(this.random);
+      player.burgerStack = createBurgerStackState(this.random);
+      player.pieKnives = [];
     }
 
     session.stage = stage;
@@ -227,7 +238,9 @@ export class SessionService {
     session.ufoElapsedMs = 0;
     session.matrixPuzzle = null;
     session.pieAngle = 0;
-    session.pieSpeed = 0.9;
+    session.pieSpeed = 4.1887902047863905;
+    session.pieTargetSpeed = 4.1887902047863905;
+    session.pieSpeedAccumulator = 0;
     session.pieDirection = 1;
     session.pieTotalHits = 0;
     session.pieDirectionChanged = false;
@@ -265,6 +278,7 @@ export class SessionService {
       player.burgerProgressIndex = 0;
       player.burgerRoundAttempted = false;
       player.island = createIslandState(this.random);
+      player.tri = createTriState(this.random);
       player.burgerStack = createBurgerStackState(this.random);
     }
     if (session.stage === 10) this.rollNextMatrixRound(session);
@@ -274,7 +288,7 @@ export class SessionService {
     else session.burgerSequence = null;
 
 
-    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=0.9; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; session.pieKnives=[]; session.pieMissId=0; session.pieLastMiss=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieKnives=[]; } }
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=4.1887902047863905; session.pieTargetSpeed=4.1887902047863905; session.pieSpeedAccumulator=0; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; session.pieKnives=[]; session.pieMissId=0; session.pieLastMiss=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieKnives=[]; } }
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -316,34 +330,43 @@ export class SessionService {
       if (!['R','B'].includes(action)) throw new Error('INVALID_INPUT');
       if (stack.penaltyMs > 0) throw new Error('BURGER_STACK_RECOVERING');
       stack.lane = Math.max(0, Math.min(2, stack.lane + (action === 'R' ? -1 : 1)));
+      for (const layer of stack.stacked) layer.lane = stack.lane;
       return { session, slot, correct:true, laneChanged:true, lane:stack.lane };
     }
 
     if (session.stage === 8) {
-      const island = slot.island;
-      if (!ISLAND_COLORS.includes(action)) throw new Error('INVALID_INPUT');
-      if (island.penaltyMs > 0) throw new Error('ISLAND_RECOVERING');
-      if (action !== island.sharks[island.progress]) {
-        island.biteId += 1; island.nudgeId += 1;
-        island.penaltyMs = 1000;
-        island.progress = island.milestone;
-        slot.successCount = island.progress;
-        slot.roundFeedback = 'bitten';
-        return { session, slot, correct: false, reset: true, penaltyMs: 1000, milestone: island.milestone };
+      const state = slot.tri;
+      if (!TRI_COLORS.includes(action)) throw new Error('INVALID_INPUT');
+      const nextPipe = state.pipes.filter((pipe) => pipe.x >= 0.13).sort((a,b) => a.x-b.x)[0];
+      if (!nextPipe) throw new Error('TRI_PIPE_NOT_READY');
+      if (action !== nextPipe.color) {
+        slot.roundFeedback = 'wrong';
+        return { session, slot, correct: false, reset: false, cycleCompleted: false, targetColor: nextPipe.color };
       }
-      island.progress += 1;
-      island.milestone = island.progress;
-      slot.successCount = island.progress;
+      for (const pipe of state.pipes) pipe.x -= 1 / 6;
+      state.shift += 1;
+      state.lastCorrectId += 1;
       slot.successFeedbackId += 1;
       slot.roundFeedback = 'correct';
-      if (island.progress >= ISLAND_TARGET_SHARKS) {
+      let rightmost = Math.max(...state.pipes.map((pipe) => pipe.x));
+      for (const pipe of state.pipes) {
+        if (pipe.x < -0.17) {
+          pipe.x = rightmost + 0.25;
+          rightmost = pipe.x;
+          pipe.color = TRI_COLORS[Math.floor(this.random() * TRI_COLORS.length)];
+          pipe.id = state.nextId++;
+          state.score += 1;
+        }
+      }
+      slot.successCount = state.score;
+      if (state.score >= TRI_TARGET_SCORE) {
         slot.completed = true;
         slot.place = session.nextPlace++;
         slot.pointsEarned = POINTS_BY_PLACE[slot.place] || 0;
         slot.totalPoints += slot.pointsEarned;
       }
       if (this.allActivePlayersFinished(session)) { session.status = 'finished'; session.paused = false; }
-      return { session, slot, correct: true, reset: false, cycleCompleted: slot.completed, progress: island.progress };
+      return { session, slot, correct: true, reset: false, cycleCompleted: slot.completed, score: state.score };
     }
 
     if (session.stage === 7) {
@@ -360,8 +383,7 @@ export class SessionService {
       session.pieTotalHits += 1; session.pieLastHitId += 1;
       const knife={id:session.pieLastHitId,angle:impactAngle,color:action,playerColor:slot.color};
       slot.pieKnives ||= []; slot.pieKnives.push(knife); session.pieLastHit=knife;
-      session.pieSpeed=Math.min(2.8,0.9+Math.floor(session.pieTotalHits/6)*0.22);
-      if(session.pieTotalHits>=12&&!session.pieDirectionChanged){session.pieDirection=this.random()<0.5?-1:1;session.pieDirectionChanged=true;}
+      
       if(PIE_COLORS.every((color)=>slot.pieHits[color]>=PIE_HITS_PER_COLOR)){slot.completed=true;slot.place=session.nextPlace++;slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0;slot.totalPoints+=slot.pointsEarned;}
       if(this.allActivePlayersFinished(session)){session.status='finished';session.paused=false;}
       return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1,knife};
@@ -384,7 +406,7 @@ export class SessionService {
       if (!BURGER_INGREDIENTS.includes(action)) throw new Error('INVALID_INPUT');
       if (diceRoundId !== session.burgerRoundId) throw new Error('STALE_BURGER_ROUND');
       if (slot.burgerRoundAttempted) throw new Error('ALREADY_ANSWERED');
-      const expected = session.burgerSequence[slot.burgerProgressIndex];
+      const expected = session.burgerSequence[session.burgerSequence.length - 1 - slot.burgerProgressIndex];
       session.burgerLastDropId += 1;
       session.burgerLastDrop = { id: session.burgerLastDropId, action, ingredient: BURGER_EMOJI[action], color: slot.color, playerName: slot.player?.name || slot.color };
       if (action !== expected) {
@@ -666,8 +688,8 @@ export class SessionService {
         const stack = player.burgerStack;
         if (stack.penaltyMs > 0) { stack.penaltyMs = Math.max(0, stack.penaltyMs - delta * 1000); continue; }
         const difficulty = stack.successCount;
-        const fallSpeed = 0.29 + difficulty * 0.035;
-        const spawnInterval = Math.max(0.4, 0.72 - difficulty * 0.08);
+        const fallSpeed = 0.72 + difficulty * 0.055;
+        const spawnInterval = difficulty > 2 ? 0.6 : 0.8;
         stack.spawnAccumulator += delta;
         while (stack.spawnAccumulator >= spawnInterval && stack.nextIngredientIndex < stack.recipe.length && stack.drops.length < 6) {
           stack.spawnAccumulator -= spawnInterval;
@@ -679,7 +701,7 @@ export class SessionService {
         if (landed) {
           if (landed.lane !== stack.lane) {
             stack.missId += 1; stack.failedCount += 1; stack.penaltyMs = 1000; stack.completedStack = [];
-            resetBurgerStackChallenge(stack, this.random); stack.spawnAccumulator = 1.05; player.roundFeedback = 'stack-missed'; continue;
+            resetBurgerStackChallenge(stack, this.random); player.roundFeedback = 'stack-missed'; continue;
           }
           stack.stacked.push({ingredient:landed.ingredient,lane:landed.lane});
           stack.stackFlashId += 1;
@@ -704,7 +726,26 @@ export class SessionService {
 
   tickIslands(deltaMs=100) { const delta=Math.max(0,Math.min(500,Number(deltaMs)||0)); if(!delta)return[]; const updated=[]; for(const session of this.sessions.values()){if(session.stage!==8||session.status!=='playing'||session.paused)continue;let changed=false;for(const p of session.players){if(!p.activeForRound||p.completed||p.island.penaltyMs<=0)continue;p.island.penaltyMs=Math.max(0,p.island.penaltyMs-delta);changed=true;}if(changed)updated.push(session);}return updated; }
 
-  tickPies(deltaMs=100) { const delta=Math.max(0,Math.min(500,Number(deltaMs)||0))/1000; if(!delta)return[]; const updated=[]; for(const session of this.sessions.values()){if(session.stage!==7||session.status!=='playing'||session.paused)continue;session.pieAngle=(session.pieAngle+session.pieSpeed*session.pieDirection*delta)%(Math.PI*2);updated.push(session);}return updated; }
+  tickPies(deltaMs=100) {
+    const elapsed=Math.max(0,Math.min(500,Number(deltaMs)||0));
+    const delta=elapsed/1000;
+    if(!delta)return[];
+    const updated=[];
+    for(const session of this.sessions.values()){
+      if(session.stage!==7||session.status!=='playing'||session.paused)continue;
+      session.pieAngle=(session.pieAngle+session.pieSpeed*session.pieDirection*delta)%(Math.PI*2);
+      session.pieSpeed += ((session.pieTargetSpeed ?? session.pieSpeed) - session.pieSpeed) * delta;
+      session.pieSpeedAccumulator=(session.pieSpeedAccumulator||0)+elapsed;
+      while(session.pieSpeedAccumulator>=1500){
+        session.pieSpeedAccumulator-=1500;
+        const variation=(this.random()*4-2)*Math.PI/180*60;
+        const sign=this.random()<0.5?-1:1;
+        session.pieTargetSpeed=Math.max(-6.283185307179586,Math.min(6.283185307179586,(session.pieSpeed+variation)*sign));
+      }
+      updated.push(session);
+    }
+    return updated;
+  }
 
   tickUfos(deltaMs=100){const delta=Math.max(0,Math.min(500,Number(deltaMs)||0));if(!delta)return[];const updated=[];for(const session of this.sessions.values()){if(session.stage!==6||session.status!=='playing'||session.paused||session.ufoPhase!=='flyby')continue;session.ufoElapsedMs=Math.min(session.ufoDurationMs,session.ufoElapsedMs+delta);if(session.ufoElapsedMs>=session.ufoDurationMs)session.ufoPhase='choose';updated.push(session);}return updated;}
   allUfoPlayersAttempted(session){const remaining=session.players.filter(p=>p.activeForRound&&!p.completed);return remaining.length>0&&remaining.every(p=>!p.connected||p.ufoRoundAttempted);}
@@ -873,7 +914,7 @@ export class SessionService {
       burgerRoundId: session.burgerRoundId, burgerLastDropId: session.burgerLastDropId,
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
-      islandTarget: ISLAND_TARGET_SHARKS, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
+      islandTarget: ISLAND_TARGET_SHARKS, triTarget: TRI_TARGET_SCORE, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
       matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle ? { roundId: session.matrixPuzzle.roundId, difficulty: session.matrixPuzzle.difficulty, category: session.matrixPuzzle.category, cells: session.matrixPuzzle.cells, options: session.matrixPuzzle.options } : null, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
@@ -883,7 +924,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        island: player.island, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
+        island: player.island, tri: player.tri, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))

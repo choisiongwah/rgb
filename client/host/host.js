@@ -136,7 +136,7 @@ function footerText(column, stage) {
     4: 'TAP ANY COLOUR TO BOOST',
     5: 'R MEAT  ·  G LETTUCE  ·  B TOMATO',
     7: 'R RED  ·  G GREEN  ·  B BLUE',
-    8: 'MATCH THE SHARK COLOUR',
+    8: 'MATCH THE NEXT PIPE COLOUR',
     9: 'R MOVE LEFT  ·  B MOVE RIGHT'
   };
   footer.textContent = labels[stage] || '';
@@ -174,7 +174,7 @@ function renderRaceDisplay(state) {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
       7: 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4',
-      8: (player.island?.progress || 0) + ' / 50 SHARKS',
+      8: (player.tri?.score || 0) + ' / ' + state.triTarget + ' PIPES',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
     distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m' : '';
@@ -186,7 +186,7 @@ function renderRaceDisplay(state) {
         4: (player.flappy?.blockersPassed || 0) + ' blockers cleared',
         5: (player.burgerProgressIndex || 0) + ' ingredients stacked',
         7: (player.pieTotalHits || 0) + ' successful knife hits',
-        8: 'Checkpoint ' + (player.island?.milestone || 0) + ' · ' + (player.island?.progress || 0) + ' crossed',
+        8: 'Pipe score ' + (player.tri?.score || 0),
         9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
       };
             car.hidden = true;
@@ -232,7 +232,7 @@ function renderRaceDisplay(state) {
 }
 
 function ensureIndividualBoard(scene, stage) {
-  const type = ({4:'flappy',5:'burger',7:'pie',8:'island',9:'stack'})[stage] || 'other';
+  const type = ({4:'flappy',5:'burger',7:'pie',8:'tri',9:'stack'})[stage] || 'other';
   let board = scene.querySelector('.individual-board');
   if (!board || board.dataset.type !== type) {
     board = document.createElement('div');
@@ -241,15 +241,15 @@ function ensureIndividualBoard(scene, stage) {
     if (type === 'flappy') {
       board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
     } else if (type === 'burger') {
-      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
+      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-stage"><div class="burger-sample"><small>MODEL BURGER</small><div class="burger-recipe"></div></div><div class="burger-plate"><div class="burger-stack"></div></div></div><div class="burger-progress"></div>';
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
-      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="board-caption"></div>';
-    } else if (type === 'island') {
-      board.innerHTML = '<div class="island-board-title">SHARK ISLAND CROSSING</div><div class="island-sea-host"><div class="island-start-host">START</div><div class="island-sharks-host"></div><div class="island-destination-host">🏝️</div><div class="island-player-host">🧑‍🚀</div></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
+    } else if (type === 'tri') {
+      board.innerHTML = '<div class="tri-board-title">TRI COLOUR RUN</div><div class="tri-world-host"><div class="tri-pipes-host"></div><div class="tri-runner-host">🐦</div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
-      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">👨‍🍳</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">🍔</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
     scene.replaceChildren(board);
   }
@@ -275,24 +275,105 @@ function renderIndividualBoard(board, state, player) {
     const sequence = state.burgerSequence || [];
     const progress = Math.max(0, Math.min(sequence.length, player.burgerProgressIndex || 0));
     const labels = {R:'🥩',G:'🥬',B:'🍅'};
-    board.querySelector('.burger-recipe').innerHTML = sequence.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
-    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + sequence[index] + '">' + labels[sequence[index]] + '</span>').join('');
+    const targetOrder = [...sequence].reverse();
+    board.querySelector('.burger-recipe').innerHTML = targetOrder.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
+    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + targetOrder[index] + '">' + labels[targetOrder[index]] + '</span>').join('');
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
     wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
-    board.querySelector('.pie-knives-host').innerHTML = (player.pieKnives || []).map(item => '<i style="transform:rotate(' + (Number(item.angle || 0)*180/Math.PI) + 'deg)"></i>').join('');
-    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (state.pieSpeed > 1.5 ? 'FAST SPIN' : 'SPINNING');
+    const knivesHost = board.querySelector('.pie-knives-host');
+    const activeKnifeIds = new Set();
+    for (const item of player.pieKnives || []) {
+      activeKnifeIds.add(String(item.id));
+      let knife = knivesHost.querySelector('[data-knife-id="' + item.id + '"]');
+      if (!knife) {
+        knife = document.createElement('i');
+        knife.dataset.knifeId = String(item.id);
+        knivesHost.append(knife);
+      }
+      const knifeColors = {R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
+      knife.style.setProperty('--knife-angle', (Number(item.angle || 0)*180/Math.PI) + 'deg');
+      knife.style.setProperty('--knife-color', knifeColors[item.color] || '#f8fafc');
+    }
+    for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
+      if (!activeKnifeIds.has(node.dataset.knifeId)) node.remove();
+    }
+    const miss = state.pieLastMiss;
+    const missHost = board.querySelector('.pie-miss-host');
+    if (miss && miss.playerColor === player.color && Number(board.dataset.lastMissId || 0) !== miss.id) {
+      board.dataset.lastMissId = String(miss.id);
+      const fallenKnife = document.createElement('i');
+      fallenKnife.className = 'pie-fallen-knife';
+      fallenKnife.textContent = '🔪';
+      fallenKnife.style.setProperty('--miss-color', ({R:'#ef4444',G:'#22c55e',B:'#3b82f6'})[miss.color] || '#fff');
+      missHost.append(fallenKnife);
+      fallenKnife.addEventListener('animationend', () => fallenKnife.remove(), {once:true});
+    }
+    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (Math.abs(state.pieSpeed) > 4.7 ? 'FAST SPIN' : 'SPINNING');
   } else if (state.stage === 8) {
-    const island = player.island || {sharks:[],progress:0,orientations:[]};
-    board.querySelector('.island-sharks-host').innerHTML = (island.sharks || []).slice(0,50).map((color,index) => '<span class="island-shark-host ' + color.toLowerCase() + ' ' + ((island.orientations || [])[index] || 'horizontal') + (index < island.progress ? ' crossed' : '') + '" title="Shark ' + (index + 1) + ': ' + color + '">' + color + '</span>').join('');
-    board.querySelector('.island-player-host').style.left = (4 + Math.min(50,island.progress || 0)*1.75) + '%';
-    board.querySelector('.board-caption').textContent = (island.progress || 0) + ' / 50 SHARKS · ' + ((island.penaltyMs || 0)>0 ? 'SHARK BITE · RECOVERING' : 'MATCH THE SHARK COLOUR');
+    const tri = player.tri || {pipes:[],score:0};
+    const colorClass = {R:'red',G:'green',B:'blue'};
+    const pipesHost = board.querySelector('.tri-pipes-host');
+    const activePipeIds = new Set();
+    for (const pipe of tri.pipes || []) {
+      activePipeIds.add(String(pipe.id));
+      let pair = pipesHost.querySelector('[data-pipe-id="' + pipe.id + '"]');
+      if (!pair) {
+        pair = document.createElement('div');
+        pair.className = 'tri-pipe-pair';
+        pair.dataset.pipeId = String(pipe.id);
+        pair.innerHTML = '<i class="tri-pipe top"></i><i class="tri-pipe bottom"></i>';
+        pipesHost.append(pair);
+      }
+      pair.className = 'tri-pipe-pair ' + (colorClass[pipe.color] || 'red');
+      pair.style.left = (pipe.x * 100) + '%';
+    }
+    for (const node of pipesHost.querySelectorAll('[data-pipe-id]')) {
+      if (!activePipeIds.has(node.dataset.pipeId)) node.remove();
+    }
+    board.querySelector('.tri-runner-host').classList.toggle('wrong', player.roundFeedback === 'wrong');
+    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
-    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
+    const dropsHost = board.querySelector('.stack-drops-host');
+    const activeDropIds = new Set();
+    const food = {R:'🥩',G:'🥬',B:'🍅',T:'🍞'};
+    for (const drop of stack.drops || []) {
+      activeDropIds.add(String(drop.id));
+      let node = dropsHost.querySelector('[data-drop-id="' + drop.id + '"]');
+      if (!node) {
+        node = document.createElement('span');
+        node.className = 'stack-drop';
+        node.dataset.dropId = String(drop.id);
+        dropsHost.append(node);
+      }
+      node.textContent = food[drop.ingredient] || '🍅';
+      node.style.left = ([16.5,50,83.5][drop.lane] ?? 50) + '%';
+      node.style.top = (Math.max(0,Math.min(1,drop.y))*100) + '%';
+    }
+    for (const node of dropsHost.querySelectorAll('[data-drop-id]')) {
+      if (!activeDropIds.has(node.dataset.dropId)) node.remove();
+    }
     board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
-    board.querySelector('.stack-built-host').innerHTML = (stack.stacked || []).map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[item.ingredient] || '🍅') + '</span>').join('');
+    const visibleStack = stack.completedStack?.length ? stack.completedStack : (stack.stacked || []);
+    const builtHost = board.querySelector('.stack-built-host');
+    builtHost.style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
+    const activeLayerIndexes = new Set();
+    visibleStack.forEach((item,index) => {
+      activeLayerIndexes.add(String(index));
+      let layer = builtHost.querySelector('[data-layer-index="' + index + '"]');
+      if (!layer) {
+        layer = document.createElement('span');
+        layer.dataset.layerIndex = String(index);
+        builtHost.append(layer);
+      }
+      layer.textContent = food[item.ingredient] || '🍅';
+      layer.className = item.ingredient === 'T' ? 'stack-top-layer' : 'stack-layer';
+    });
+    for (const node of builtHost.querySelectorAll('[data-layer-index]')) {
+      if (!activeLayerIndexes.has(node.dataset.layerIndex)) node.remove();
+    }
     board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
 }
@@ -323,9 +404,10 @@ function applyState(state) {
 
 class RGBScene extends Phaser.Scene {
   constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.lastPieHit = 0; this.audioContext = null; }
-  preload() { for(let id=1;id<=8;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
+  preload() { for(let id=1;id<=9;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
+    this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
     this.subtitle = this.add.text(0, 0, '', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
@@ -365,6 +447,29 @@ class RGBScene extends Phaser.Scene {
   }
   layout(width, height) {
     const center = width / 2;
+    if (this.ufoCity) {
+      const city = this.ufoCity;
+      city.clear();
+      city.fillStyle(0x0f172a, 1);
+      city.fillRect(0, height * 0.32, width, height * 0.68);
+      const buildings = 9;
+      for (let i = 0; i < buildings; i += 1) {
+        const x = i * width / buildings;
+        const buildingHeight = height * (0.22 + ((i * 7) % 4) * 0.055);
+        city.fillStyle(i % 2 ? 0x1e293b : 0x273449, 1);
+        city.fillRect(x + 2, height * 0.72 - buildingHeight, width / buildings - 4, buildingHeight);
+        city.fillStyle(0xfbbf24, 0.48);
+        for (let row = 0; row < 4; row += 1) {
+          for (let col = 0; col < 3; col += 1) {
+            const wx = x + 8 + col * Math.max(8, width / buildings * 0.27);
+            const wy = height * 0.72 - buildingHeight + 12 + row * 17;
+            if (wy < height * 0.7 - 4) city.fillRect(wx, wy, 5, 7);
+          }
+        }
+      }
+      city.fillStyle(0x334155, 1);
+      city.fillRect(0, height * 0.72, width, height * 0.28);
+    }
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
     this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78); this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(22,height*.055)); this.ufoTarget?.setPosition(center,height*.46);
     this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.72).setDisplaySize(Math.min(width*.2,150),Math.min(height*.19,100)));
@@ -487,7 +592,7 @@ class RGBScene extends Phaser.Scene {
     const isMatrix = state.stage === 10;
     this.title.setText(isMatrix ? 'MATRIX MASTER' : isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the target burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Watch the UFO fly past, then identify it from three choices · First to 10 points wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to 5 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setVisible(!isMatrix);
@@ -518,6 +623,7 @@ class RGBScene extends Phaser.Scene {
     });
     this.burgerStackText.setVisible(isBurger);
     this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
+    this.ufoCity?.setVisible(isUfo);
     if(isPie){
       this.pieGraphics.clear();
       const radius=Math.min(this.scale.width*.19,this.scale.height*.29,190);

@@ -169,3 +169,55 @@
 #room.shared-mode #player-strip{display:grid!important;flex:0 0 30dvh;height:30dvh;min-height:0;position:relative;z-index:2}
 #room.individual-mode #race-display{display:grid!important;position:absolute;inset:0;width:100%;height:100%;z-index:3}
 #room.individual-mode #game-root,#room.individual-mode #player-strip{display:none!important}
+
+
+/* Level 8 — faithful Tri scene: paired RGB pipes slide left after a correct colour input. */
+.individual-board.tri{background:linear-gradient(180deg,#b9e7fa 0%,#8ac8df 58%,#397b55 58%,#1f5137 100%);color:#102033;justify-content:space-between;padding:clamp(10px,2vh,20px)}
+.tri-board-title{font-size:clamp(15px,2vw,25px);font-weight:1000;letter-spacing:.1em;text-shadow:0 2px #fff9}
+.tri-world-host{position:relative;flex:1;width:100%;min-height:0;overflow:hidden;border:3px solid #e0f2fe;border-radius:14px;background:linear-gradient(180deg,#79c6e8 0 49.5%,#4b8cbd 50%,#9bd1e9 100%);box-shadow:inset 0 0 25px #0c4a6e55}
+.tri-pipes-host{position:absolute;inset:0}
+.tri-pipe-pair{position:absolute;top:0;bottom:0;width:13%;min-width:26px;transform:translateX(-50%);transition:left .13s cubic-bezier(.2,.7,.2,1);filter:drop-shadow(3px 3px 3px #0005)}
+.tri-pipe{position:absolute;left:0;right:0;display:block;border:2px solid #163c2c;background:linear-gradient(90deg,#14532d,#4ade80 38%,#166534 78%,#052e16);box-shadow:inset -6px 0 #052e16}
+.tri-pipe.top{top:0;height:50%;border-radius:0 0 5px 5px}
+.tri-pipe.bottom{bottom:0;height:50%;border-radius:5px 5px 0 0}
+.tri-pipe-pair.red .tri-pipe{background:linear-gradient(90deg,#7f1d1d,#fb7185 38%,#b91c1c 78%,#450a0a)}
+.tri-pipe-pair.green .tri-pipe{background:linear-gradient(90deg,#14532d,#4ade80 38%,#166534 78%,#052e16)}
+.tri-pipe-pair.blue .tri-pipe{background:linear-gradient(90deg,#1e3a8a,#60a5fa 38%,#1d4ed8 78%,#172554)}
+.tri-runner-host{position:absolute;z-index:4;left:24%;top:50%;transform:translate(-50%,-50%);font-size:clamp(30px,5vw,58px);filter:drop-shadow(0 5px 3px #0006);transition:transform .12s}
+.tri-runner-host.wrong{animation:tri-wrong .16s 2}
+@keyframes tri-wrong{50%{transform:translate(-50%,-50%) translateX(-7px) rotate(-8deg);filter:drop-shadow(0 0 12px #ef4444)}}
+.tri-world-host:after{content:"";position:absolute;z-index:1;left:0;right:0;top:49.5%;height:2px;background:#e0f2feaa;pointer-events:none}
+.pie-wheel-host{transition:transform .1s linear}
+.burger-layer{animation:burger-layer-drop .32s cubic-bezier(.2,.8,.3,1) both}
+@keyframes burger-layer-drop{from{opacity:0;transform:translateY(-42px) scale(.82)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+
+/* Level 5 — the original side-by-side reference and player burger stacks. */
+.individual-board.burger .burger-stage{grid-row:3;display:flex;align-items:center;justify-content:space-evenly;gap:clamp(8px,2vw,22px);width:100%;min-height:0;flex:1}
+.individual-board.burger .burger-sample{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;max-width:42%}
+.burger-sample small{font-size:clamp(9px,1vw,13px);font-weight:1000;letter-spacing:.08em;color:#78350f}
+.individual-board.burger .burger-recipe{display:flex;flex-direction:column-reverse;align-items:stretch;justify-content:flex-start;flex-wrap:nowrap;gap:2px;width:clamp(58px,13vw,112px);min-height:0;max-height:34vh;overflow:visible}
+.individual-board.burger .burger-step{width:100%;height:clamp(13px,2.4vh,22px);min-height:12px;border-radius:5px;font-size:clamp(10px,1.4vw,17px);line-height:1}
+.individual-board.burger .burger-plate{width:clamp(105px,34vw,205px);height:clamp(80px,17vh,145px);padding:8px 10px 18px;flex:none}
+.individual-board.burger .burger-stack{width:82%;gap:1px}
+.individual-board.burger .burger-layer{height:clamp(12px,2vh,19px);border-width:1px}
+
+.stack-built-host span{display:inline-grid;place-items:center;min-width:20px;padding:1px 2px;border-radius:5px;background:#fef3c7;border:1px solid #92400e;animation:burger-layer-drop .25s ease-out both}
+.stack-built-host .stack-top-bun{display:inline-block;position:absolute;bottom:30px;left:50%;transform:translateX(-50%);font-size:clamp(18px,3vw,28px);font-style:normal;filter:drop-shadow(0 3px 2px #0005)}
+.stack-drop{transition:top .1s linear,left .1s linear}
+
+.pie-knives-host i{width:7px;height:42%;background:linear-gradient(to bottom,#f8fafc 0 72%,var(--knife-color) 72% 100%);border:1px solid #334155;box-shadow:0 1px 3px #0009;transform:rotate(var(--knife-angle));transition:transform .1s linear}
+.pie-knives-host i:before{content:"";position:absolute;top:-7px;left:-2px;width:9px;height:9px;background:#f8fafc;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.pie-knives-host i:after{content:"";position:absolute;bottom:-7px;left:-2px;width:9px;height:8px;border-radius:2px;background:var(--knife-color);border:1px solid #334155}
+.pie-miss-host{position:absolute;inset:0;pointer-events:none;z-index:8}
+.pie-fallen-knife{position:absolute;left:50%;bottom:4%;font-size:clamp(25px,4vw,42px);color:var(--miss-color);filter:drop-shadow(0 3px 2px #0008);animation:pie-knife-fall .55s cubic-bezier(.5,.05,.8,.5) forwards}
+@keyframes pie-knife-fall{0%{opacity:1;transform:translate(-50%,0) rotate(0)}100%{opacity:0;transform:translate(45px,120px) rotate(65deg)}}
+
+.pie-knives-host i{animation:pie-knife-stick .15s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pie-knife-stick{from{opacity:.25;transform:translateY(45px) rotate(var(--knife-angle))}to{opacity:1;transform:rotate(var(--knife-angle))}}
+
+.stack-built-host{bottom:34px!important;height:55%;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:1px}
+.stack-built-host .stack-layer,.stack-built-host .stack-top-layer{width:clamp(38px,9vw,78px);height:clamp(11px,1.8vh,18px);min-width:0;padding:0;border:1px solid #78350f;border-radius:5px;background:linear-gradient(#86efac,#15803d);font-size:clamp(10px,1.5vw,17px);line-height:1}
+.stack-built-host .stack-top-layer{border-radius:50% 50% 5px 5px;background:linear-gradient(#fcd34d,#b45309);border-width:2px}
+
+.stack-built-host{bottom:58px!important;left:50%;right:auto;width:clamp(48px,12vw,90px);height:55%;transform:translateX(-50%)}
