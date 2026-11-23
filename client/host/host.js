@@ -116,13 +116,30 @@ function ensureRaceDisplay() {
     qr.alt = 'Join ' + color;
     const road = document.createElement('div');
     road.className = 'host-race-road';
-    road.innerHTML = '<div class="host-road-lane lane-a"></div><div class="host-road-lane lane-b"></div><div class="host-race-obstacles"></div><div class="host-race-car">🚗</div><div class="host-race-crash">CRASH!</div><div class="host-individual-scene"><strong class="host-individual-icon"></strong><span class="host-individual-detail"></span></div>';
+    road.innerHTML = '<div class="host-road-lane lane-a"></div><div class="host-road-lane lane-b"></div><div class="host-race-obstacles"></div><div class="host-race-car">🚗</div><div class="host-race-crash">CRASH!</div>';
+    const scene = document.createElement('div');
+    scene.className = 'host-individual-scene';
+    scene.hidden = true;
     const footer = document.createElement('footer');
     footer.className = 'race-player-footer';
     footer.textContent = 'R  LEFT  ·  G  CENTRE  ·  B  RIGHT';
-    column.append(header, status, qr, road, footer);
+    column.append(header, status, qr, road, scene, footer);
     display.append(column);
   }
+}
+
+function footerText(column, stage) {
+  const footer = column.querySelector('.race-player-footer');
+  if (!footer) return;
+  const labels = {
+    3: 'R LEFT  ·  G CENTRE  ·  B RIGHT',
+    4: 'TAP ANY COLOUR TO BOOST',
+    5: 'R MEAT  ·  G LETTUCE  ·  B TOMATO',
+    7: 'R RED  ·  G GREEN  ·  B BLUE',
+    8: 'MATCH THE SHARK COLOUR',
+    9: 'R MOVE LEFT  ·  B MOVE RIGHT'
+  };
+  footer.textContent = labels[stage] || '';
 }
 
 function renderRaceDisplay(state) {
@@ -141,8 +158,6 @@ function renderRaceDisplay(state) {
     const obstacles = column.querySelector('.host-race-obstacles');
     const crash = column.querySelector('.host-race-crash');
     const scene = column.querySelector('.host-individual-scene');
-    const sceneIcon = column.querySelector('.host-individual-icon');
-    const sceneDetail = column.querySelector('.host-individual-detail');
     name.textContent = player.player?.name || player.color;
     status.textContent = player.joined
       ? (player.connected ? 'CONNECTED' : 'DISCONNECTED') + (player.completed ? ' · ' + ordinal(player.place) + ' PLACE' : '')
@@ -151,7 +166,9 @@ function renderRaceDisplay(state) {
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
     const individual = [4,5,7,8,9].includes(state.stage);
-    road.hidden = !player.joined || individual;
+    const highway = state.stage === 3;
+    road.hidden = !player.joined || !highway;
+    scene.hidden = !player.joined || !individual;
     const race = player.race || {};
     const stageProgress = {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
@@ -160,7 +177,8 @@ function renderRaceDisplay(state) {
       8: (player.island?.progress || 0) + ' / 50 SHARKS',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
-    distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m';
+    distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m' : '';
+    footerText(column, state.stage);
     if (!player.joined) continue;
     if (individual) {
       const icons = {4:'🚀',5:'🍔',7:'🥧',8:'🏝️',9:'🍔'};
@@ -171,10 +189,7 @@ function renderRaceDisplay(state) {
         8: 'Checkpoint ' + (player.island?.milestone || 0) + ' · ' + (player.island?.progress || 0) + ' crossed',
         9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
       };
-      scene.hidden = false;
-      sceneIcon.hidden = true;
-      sceneDetail.hidden = true;
-      car.hidden = true;
+            car.hidden = true;
       obstacles.hidden = true;
       crash.hidden = true;
       const board = ensureIndividualBoard(scene, state.stage);
@@ -183,7 +198,6 @@ function renderRaceDisplay(state) {
       column.classList.toggle('disconnected', !player.connected);
       continue;
     }
-    scene.hidden = true;
     car.hidden = false;
     obstacles.hidden = false;
     car.style.left = ([20, 50, 80][race.lane ?? 1]) + '%';
@@ -276,8 +290,8 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = (island.progress || 0) + ' / 50 SHARKS · ' + ((island.penaltyMs || 0)>0 ? 'SHARK BITE · RECOVERING' : 'MATCH THE SHARK COLOUR');
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
-    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] || 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
-    board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] || 50) + '%';
+    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
+    board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
     board.querySelector('.stack-built-host').innerHTML = (stack.stacked || []).map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[item.ingredient] || '🍅') + '</span>').join('');
     board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
