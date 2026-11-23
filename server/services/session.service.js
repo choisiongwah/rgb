@@ -217,6 +217,9 @@ export class SessionService {
       player.matrixRoundAttempted = false;
       player.pieHits = { R: 0, G: 0, B: 0 };
       player.pieTotalHits = 0;
+      player.tri = createTriState(this.random);
+      player.burgerStack = createBurgerStackState(this.random);
+      player.pieKnives = [];
     }
 
     session.stage = stage;
