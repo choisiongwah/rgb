@@ -174,11 +174,13 @@ function renderRaceDisplay(state) {
         9: 'Challenge ' + (player.burgerStack?.challengeNumber || 1) + ' · ' + (player.burgerStack?.stacked?.length || 0) + ' layers'
       };
       scene.hidden = false;
-      sceneIcon.textContent = icons[state.stage] || '🎮';
-      sceneDetail.textContent = details[state.stage] || '';
+      sceneIcon.hidden = true;
+      sceneDetail.hidden = true;
       car.hidden = true;
       obstacles.hidden = true;
       crash.hidden = true;
+      const board = ensureIndividualBoard(scene, state.stage);
+      renderIndividualBoard(board, state, player);
       column.classList.toggle('completed', Boolean(player.completed));
       column.classList.toggle('disconnected', !player.connected);
       continue;
@@ -214,6 +216,47 @@ function renderRaceDisplay(state) {
     crash.hidden = !(race.penaltyMs > 0);
     column.classList.toggle('completed', Boolean(player.completed));
     column.classList.toggle('disconnected', !player.connected);
+  }
+}
+
+function ensureIndividualBoard(scene, stage) {
+  const type = stage === 4 ? 'flappy' : stage === 5 ? 'burger' : 'other';
+  let board = scene.querySelector('.individual-board');
+  if (!board || board.dataset.type !== type) {
+    board = document.createElement('div');
+    board.className = 'individual-board ' + type;
+    board.dataset.type = type;
+    if (type === 'flappy') {
+      board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
+    } else if (type === 'burger') {
+      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
+    } else board.innerHTML = '<div class="individual-fallback"></div>';
+    scene.replaceChildren(board);
+  }
+  return board;
+}
+
+function renderIndividualBoard(board, state, player) {
+  if (state.stage === 4) {
+    const flight = player.flappy || { y: 0.5, obstacles: [], blockersPassed: 0, penaltyMs: 0 };
+    const rocket = board.querySelector('.flappy-rocket');
+    rocket.style.top = (Math.max(0.04, Math.min(0.96, flight.y || 0.5)) * 100) + '%';
+    rocket.classList.toggle('crashed', (flight.penaltyMs || 0) > 0);
+    const obstacles = board.querySelector('.flappy-obstacles');
+    const gap = Math.max(0.22, 0.38 - Math.floor((flight.blockersPassed || 0) / 6) * 0.035);
+    obstacles.innerHTML = (flight.obstacles || []).map(item => {
+      const topHeight = Math.max(8, (item.gapY - gap / 2) * 100);
+      const bottomTop = (item.gapY + gap / 2) * 100;
+      return '<div class="flappy-pipe top" style="left:' + (item.x * 100) + '%;height:' + topHeight + '%"></div><div class="flappy-pipe bottom" style="left:' + (item.x * 100) + '%;top:' + bottomTop + '%;height:' + (100-bottomTop) + '%"></div>';
+    }).join('');
+    board.querySelector('.board-caption').textContent = (flight.blockersPassed || 0) + ' / 20 BLOCKERS · ' + ((flight.penaltyMs || 0) > 0 ? 'CRASH RECOVERY' : 'TAP ANY COLOUR TO BOOST');
+  } else if (state.stage === 5) {
+    const sequence = state.burgerSequence || [];
+    const progress = Math.max(0, Math.min(sequence.length, player.burgerProgressIndex || 0));
+    const labels = {R:'🥩',G:'🥬',B:'🍅'};
+    board.querySelector('.burger-recipe').innerHTML = sequence.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
+    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + sequence[index] + '">' + labels[sequence[index]] + '</span>').join('');
+    board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   }
 }
 
