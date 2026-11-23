@@ -336,10 +336,49 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
-    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',T:'🍞'}[drop.ingredient] || '🍅') + '</span>').join('');
+    const dropsHost = board.querySelector('.stack-drops-host');
+    const activeDropIds = new Set();
+    const food = {R:'🥩',G:'🥬',B:'🍅',T:'🍞'};
+    for (const drop of stack.drops || []) {
+      activeDropIds.add(String(drop.id));
+      let node = dropsHost.querySelector('[data-drop-id="' + drop.id + '"]');
+      if (!node) {
+        node = document.createElement('span');
+        node.className = 'stack-drop';
+        node.dataset.dropId = String(drop.id);
+        node.textContent = food[drop.ingredient] || '🍅';
+        dropsHost.append(node);
+      }
+      node.style.left = ([16.5,50,83.5][drop.lane] ?? 50) + '%';
+      node.style.top = (Math.max(0,Math.min(1,drop.y))*100) + '%';
+    }
+    for (const node of dropsHost.querySelectorAll('[data-drop-id]')) {
+      if (!activeDropIds.has(node.dataset.dropId)) node.remove();
+    }
     board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
     const visibleStack = stack.completedStack?.length ? stack.completedStack : (stack.stacked || []);
-    board.querySelector('.stack-built-host').innerHTML = visibleStack.map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',T:'🍞'}[item.ingredient] || '🍅') + '</span>').join('') + (stack.completedStack?.length ? '<b class="stack-top-bun">🍞</b>' : '');
+    const builtHost = board.querySelector('.stack-built-host');
+    const activeLayerIndexes = new Set();
+    visibleStack.forEach((item,index) => {
+      activeLayerIndexes.add(String(index));
+      let layer = builtHost.querySelector('[data-layer-index="' + index + '"]');
+      if (!layer) {
+        layer = document.createElement('span');
+        layer.dataset.layerIndex = String(index);
+        builtHost.append(layer);
+      }
+      layer.textContent = food[item.ingredient] || '🍅';
+    });
+    for (const node of builtHost.querySelectorAll('[data-layer-index]')) {
+      if (!activeLayerIndexes.has(node.dataset.layerIndex)) node.remove();
+    }
+    let bun = builtHost.querySelector('.stack-top-bun');
+    if (stack.completedStack?.length && !bun) {
+      bun = document.createElement('b');
+      bun.className = 'stack-top-bun';
+      bun.textContent = '🍞';
+      builtHost.append(bun);
+    } else if (!stack.completedStack?.length && bun) bun.remove();
     board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
 }
