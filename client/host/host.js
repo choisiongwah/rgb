@@ -172,7 +172,7 @@ function renderRaceDisplay(state) {
         obstacles.append(vehicle);
       }
       vehicle.textContent = item.type || '🚙';
-      vehicle.style.left = ([20, 50, 80][item.lane] || 50) + '%';
+      vehicle.style.left = ([20, 50, 80][item.lane] ?? 50) + '%';
       vehicle.style.top = (Math.max(0, Math.min(1, item.progress)) * 100) + '%';
     }
     for (const node of obstacles.querySelectorAll('[data-obstacle-id]')) {
