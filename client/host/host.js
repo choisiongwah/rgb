@@ -249,7 +249,7 @@ function ensureIndividualBoard(scene, stage) {
     } else if (type === 'tri') {
       board.innerHTML = '<div class="tri-board-title">TRI COLOUR RUN</div><div class="tri-world-host"><div class="tri-pipes-host"></div><div class="tri-runner-host">🛸</div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
-      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">👨‍🍳</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">🍔</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
     scene.replaceChildren(board);
   }
