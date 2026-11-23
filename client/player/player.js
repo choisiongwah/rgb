@@ -238,11 +238,11 @@ function updateController(state) {
   }
   root.querySelector('.pad').hidden = false;
   root.querySelector('.pad').classList.toggle('burger-stack-pad', isBurgerStack);
-  if (isDice) {
+  if (isDice || isUfo) {
     sequence.hidden = false;
     hint.hidden = false;
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
-    hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
+    hint.textContent = isUfo ? 'R = LEFT UFO  ·  G = MIDDLE UFO  ·  B = RIGHT UFO' : 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
   } else if (isMatrix) {
     sequence.hidden = false;
     hint.hidden = false;
