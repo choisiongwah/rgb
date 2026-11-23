@@ -131,7 +131,7 @@ export class SessionService {
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
       matrixTarget: MATRIX_TARGET_POINTS, matrixRoundId: 0, matrixPuzzle: null, ufoTarget: UFO_TARGET_POINTS, ufoRoundId: 0, ufoCycle: 0, ufoTargetId: null, ufoOptions: [], ufoCorrectIndex: null, ufoPhase: 'idle', ufoElapsedMs: 0, ufoDurationMs: 2000,
-      pieAngle: 0, pieSpeed: 4.1887902047863905, pieDirection: 1, pieSpeedAccumulator: 0, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null, pieKnives: [], pieMissId: 0, pieLastMiss: null,
+      pieAngle: 0, pieSpeed: 4.1887902047863905, pieTargetSpeed: 4.1887902047863905, pieDirection: 1, pieSpeedAccumulator: 0, pieTotalHits: 0, pieDirectionChanged: false, pieLastHitId: 0, pieLastHit: null, pieKnives: [], pieMissId: 0, pieLastMiss: null,
       players: COLORS.map((color) => ({
         color, token: randomBytes(24).toString('hex'), player: null,
         connected: false, joined: false, activeForRound: false,
@@ -239,6 +239,7 @@ export class SessionService {
     session.matrixPuzzle = null;
     session.pieAngle = 0;
     session.pieSpeed = 4.1887902047863905;
+    session.pieTargetSpeed = 4.1887902047863905;
     session.pieSpeedAccumulator = 0;
     session.pieDirection = 1;
     session.pieTotalHits = 0;
@@ -287,7 +288,7 @@ export class SessionService {
     else session.burgerSequence = null;
 
 
-    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=4.1887902047863905; session.pieSpeedAccumulator=0; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; session.pieKnives=[]; session.pieMissId=0; session.pieLastMiss=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieKnives=[]; } }
+    if (session.stage === 7) { session.pieAngle=0; session.pieSpeed=4.1887902047863905; session.pieTargetSpeed=4.1887902047863905; session.pieSpeedAccumulator=0; session.pieDirection=1; session.pieTotalHits=0; session.pieDirectionChanged=false; session.pieLastHitId=0; session.pieLastHit=null; session.pieKnives=[]; session.pieMissId=0; session.pieLastMiss=null; for (const p of session.players) { p.pieHits={R:0,G:0,B:0}; p.pieTotalHits=0; p.pieKnives=[]; } }
     if (session.stage === 6) { session.ufoCycle = 0; session.ufoRoundId = 0; this.rollNextUfoRound(session); }
     else { session.ufoPhase = 'idle'; session.ufoTargetId = null; session.ufoOptions = []; }
     return session;
@@ -733,13 +734,13 @@ export class SessionService {
     for(const session of this.sessions.values()){
       if(session.stage!==7||session.status!=='playing'||session.paused)continue;
       session.pieAngle=(session.pieAngle+session.pieSpeed*session.pieDirection*delta)%(Math.PI*2);
+      session.pieSpeed += ((session.pieTargetSpeed ?? session.pieSpeed) - session.pieSpeed) * delta;
       session.pieSpeedAccumulator=(session.pieSpeedAccumulator||0)+elapsed;
       while(session.pieSpeedAccumulator>=1500){
         session.pieSpeedAccumulator-=1500;
         const variation=(this.random()*4-2)*Math.PI/180*60;
         const sign=this.random()<0.5?-1:1;
-        session.pieSpeed=Math.max(-6.283185307179586,Math.min(6.283185307179586,(Math.abs(session.pieSpeed)+variation)*sign));
-        if(Math.abs(session.pieSpeed)<0.35)session.pieSpeed=sign*0.35;
+        session.pieTargetSpeed=Math.max(-6.283185307179586,Math.min(6.283185307179586,(session.pieSpeed+variation)*sign));
       }
       updated.push(session);
     }
