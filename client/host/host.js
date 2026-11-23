@@ -150,8 +150,8 @@ function renderRaceDisplay(state) {
     qr.hidden = player.joined;
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
-    road.hidden = !player.joined;
     const individual = [4,5,7,8,9].includes(state.stage);
+    road.hidden = !player.joined || individual;
     const race = player.race || {};
     const stageProgress = {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
@@ -227,7 +227,7 @@ function ensureIndividualBoard(scene, stage) {
     if (type === 'flappy') {
       board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
     } else if (type === 'burger') {
-      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
+      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
@@ -250,7 +250,8 @@ function renderIndividualBoard(board, state, player) {
     rocket.classList.toggle('crashed', (flight.penaltyMs || 0) > 0);
     const obstacles = board.querySelector('.flappy-obstacles');
     const gap = Math.max(0.22, 0.38 - Math.floor((flight.blockersPassed || 0) / 6) * 0.035);
-    obstacles.innerHTML = (flight.obstacles || []).map(item => {
+    const visibleObstacles = (flight.obstacles || []).length ? flight.obstacles : (state.status === 'waiting' ? [{x:0.68,gapY:0.42},{x:0.9,gapY:0.62}] : []);
+    obstacles.innerHTML = visibleObstacles.map(item => {
       const topHeight = Math.max(8, (item.gapY - gap / 2) * 100);
       const bottomTop = (item.gapY + gap / 2) * 100;
       return '<div class="flappy-pipe top" style="left:' + (item.x * 100) + '%;height:' + topHeight + '%"></div><div class="flappy-pipe bottom" style="left:' + (item.x * 100) + '%;top:' + bottomTop + '%;height:' + (100-bottomTop) + '%"></div>';
