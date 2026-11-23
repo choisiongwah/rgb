@@ -26,7 +26,7 @@ function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(k
 const BURGER_STACK_TARGET = 5;
 const BURGER_STACK_MIN_LENGTH = 3;
 const BURGER_STACK_MAX_LENGTH = 7;
-const BURGER_STACK_INGREDIENTS = ['R','G','B','Y','P'];
+const BURGER_STACK_INGREDIENTS = ['R','G','B'];
 function createBurgerStackState(random) {
   const length = BURGER_STACK_MIN_LENGTH + Math.floor(random() * (BURGER_STACK_MAX_LENGTH - BURGER_STACK_MIN_LENGTH + 1));
   return { lane:1, challengeNumber:1, challengeLength:length,
