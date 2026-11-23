@@ -22,7 +22,7 @@ function createTriState(random) {
 function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
 function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
 function pieImpactAngle(wheelAngle) { return normalizeAngle(wheelAngle); }
-function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<0.24); }
+function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<(10*Math.PI/180)); }
 const BURGER_STACK_TARGET = 5;
 const BURGER_STACK_MIN_LENGTH = 3;
 const BURGER_STACK_MAX_LENGTH = 7;
@@ -42,8 +42,8 @@ function resetBurgerStackChallenge(stack, random) {
 const PIE_HITS_PER_COLOR = 4;
 const PIE_COLORS = ['R', 'G', 'B'];
 function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = (((angle + Math.PI / 3) % turn) + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
-const UFO_DURATIONS_MS = [1500, 1100, 800, 500];
-function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
+const UFO_DURATIONS_MS = [2000, 1500, 1000, 500];
+function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8,9]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
 const BURGER_TARGET_POINTS = 5;
 const BURGER_MIN_LENGTH = 3;
 const BURGER_MAX_LENGTH = 7;
@@ -683,7 +683,7 @@ export class SessionService {
         if (stack.penaltyMs > 0) { stack.penaltyMs = Math.max(0, stack.penaltyMs - delta * 1000); continue; }
         const difficulty = stack.successCount;
         const fallSpeed = 0.72 + difficulty * 0.055;
-        const spawnInterval = Math.max(0.42, 0.8 - difficulty * 0.08);
+        const spawnInterval = difficulty > 2 ? 0.6 : 0.8;
         stack.spawnAccumulator += delta;
         while (stack.spawnAccumulator >= spawnInterval && stack.nextIngredientIndex < stack.recipe.length && stack.drops.length < 6) {
           stack.spawnAccumulator -= spawnInterval;
