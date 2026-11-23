@@ -358,6 +358,7 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
     const visibleStack = stack.completedStack?.length ? stack.completedStack : (stack.stacked || []);
     const builtHost = board.querySelector('.stack-built-host');
+    builtHost.style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
     const activeLayerIndexes = new Set();
     visibleStack.forEach((item,index) => {
       activeLayerIndexes.add(String(index));
