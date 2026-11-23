@@ -304,6 +304,9 @@ function applyState(state) {
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
   const isIndividualDisplay = [3,4,5,7,8,9].includes(state.stage);
+  const room = $('#room');
+  room.classList.toggle('individual-mode', isIndividualDisplay);
+  room.classList.toggle('shared-mode', !isIndividualDisplay);
   $('#race-display').hidden = !isIndividualDisplay;
   $('#game-root').hidden = isIndividualDisplay;
   $('#player-strip').hidden = isIndividualDisplay;
@@ -311,7 +314,11 @@ function applyState(state) {
   if (isIndividualDisplay) renderRaceDisplay(state);
   renderSlots(state);
   renderFinalResults(state);
-  if (game?.scene?.keys?.RGBScene) game.scene.keys.RGBScene.updateState(state);
+  if (game?.scene?.keys?.RGBScene) {
+    game.scale?.refresh();
+    game.scene.keys.RGBScene.updateState(state);
+    game.scene.keys.RGBScene.layout(game.scale.width, game.scale.height);
+  }
 }
 
 class RGBScene extends Phaser.Scene {
@@ -392,6 +399,8 @@ class RGBScene extends Phaser.Scene {
       this.diceGraphics?.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 18);
       this.diceNumbers?.[index]?.setPosition(x, y).setFontSize(Math.max(32, size * 0.52));
       this.diceLabels?.[index]?.setPosition(x, y + size * 0.72).setFontSize(Math.max(11, Math.min(19, width * 0.016)));
+      if (this.diceNumbers?.[index]) this.children.bringToTop(this.diceNumbers[index]);
+      if (this.diceLabels?.[index]) this.children.bringToTop(this.diceLabels[index]);
     }
   }
   animateBurgerDrop(ingredient, color) {
@@ -498,14 +507,14 @@ class RGBScene extends Phaser.Scene {
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
     this.matrixCells.forEach((cell, index) => {
-      const visible = isMatrix && state.status !== 'waiting' && Boolean(state.matrixPuzzle);
+      const visible = isMatrix;
       cell.setVisible(visible);
-      cell.setText(index === 8 ? '?' : (state.matrixPuzzle?.cells?.[index] || ''));
+      cell.setText(index === 8 ? '?' : (state.matrixPuzzle?.cells?.[index] || (state.status === 'waiting' ? ['●','▲','■','▲','■','●','■','●'][index] : '')));
       cell.setColor(index === 8 ? '#fbbf24' : '#f8fafc').setBackgroundColor(index === 8 ? '#493d20' : '#243247');
     });
     this.matrixOptions.forEach((option, index) => {
-      option.setVisible(isMatrix && state.status !== 'waiting' && Boolean(state.matrixPuzzle));
-      option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || ''));
+      option.setVisible(isMatrix);
+      option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || (state.status === 'waiting' ? ['●','▲','■'][index] : '')));
     });
     this.burgerStackText.setVisible(isBurger);
     this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
@@ -531,8 +540,8 @@ class RGBScene extends Phaser.Scene {
       this.pieHud.setText('R / G / B · TIME YOUR THROW');
       if(state.pieLastHitId!==this.lastPieHit){this.lastPieHit=state.pieLastHitId;this.pieKnife.setPosition(this.scale.width/2,this.scale.height*.78).setScale(.65).setAlpha(1);this.tweens.add({targets:this.pieKnife,y:this.scale.height*.57,scale:1.05,alpha:0,duration:300,ease:'Cubic.Out'});}
     } this.ufoWindow.setVisible(isUfo); this.ufoTarget.setVisible(isUfo && state.ufoPhase==='flyby');
-    this.ufoOptions.forEach((o,i)=>{o.setVisible(isUfo && state.ufoPhase==='choose');if(state.ufoOptions?.[i])o.setTexture('ufo-'+state.ufoOptions[i]);});
-    this.ufoOptionLabels.forEach(o=>o.setVisible(isUfo && state.ufoPhase==='choose'));
+    this.ufoOptions.forEach((o,i)=>{o.setVisible(isUfo && (state.ufoPhase==='choose' || state.ufoPhase==='idle'));if(state.ufoOptions?.[i])o.setTexture('ufo-'+state.ufoOptions[i]);else o.setTexture('ufo-'+(i+1));});
+    this.ufoOptionLabels.forEach(o=>o.setVisible(isUfo));
     if(isUfo && state.ufoRoundId!==this.lastUfoRound){this.lastUfoRound=state.ufoRoundId;this.tweens.killTweensOf(this.ufoTarget);this.ufoTarget.setTexture('ufo-'+(state.ufoTargetId||1)).setPosition(this.scale.width+100,this.scale.height*.46).setVisible(true);this.tweens.add({targets:this.ufoTarget,x:-100,duration:state.ufoDurationMs||2000,ease:'Linear',onComplete:()=>this.ufoTarget.setVisible(false)});}
     if(!isUfo){this.ufoTarget.setVisible(false);this.ufoOptions.forEach(o=>o.setVisible(false));this.ufoOptionLabels.forEach(o=>o.setVisible(false));}
     if (!isBurger) { this.burgerFallingText.setVisible(false); this.burgerTopBunText.setVisible(false); }
@@ -547,7 +556,7 @@ class RGBScene extends Phaser.Scene {
     if (isBurger && state.burgerRoundId !== this.lastBurgerRound) this.lastBurgerRound = state.burgerRoundId;
     this.diceNumbers.forEach((item, index) => {
       item.setVisible(isDice);
-      item.setText(isDice && state.diceValues ? String(state.diceValues[index]) : '');
+      item.setText(isDice ? (state.diceValues ? String(state.diceValues[index] ?? '?') : '?') : '');
     });
     if (isDice && state.diceRoundId !== this.lastDiceRound) {
       this.lastDiceRound = state.diceRoundId;
