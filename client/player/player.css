@@ -107,3 +107,6 @@ body:has(.knife-wheel-screen:not([hidden])) .pad button{height:13vh;min-height:6
 
 .knife-launch.throw{animation:knife-launch-throw .32s cubic-bezier(.2,.75,.35,1)}
 @keyframes knife-launch-throw{0%{bottom:5%;opacity:1;transform:translateX(-50%) scale(1)}75%{bottom:44%;opacity:1;transform:translateX(-50%) scale(.82)}100%{bottom:44%;opacity:0;transform:translateX(-50%) scale(.75)}}
+
+/* Explicitly honour hidden on game-scene sections whose layout uses flex/grid. */
+[hidden]{display:none!important}
