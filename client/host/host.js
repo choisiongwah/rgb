@@ -173,7 +173,7 @@ function renderRaceDisplay(state) {
     const stageProgress = {
       4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
-      7: 'R ' + (player.pieHits?.R || 0) + '/6 · G ' + (player.pieHits?.G || 0) + '/6 · B ' + (player.pieHits?.B || 0) + '/6',
+      7: 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4',
       8: (player.island?.progress || 0) + ' / 50 SHARKS',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
@@ -285,7 +285,7 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (state.pieSpeed > 1.5 ? 'FAST SPIN' : 'SPINNING');
   } else if (state.stage === 8) {
     const island = player.island || {sharks:[],progress:0,orientations:[]};
-    board.querySelector('.island-sharks-host').innerHTML = (island.sharks || []).slice(0,50).map((color,index) => '<span class="island-shark-host ' + color.toLowerCase() + (index < island.progress ? ' crossed' : '') + '">' + color + '</span>').join('');
+    board.querySelector('.island-sharks-host').innerHTML = (island.sharks || []).slice(0,50).map((color,index) => '<span class="island-shark-host ' + color.toLowerCase() + ' ' + ((island.orientations || [])[index] || 'horizontal') + (index < island.progress ? ' crossed' : '') + '" title="Shark ' + (index + 1) + ': ' + color + '">' + color + '</span>').join('');
     board.querySelector('.island-player-host').style.left = (4 + Math.min(50,island.progress || 0)*1.75) + '%';
     board.querySelector('.board-caption').textContent = (island.progress || 0) + ' / 50 SHARKS · ' + ((island.penaltyMs || 0)>0 ? 'SHARK BITE · RECOVERING' : 'MATCH THE SHARK COLOUR');
   } else if (state.stage === 9) {
