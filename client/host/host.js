@@ -506,7 +506,7 @@ class RGBScene extends Phaser.Scene {
     const isMatrix = state.stage === 10;
     this.title.setText(isMatrix ? 'MATRIX MASTER' : isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Memorise the UFO through the 1 cm viewing slit · First to 10 points wins.' : isBurger ? 'Build the target burger in order · First to 6 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Watch the UFO fly past, then identify it from three choices · First to 10 points wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to 5 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setVisible(!isMatrix);
