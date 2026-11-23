@@ -325,7 +325,8 @@ export class SessionService {
       const stack = slot.burgerStack;
       if (!['R','B'].includes(action)) throw new Error('INVALID_INPUT');
       if (stack.penaltyMs > 0) throw new Error('BURGER_STACK_RECOVERING');
-      stack.lane = Math.max(0, Math.min(2, stack.lane + (action === 'R' ? -1 : 1)));\n      for (const layer of stack.stacked) layer.lane = stack.lane;
+      stack.lane = Math.max(0, Math.min(2, stack.lane + (action === 'R' ? -1 : 1)));
+      for (const layer of stack.stacked) layer.lane = stack.lane;
       return { session, slot, correct:true, laneChanged:true, lane:stack.lane };
     }
 
