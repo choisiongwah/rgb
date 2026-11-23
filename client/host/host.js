@@ -373,6 +373,7 @@ class RGBScene extends Phaser.Scene {
   preload() { for(let id=1;id<=9;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
+    this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
     this.subtitle = this.add.text(0, 0, '', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
@@ -412,6 +413,29 @@ class RGBScene extends Phaser.Scene {
   }
   layout(width, height) {
     const center = width / 2;
+    if (this.ufoCity) {
+      const city = this.ufoCity;
+      city.clear();
+      city.fillStyle(0x0f172a, 1);
+      city.fillRect(0, height * 0.32, width, height * 0.68);
+      const buildings = 9;
+      for (let i = 0; i < buildings; i += 1) {
+        const x = i * width / buildings;
+        const buildingHeight = height * (0.22 + ((i * 7) % 4) * 0.055);
+        city.fillStyle(i % 2 ? 0x1e293b : 0x273449, 1);
+        city.fillRect(x + 2, height * 0.72 - buildingHeight, width / buildings - 4, buildingHeight);
+        city.fillStyle(0xfbbf24, 0.48);
+        for (let row = 0; row < 4; row += 1) {
+          for (let col = 0; col < 3; col += 1) {
+            const wx = x + 8 + col * Math.max(8, width / buildings * 0.27);
+            const wy = height * 0.72 - buildingHeight + 12 + row * 17;
+            if (wy < height * 0.7 - 4) city.fillRect(wx, wy, 5, 7);
+          }
+        }
+      }
+      city.fillStyle(0x334155, 1);
+      city.fillRect(0, height * 0.72, width, height * 0.28);
+    }
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
     this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78); this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(22,height*.055)); this.ufoTarget?.setPosition(center,height*.46);
     this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.72).setDisplaySize(Math.min(width*.2,150),Math.min(height*.19,100)));
@@ -565,6 +589,7 @@ class RGBScene extends Phaser.Scene {
     });
     this.burgerStackText.setVisible(isBurger);
     this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
+    this.ufoCity?.setVisible(isUfo);
     if(isPie){
       this.pieGraphics.clear();
       const radius=Math.min(this.scale.width*.19,this.scale.height*.29,190);
