@@ -220,7 +220,7 @@ function renderRaceDisplay(state) {
 }
 
 function ensureIndividualBoard(scene, stage) {
-  const type = stage === 4 ? 'flappy' : stage === 5 ? 'burger' : 'other';
+  const type = ({4:'flappy',5:'burger',6:'ufo',7:'pie',8:'island',9:'stack'})[stage] || 'other';
   let board = scene.querySelector('.individual-board');
   if (!board || board.dataset.type !== type) {
     board = document.createElement('div');
@@ -230,6 +230,14 @@ function ensureIndividualBoard(scene, stage) {
       board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
     } else if (type === 'burger') {
       board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
+    } else if (type === 'ufo') {
+      board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
+    } else if (type === 'pie') {
+      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="board-caption"></div>';
+    } else if (type === 'island') {
+      board.innerHTML = '<div class="island-board-title">SHARK ISLAND CROSSING</div><div class="island-sea-host"><div class="island-start-host">START</div><div class="island-sharks-host"></div><div class="island-destination-host">🏝️</div><div class="island-player-host">🧑‍🚀</div></div><div class="board-caption"></div>';
+    } else if (type === 'stack') {
+      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">👨‍🍳</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
     scene.replaceChildren(board);
   }
@@ -257,6 +265,29 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.burger-recipe').innerHTML = sequence.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
     board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + sequence[index] + '">' + labels[sequence[index]] + '</span>').join('');
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
+  } else if (state.stage === 6) {
+    const options = state.ufoOptions || [];
+    const target = board.querySelector('.ufo-target');
+    target.textContent = state.ufoPhase === 'flyby' ? '🛸' : 'TARGET HIDDEN';
+    target.classList.toggle('flying', state.ufoPhase === 'flyby');
+    board.querySelector('.ufo-options').innerHTML = options.map((id,index) => '<span class="ufo-option">' + '<b>' + ['R','G','B'][index] + '</b><strong>🛸</strong><small>UFO ' + id + '</small></span>').join('');
+    board.querySelector('.board-caption').textContent = state.ufoPhase === 'flyby' ? 'WATCH THE FLYBY · ' + Math.max(0,Math.ceil((state.ufoDurationMs-state.ufoElapsedMs)/1000)) + 's' : 'CHOOSE THE MATCHING UFO';
+  } else if (state.stage === 7) {
+    const wheel = board.querySelector('.pie-wheel-host');
+    wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+    board.querySelector('.pie-knives-host').innerHTML = (state.pieKnives || []).map(item => '<i style="transform:rotate(' + (Number(item.angle || 0)*180/Math.PI) + 'deg)"></i>').join('');
+    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (state.pieSpeed > 1.5 ? 'FAST SPIN' : 'SPINNING');
+  } else if (state.stage === 8) {
+    const island = player.island || {sharks:[],progress:0,orientations:[]};
+    board.querySelector('.island-sharks-host').innerHTML = (island.sharks || []).slice(0,50).map((color,index) => '<span class="island-shark-host ' + color.toLowerCase() + (index < island.progress ? ' crossed' : '') + '">' + color + '</span>').join('');
+    board.querySelector('.island-player-host').style.left = (4 + Math.min(50,island.progress || 0)*1.75) + '%';
+    board.querySelector('.board-caption').textContent = (island.progress || 0) + ' / 50 SHARKS · ' + ((island.penaltyMs || 0)>0 ? 'SHARK BITE · RECOVERING' : 'MATCH THE SHARK COLOUR');
+  } else if (state.stage === 9) {
+    const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
+    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] || 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
+    board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] || 50) + '%';
+    board.querySelector('.stack-built-host').innerHTML = (stack.stacked || []).map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[item.ingredient] || '🍅') + '</span>').join('');
+    board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
 }
 
@@ -614,7 +645,14 @@ async function createRoom() {
     const qr = document.createElement('img');
     qr.id = 'qr-' + player.color;
     qr.alt = 'Join ' + player.color;
-    qr.src = await QRCode.toDataURL(publicBaseUrl + '/player/?sessionId=' + session.id + '&joinToken=' + player.joinToken);
+    const joinUrl = publicBaseUrl + '/player/?sessionId=' + encodeURIComponent(session.id) + '&joinToken=' + encodeURIComponent(player.joinToken);
+    qr.src = await QRCode.toDataURL(joinUrl);
+    const joinLink = document.createElement('a');
+    joinLink.className = 'player-join-link';
+    joinLink.href = joinUrl;
+    joinLink.target = '_blank';
+    joinLink.rel = 'noopener';
+    joinLink.textContent = 'Open player link';
     const status = document.createElement('p');
     status.id = 'slot-status-' + player.color;
     status.className = 'player-status';
@@ -626,7 +664,7 @@ async function createRoom() {
     const result = document.createElement('div');
     result.id = 'result-' + player.color;
     result.className = 'player-result';
-    card.append(title, mascot, qr, status, count, result);
+    card.append(title, mascot, qr, joinLink, status, count, result);
     $('#player-strip').append(card);
   }
 
