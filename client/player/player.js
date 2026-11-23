@@ -201,7 +201,7 @@ function updateController(state) {
   const isIsland = state.stage === 8;
   const isBurgerStack = state.stage === 9;
   const isMatrix = state.stage === 10;
-  const individualScreen = state.stage >= 3 && state.stage <= 9;
+  const individualScreen = [3,4,5,7,8,9].includes(state.stage);
   const intro = root.querySelector('#level-intro');
   intro.hidden = state.status !== 'waiting' || !individualScreen;
   const introCopy = {
