@@ -241,7 +241,7 @@ function ensureIndividualBoard(scene, stage) {
     if (type === 'flappy') {
       board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
     } else if (type === 'burger') {
-      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-recipe"></div><div class="burger-plate"><div class="burger-stack"></div></div><div class="burger-progress"></div>';
+      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-stage"><div class="burger-sample"><small>MODEL BURGER</small><div class="burger-recipe"></div></div><div class="burger-plate"><div class="burger-stack"></div></div></div><div class="burger-progress"></div>';
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
