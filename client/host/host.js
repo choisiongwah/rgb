@@ -309,9 +309,10 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
-    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[drop.ingredient] || '🍅') + '</span>').join('');
+    board.querySelector('.stack-drops-host').innerHTML = (stack.drops || []).map(drop => '<span class="stack-drop" style="left:' + ([16.5,50,83.5][drop.lane] ?? 50) + '%;top:' + (Math.max(0,Math.min(1,drop.y))*100) + '%">' + ({R:'🥩',G:'🥬',B:'🍅',T:'🍞'}[drop.ingredient] || '🍅') + '</span>').join('');
     board.querySelector('.stack-catcher-host').style.left = ([16.5,50,83.5][stack.lane] ?? 50) + '%';
-    board.querySelector('.stack-built-host').innerHTML = (stack.stacked || []).map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',Y:'🧀',P:'🧅'}[item.ingredient] || '🍅') + '</span>').join('');
+    const visibleStack = stack.completedStack?.length ? stack.completedStack : (stack.stacked || []);
+    board.querySelector('.stack-built-host').innerHTML = visibleStack.map(item => '<span>' + ({R:'🥩',G:'🥬',B:'🍅',T:'🍞'}[item.ingredient] || '🍅') + '</span>').join('') + (stack.completedStack?.length ? '<b class="stack-top-bun">🍞</b>' : '');
     board.querySelector('.board-caption').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.successCount || 0) + ' / ' + state.burgerStackTarget + ' COMPLETE' + ((stack.penaltyMs || 0)>0 ? ' · MISALIGNED!' : '');
   }
 }
