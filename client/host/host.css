@@ -75,3 +75,35 @@
 .host-individual-scene[hidden]{display:none!important}
 .host-race-car[hidden],.host-race-obstacles[hidden]{display:none!important}
 @keyframes host-scene-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+
+.individual-board{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:8px;padding:12px;overflow:hidden}
+.individual-board.flappy{background:linear-gradient(180deg,#7dd3fc 0%,#bae6fd 58%,#4ade80 58%,#15803d 100%);color:#0f172a}
+.flappy-sky{position:relative;flex:1;width:100%;min-height:0;overflow:hidden;border:3px solid #e0f2fe;border-radius:16px;background:linear-gradient(180deg,#38bdf8,#bae6fd 78%,#86efac 78%);box-shadow:inset 0 0 30px #0369a155}
+.flappy-stars{position:absolute;top:8%;left:5%;color:#fff;font-size:clamp(12px,2vw,22px);opacity:.85}
+.flappy-cloud{position:absolute;width:26%;height:9%;border-radius:999px;background:#f8fafc;opacity:.82;filter:drop-shadow(0 4px 3px #0284c755)}
+.flappy-cloud:before,.flappy-cloud:after{content:"";position:absolute;bottom:25%;width:42%;height:130%;border-radius:50%;background:inherit}
+.flappy-cloud:before{left:18%}.flappy-cloud:after{right:14%;width:35%;height:100%}
+.cloud-a{top:20%;left:45%}.cloud-b{top:48%;left:68%;transform:scale(.7)}
+.flappy-ground{position:absolute;bottom:0;left:0;right:0;height:9%;background:repeating-linear-gradient(90deg,#854d0e 0 16px,#a16207 16px 32px);border-top:5px solid #65a30d}
+.flappy-rocket{position:absolute;z-index:4;left:24%;transform:translate(-50%,-50%);font-size:clamp(32px,5vw,62px);line-height:1;filter:drop-shadow(0 5px 3px #0006);transition:top .08s linear}
+.flappy-rocket.crashed{filter:drop-shadow(0 0 12px #ef4444);animation:flappy-hit .16s infinite alternate}
+@keyframes flappy-hit{to{transform:translate(-50%,-50%) rotate(-12deg) scale(.88)}}
+.flappy-obstacles{position:absolute;z-index:2;inset:0}
+.flappy-pipe{position:absolute;width:9%;min-width:18px;background:linear-gradient(90deg,#15803d,#4ade80 45%,#166534);border:3px solid #14532d;box-shadow:inset -5px 0 #166534,0 3px 5px #0004}
+.flappy-pipe.top{top:0;border-radius:0 0 8px 8px}
+.flappy-pipe.bottom{border-radius:8px 8px 0 0}
+.board-caption{flex:none;text-align:center;font-size:clamp(10px,1.25vw,15px);font-weight:1000;letter-spacing:.04em;color:#0f172a;text-shadow:0 1px #fff8}
+.individual-board.burger{background:radial-gradient(ellipse at center,#fde68a,#92400e);color:#431407}
+.burger-game-title{font-size:clamp(16px,2vw,25px);font-weight:1000;letter-spacing:.08em;text-shadow:0 2px #fff8}
+.burger-recipe{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:clamp(3px,.7vw,9px);width:100%}
+.burger-step{display:grid;place-items:center;width:clamp(28px,4vw,48px);height:clamp(28px,4vw,48px);font-size:clamp(18px,2.6vw,32px);border:2px solid #78350f;border-radius:10px;background:#fffbeb;opacity:.55}
+.burger-step.done{opacity:1;background:#bbf7d0;border-color:#15803d;transform:translateY(-3px)}
+.burger-step.current{opacity:1;border-color:#dc2626;box-shadow:0 0 0 3px #fca5a5;animation:burger-pulse .7s infinite alternate}
+@keyframes burger-pulse{to{transform:scale(1.12)}}
+.burger-plate{width:min(78%,230px);height:clamp(100px,22vh,180px);display:flex;align-items:flex-end;justify-content:center;padding:12px 12px 24px;border-radius:50%;background:radial-gradient(ellipse,#fff 0 48%,#cbd5e1 50% 58%,#64748b 60% 64%,#e2e8f0 66%);box-shadow:0 12px 18px #451a0344}
+.burger-stack{width:72%;display:flex;flex-direction:column-reverse;align-items:stretch;gap:2px}
+.burger-layer{height:clamp(12px,2.2vh,20px);display:grid;place-items:center;border:2px solid #78350f;border-radius:8px;font-size:clamp(11px,1.7vw,20px);line-height:1;background:linear-gradient(#fcd34d,#b45309)}
+.burger-layer.layer-G{background:linear-gradient(#86efac,#15803d)}
+.burger-layer.layer-B{background:linear-gradient(#fca5a5,#dc2626)}
+.burger-progress{font-size:clamp(10px,1.3vw,16px);font-weight:1000;letter-spacing:.04em;background:#fff8;padding:5px 10px;border-radius:999px}
