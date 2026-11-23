@@ -275,7 +275,7 @@ function renderIndividualBoard(board, state, player) {
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
     wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
-    board.querySelector('.pie-knives-host').innerHTML = (state.pieKnives || []).map(item => '<i style="transform:rotate(' + (Number(item.angle || 0)*180/Math.PI) + 'deg)"></i>').join('');
+    board.querySelector('.pie-knives-host').innerHTML = (player.pieKnives || []).map(item => '<i style="transform:rotate(' + (Number(item.angle || 0)*180/Math.PI) + 'deg)"></i>').join('');
     board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (state.pieSpeed > 1.5 ? 'FAST SPIN' : 'SPINNING');
   } else if (state.stage === 8) {
     const island = player.island || {sharks:[],progress:0,orientations:[]};
