@@ -113,7 +113,7 @@ function renderController(name, color, state) {
       if (button.disabled || !socket?.connected) return;
       const thisInput = inputId++;
       button.classList.add('pressed');
-      const payload = { action: button.dataset.a, inputId: thisInput };
+      const payload = { action: latestState?.stage === 4 ? 'JUMP' : button.dataset.a, inputId: thisInput };
       if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
       if (latestState?.stage === 5) payload.roundId = latestState.burgerRoundId;
       if (latestState?.stage === 6) payload.roundId = latestState.ufoRoundId;
@@ -201,36 +201,52 @@ function updateController(state) {
   const isIsland = state.stage === 8;
   const isBurgerStack = state.stage === 9;
   const isMatrix = state.stage === 10;
+  const individualScreen = state.stage >= 3 && state.stage <= 9;
   const intro = root.querySelector('#level-intro');
-  const introCopy = {3:['HIGHWAY DODGE','Switch between three road lanes using R, G and B. Avoid traffic and reach 3,000 m.'],4:['ROCKET FLIGHT','Tap your screen to boost the rocket through the moving gaps. Each player flies independently.'],5:['BURGER BUILDER','Start with the bottom bread. Stack the falling ingredients in the shown order using R, G and B.'],6:['UFO SPOTTER','Watch each uniquely shaped UFO through the narrow viewing slit, then choose its matching position.'],7:['KNIFE HIT','Watch the rotating pie and throw knives at the matching colour. Avoid repeating the same spot.'],8:['SHARK ISLAND CROSSING','Step forward by matching each shark colour. A wrong move returns you to your latest checkpoint, not the start.']};
-  intro.hidden = state.status !== 'waiting' || !introCopy[state.stage];
-  if (introCopy[state.stage]) { root.querySelector('#level-intro-title').textContent = introCopy[state.stage][0]; root.querySelector('#level-intro-copy').textContent = introCopy[state.stage][1]; }
+  intro.hidden = state.status !== 'waiting' || !individualScreen;
+  const introCopy = {
+    3:['HIGHWAY DODGE','Use R, G and B to switch lanes. Avoid traffic.'],
+    4:['ROCKET FLIGHT','Tap any R, G or B button to boost your rocket.'],
+    5:['BURGER BUILDER','Use R, G and B to select the correct ingredient.'],
+    6:['UFO SPOTTER','Watch the UFO, then choose its matching position.'],
+    7:['KNIFE HIT','Use R, G and B to throw at the matching pie colour.'],
+    8:['SHARK ISLAND CROSSING','Match each shark colour using R, G and B.'],
+    9:['BURGER STACK','Use R and B to move left and right to catch ingredients.']
+  };
+  if (introCopy[state.stage]) {
+    root.querySelector('#level-intro-title').textContent = introCopy[state.stage][0];
+    root.querySelector('#level-intro-copy').textContent = introCopy[state.stage][1];
+  }
   root.querySelectorAll('[data-a]').forEach((button) => {
     button.hidden = isBurgerStack && button.dataset.a === 'G';
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
-      !mine.activeForRound || (isDice && mine.roundAttempted) || (isBurger && mine.burgerRoundAttempted) || (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) || (isMatrix && mine.matrixRoundAttempted) || (isRace && (mine.race?.penaltyMs || 0) > 0) || (isIsland && (mine.island?.penaltyMs || 0) > 0) || (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0);
+      !mine.activeForRound || (isDice && mine.roundAttempted) ||
+      (isBurger && mine.burgerRoundAttempted) ||
+      (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) ||
+      (isMatrix && mine.matrixRoundAttempted) ||
+      (isRace && (mine.race?.penaltyMs || 0) > 0) ||
+      (isIsland && (mine.island?.penaltyMs || 0) > 0) ||
+      (isBurgerStack && (mine.burgerStack?.penaltyMs || 0) > 0);
   });
   const sequence = root.querySelector('#sequence');
   const hint = root.querySelector('#input-hint');
-  sequence.hidden = isRace || isFlappy || isUfo || isPie || isIsland || isBurgerStack || isMatrix || isBurger;
-  hint.hidden = isRace || isFlappy || isMatrix || isBurger || isPie;
-  root.querySelector('#race-screen').hidden = true;
-  root.querySelector('#burger-quiz').hidden = !isBurger;
-  root.querySelector('#pie-screen').hidden = !isPie;
-  if (isPie) renderPie(state, mine);
-  if (isBurger) { root.querySelector('#burger-quiz-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>'), '🍞'].join(''); root.querySelector('#burger-built-stack').innerHTML = ['🍞', ...(state.burgerSequence || []).slice(0, mine.burgerProgressIndex || 0).map((action) => '<span>' + ({R:'🥩',G:'🥬',B:'🍅'}[action]) + '</span>')].join(''); }
-  root.querySelector('#island-screen').hidden = !isIsland;
-  root.querySelector('#burger-builder-screen').hidden = !isBurger;
-  root.querySelector('#knife-wheel-screen').hidden = !isPie;
-  root.querySelector('#burger-stack-screen').hidden = !isBurgerStack;
+  sequence.hidden = individualScreen || isMatrix;
+  hint.hidden = individualScreen || isMatrix;
+  for (const selector of ['#race-screen','#burger-quiz','#pie-screen','#flappy-screen','#burger-builder-screen','#burger-stack-screen','#knife-wheel-screen','#island-screen']) {
+    const element = root.querySelector(selector);
+    if (element) element.hidden = true;
+  }
+  root.querySelector('.pad').hidden = false;
   root.querySelector('.pad').classList.toggle('burger-stack-pad', isBurgerStack);
-  if (isBurgerStack) renderBurgerStack(state, mine);
-  if (isBurger) renderBurgerBuilder(state, mine);
-  if (isPie) renderKnifeWheel(state, mine);
-  if (isIsland) renderIsland(state, mine);
-  root.querySelector('#flappy-screen').hidden = !isFlappy;
-  root.querySelector('.pad').hidden = isFlappy;
-  if (isFlappy) renderFlappy(state, mine);
+  if (isDice) {
+    sequence.hidden = false;
+    hint.hidden = false;
+    sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
+    hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
+  } else if (isMatrix) {
+    sequence.hidden = false;
+    hint.hidden = false;
+  }
   if (isDice) {
     sequence.innerHTML = '<span>R</span><span>G</span><span>B</span>';
     hint.textContent = 'R = LEFT  ·  G = MIDDLE  ·  B = RIGHT';
