@@ -107,3 +107,27 @@
 .burger-layer.layer-G{background:linear-gradient(#86efac,#15803d)}
 .burger-layer.layer-B{background:linear-gradient(#fca5a5,#dc2626)}
 .burger-progress{font-size:clamp(10px,1.3vw,16px);font-weight:1000;letter-spacing:.04em;background:#fff8;padding:5px 10px;border-radius:999px}
+
+
+/* Host-side visual boards for individual levels 6–9 */
+.individual-board.ufo,.individual-board.pie,.individual-board.island,.individual-board.stack{position:relative;width:100%;height:100%;min-height:250px;overflow:hidden;border-radius:12px;color:#f8fafc;text-align:center;padding:10px;box-sizing:border-box}
+.individual-board.ufo{background:radial-gradient(ellipse at 50% 30%,#334155,#111827 72%)}
+.ufo-board-title,.pie-board-title,.island-board-title,.stack-board-title{font-weight:900;letter-spacing:1px;font-size:clamp(12px,1.5vw,20px)}
+.ufo-target-caption{font-size:10px;opacity:.75;margin-top:8px}.ufo-target{font-size:42px;margin:5px auto 12px}.ufo-target.flying{animation:ufo-flyby 1.1s ease-in-out infinite alternate}
+.ufo-options{display:flex;justify-content:space-around;gap:5px}.ufo-option{display:flex;flex-direction:column;align-items:center;background:#ffffff18;border:1px solid #94a3b855;border-radius:8px;padding:7px;min-width:0;flex:1}.ufo-option strong{font-size:28px}.ufo-option b{font-size:12px}.ufo-option small{font-size:9px}
+.individual-board.pie{background:radial-gradient(circle,#475569,#111827 72%)}
+.pie-wheel-host{position:relative;width:min(48%,190px);aspect-ratio:1;margin:12px auto;border-radius:50%;overflow:visible;border:5px solid #e2e8f0;display:flex;align-items:center;justify-content:center}
+.pie-sector{position:absolute;width:100%;height:100%;border-radius:50%}.pie-sector.red{background:conic-gradient(#ef4444 0 33.33%,transparent 33.33%)}.pie-sector.green{background:conic-gradient(transparent 0 33.33%,#22c55e 33.33% 66.66%,transparent 66.66%)}.pie-sector.blue{background:conic-gradient(transparent 0 66.66%,#3b82f6 66.66% 100%)}
+.pie-wheel-core{position:absolute;width:24%;height:24%;border-radius:50%;background:#0f172a;border:3px solid white;z-index:2}.pie-knives-host{position:absolute;inset:0;z-index:3}.pie-knives-host i{position:absolute;left:calc(50% - 2px);top:0;width:4px;height:42%;background:#f8fafc;transform-origin:50% 100%;border-radius:3px}.pie-pointer-host{position:absolute;top:-13px;left:calc(50% - 8px);border-left:8px solid transparent;border-right:8px solid transparent;border-top:17px solid white;z-index:4}
+.individual-board.island{background:linear-gradient(#7dd3fc 0 25%,#0284c7 25% 100%)}
+.island-sea-host{position:relative;height:175px;margin-top:8px;border-radius:10px;background:repeating-linear-gradient(0deg,#0369a1 0 13px,#0ea5e9 14px 17px);overflow:hidden}
+.island-start-host,.island-destination-host{position:absolute;top:8px;background:#166534;border-radius:12px;padding:5px;font-size:10px;z-index:2}.island-start-host{left:4px}.island-destination-host{right:4px;font-size:24px}
+.island-sharks-host{position:absolute;inset:35px 8px 8px;display:flex;align-items:center;gap:2px;overflow:hidden}.island-shark-host{flex:1;min-width:0;height:25px;border-radius:50%;font-size:8px;color:#fff;display:grid;place-items:center;background:#ef4444}.island-shark-host.green{background:#16a34a}.island-shark-host.blue{background:#2563eb}.island-shark-host.crossed{opacity:.22}
+.island-player-host{position:absolute;bottom:10px;left:4%;font-size:22px;transition:left .2s;z-index:3}
+.individual-board.stack{background:linear-gradient(#7dd3fc,#164e63)}
+.stack-world-host{position:relative;height:180px;margin-top:8px;border-radius:10px;background:linear-gradient(#0c4a6e,#164e63);overflow:hidden}
+.stack-lanes-host{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}.stack-lanes-host i{border-right:1px dashed #ffffff55}
+.stack-drops-host,.stack-built-host{position:absolute;inset:0}.stack-drop{position:absolute;transform:translateX(-50%);font-size:20px}.stack-catcher-host{position:absolute;bottom:34px;transform:translateX(-50%);font-size:25px;transition:left .12s}.stack-built-host{top:auto;bottom:4px;display:flex;justify-content:center;align-items:end;font-size:18px}
+.board-caption{font-size:10px;font-weight:800;margin-top:7px;letter-spacing:.3px}
+@keyframes ufo-flyby{from{transform:translateX(-35px) rotate(-8deg)}to{transform:translateX(35px) rotate(8deg)}}
+.player-join-link{display:block;margin:4px auto 8px;color:#93c5fd;font-size:12px;text-decoration:underline;overflow-wrap:anywhere}
