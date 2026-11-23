@@ -375,8 +375,7 @@ export class SessionService {
       session.pieTotalHits += 1; session.pieLastHitId += 1;
       const knife={id:session.pieLastHitId,angle:impactAngle,color:action,playerColor:slot.color};
       slot.pieKnives ||= []; slot.pieKnives.push(knife); session.pieLastHit=knife;
-      session.pieSpeed=Math.min(6.283185307179586,session.pieSpeed+0.12);
-      if(session.pieTotalHits>=12&&!session.pieDirectionChanged){session.pieDirection=this.random()<0.5?-1:1;session.pieDirectionChanged=true;}
+      
       if(PIE_COLORS.every((color)=>slot.pieHits[color]>=PIE_HITS_PER_COLOR)){slot.completed=true;slot.place=session.nextPlace++;slot.pointsEarned=POINTS_BY_PLACE[slot.place]||0;slot.totalPoints+=slot.pointsEarned;}
       if(this.allActivePlayersFinished(session)){session.status='finished';session.paused=false;}
       return {session,slot,correct:true,reset:false,cycleCompleted:slot.completed,pointAwarded:1,knife};
