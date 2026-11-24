@@ -351,11 +351,17 @@ export class SessionService {
       let rightmost = Math.max(...state.pipes.map((pipe) => pipe.x));
       for (const pipe of state.pipes) {
         if (pipe.x < -(50/600)) {
-          pipe.x = rightmost + (100/600);
-          rightmost = pipe.x;
-          pipe.color = TRI_COLORS[Math.floor(this.random() * TRI_COLORS.length)];
-          pipe.id = state.nextId++;
           state.score += 1;
+          // Generate exactly 30 platforms in the whole course, then let
+          // the remaining platforms clear naturally without replacements.
+          if (state.nextId <= TRI_TARGET_SCORE) {
+            pipe.x = rightmost + (100/600);
+            rightmost = pipe.x;
+            pipe.color = TRI_COLORS[Math.floor(this.random() * TRI_COLORS.length)];
+            pipe.id = state.nextId++;
+          } else {
+            pipe.x = -1;
+          }
         }
       }
       slot.successCount = state.score;
