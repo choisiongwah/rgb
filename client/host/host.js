@@ -253,7 +253,7 @@ function ensureIndividualBoard(scene, stage) {
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
-      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="pie-flight-host"><i class="pie-ready-knife" aria-hidden="true"></i></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div></div><div class="pie-flight-host"><i class="pie-ready-knife" aria-hidden="true"></i></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
     } else if (type === 'tri') {
       board.innerHTML = '<div class="tri-board-title">SHARK ISLAND · COLOUR STEPS</div><div class="tri-world-host"><div class="tri-platforms-host"></div><div class="tri-runner-host"><span class="tri-runner-fallback">🧑‍🚀</span></div><div class="tri-confetti-host"></div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
@@ -332,7 +332,7 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
-    wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+    wheel.style.transform = 'rotate(' + (-Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
     const readyKnife = board.querySelector('.pie-ready-knife');
     const throwPhase = player.pieThrow?.phase || '';
     readyKnife.classList.toggle('throwing', throwPhase === 'flying');
@@ -349,7 +349,7 @@ function renderIndividualBoard(board, state, player) {
         knivesHost.append(knife);
       }
       const knifeColors = {R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
-      knife.style.setProperty('--knife-angle', (90 - Number(item.angle || 0)*180/Math.PI) + 'deg');
+      knife.style.setProperty('--knife-angle', (90 + Number(item.angle || 0)*180/Math.PI) + 'deg');
       knife.style.setProperty('--knife-color', knifeColors[item.color] || '#f8fafc');
     }
     for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
@@ -378,7 +378,7 @@ function renderIndividualBoard(board, state, player) {
       board.classList.add('pie-missed');
       window.setTimeout(() => board.classList.remove('pie-missed'), 260);
     }
-    board.querySelector('.board-caption').textContent = 'R RED KNIFE  ·  G GREEN KNIFE  ·  B BLUE KNIFE  ·  HIT AN EMPTY MATCHING SPOT';
+    board.querySelector('.board-caption').textContent = 'THROW FROM THE BOTTOM EDGE · MATCH THE COLOUR · AVOID ATTACHED KNIVES';
   } else if (state.stage === 8) {
     const tri = player.tri || {pipes:[],score:0};
     const platformsHost = board.querySelector('.tri-platforms-host');
@@ -540,7 +540,7 @@ class RGBScene extends Phaser.Scene {
     this.burgerStackText = this.add.text(0, 0, '🥬   🥩   🍅', { fontSize: '64px', color: '#ffffff' }).setOrigin(0.5);
     this.burgerFallingText = this.add.text(0, 0, '', { fontSize: '58px' }).setOrigin(0.5).setVisible(false);
     this.burgerTopBunText = this.add.text(0, 0, '🍞', { fontSize: '64px' }).setOrigin(0.5).setVisible(false);
-    this.pieContainer=this.add.container(0,0).setVisible(false); this.pieGraphics=this.add.graphics(); this.pieContainer.add(this.pieGraphics); this.piePointer=this.add.triangle(0,0,0,0,28,0,14,22,0xf8fafc).setVisible(false); this.pieKnife=this.add.text(0,0,'🔪',{fontSize:'48px'}).setOrigin(.5).setVisible(false); this.pieHud=this.add.text(0,0,'R 0/6   G 0/6   B 0/6',{fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setVisible(false);
+    this.pieContainer=this.add.container(0,0).setVisible(false); this.pieGraphics=this.add.graphics(); this.pieContainer.add(this.pieGraphics); this.pieKnife=this.add.text(0,0,'🔪',{fontSize:'48px'}).setOrigin(.5).setVisible(false); this.pieHud=this.add.text(0,0,'R 0/4   G 0/4   B 0/4',{fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setVisible(false);
     this.ufoWindow=this.add.rectangle(0,0,100,40,0x0b1020).setStrokeStyle(3,0x93c5fd).setVisible(false);
     this.ufoTarget=this.add.image(0,0,'ufo-1').setVisible(false);
     this.ufoOptions=[0,1,2].map(()=>this.add.image(0,0,'ufo-1').setVisible(false));
@@ -595,7 +595,7 @@ class RGBScene extends Phaser.Scene {
       city.fillRect(0, height * 0.72, width, height * 0.28);
     }
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
-    this.pieContainer?.setPosition(center,height*.52); this.piePointer?.setPosition(center,height*.20); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78);
+    this.pieContainer?.setPosition(center,height*.52); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78);
     this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(22,height*.055)).setVisible(false);
     this.ufoLegendGraphics?.clear();
     const legendColors=[0xff1100,0x00da09,0x2196f3];
@@ -759,7 +759,7 @@ class RGBScene extends Phaser.Scene {
     const isMatrix = state.stage === 10;
     this.title.setText(isMatrix ? 'MATRIX MASTER' : isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Time your RGB knife throws · Avoid positions already occupied by knives.' : isUfo ? 'Watch the UFO fly past, then identify it from the three coloured choices · First to 10 correct answers wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to 5 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Throw from the bottom edge · Match the colour and avoid attached knives.' : isUfo ? 'Watch the UFO fly past, then identify it from the three coloured choices · First to 10 correct answers wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to 5 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
       ? 'Three unique dice · First to 8 correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setVisible(!isMatrix && !isUfo);
@@ -789,7 +789,7 @@ class RGBScene extends Phaser.Scene {
       option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || (state.status === 'waiting' ? ['●','▲','■'][index] : '')));
     });
     this.burgerStackText.setVisible(isBurger);
-    this.pieContainer.setVisible(isPie); this.piePointer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
+    this.pieContainer.setVisible(isPie); this.pieHud.setVisible(isPie); this.pieKnife.setVisible(isPie);
     this.ufoCity?.setVisible(isUfo);
     if(isPie){
       this.pieGraphics.clear();
@@ -810,7 +810,7 @@ class RGBScene extends Phaser.Scene {
           this.pieGraphics.fillStyle(({R:0xef4444,G:0x22c55e,B:0x3b82f6})[knife.color]||0xffffff,1);this.pieGraphics.fillCircle(x,y,5);
         }
       }
-      this.pieHud.setText('R / G / B · TIME YOUR THROW');
+      this.pieHud.setText('R / G / B · HIT THE MATCHING COLOUR');
       if(state.pieLastHitId!==this.lastPieHit){this.lastPieHit=state.pieLastHitId;this.pieKnife.setPosition(this.scale.width/2,this.scale.height*.78).setScale(.65).setAlpha(1);this.tweens.add({targets:this.pieKnife,y:this.scale.height*.57,scale:1.05,alpha:0,duration:300,ease:'Cubic.Out'});}
     } this.ufoWindow.setVisible(false);
     this.ufoLegendGraphics?.setVisible(isUfo);
