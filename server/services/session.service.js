@@ -50,7 +50,7 @@ function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8,9]; for(let i=po
 const BURGER_MIN_LENGTH = 3;
 const BURGER_MAX_LENGTH = 7;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
-const BURGER_EMOJI = { R: '🥩', G: '🥬', B: '🍅' };
+const BURGER_EMOJI = { R: '🍅', G: '🥬', B: '🥩' };
 function createBurgerSequence(random) {
   const length = BURGER_MIN_LENGTH + Math.floor(random() * (BURGER_MAX_LENGTH - BURGER_MIN_LENGTH + 1));
   return Array.from({ length }, () => BURGER_INGREDIENTS[Math.floor(random() * BURGER_INGREDIENTS.length)]);
@@ -137,7 +137,7 @@ export class SessionService {
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], island: createIslandState(this.random), tri: createTriState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, burgerFailureId: 0, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], island: createIslandState(this.random), tri: createTriState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -410,6 +410,7 @@ export class SessionService {
       session.burgerLastDropId += 1;
       session.burgerLastDrop = { id: session.burgerLastDropId, action, ingredient: BURGER_EMOJI[action], color: slot.color, playerName: slot.player?.name || slot.color };
       if (action !== expected) {
+        slot.burgerFailureId = (slot.burgerFailureId || 0) + 1;
         slot.burgerRoundAttempted = true;
         slot.roundFeedback = 'wrong';
         if (this.allBurgerPlayersAttempted(session)) this.rollNextBurgerRound(session);
@@ -924,7 +925,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        island: player.island, tri: player.tri, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
+        island: player.island, tri: player.tri, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, burgerFailureId: player.burgerFailureId || 0, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
