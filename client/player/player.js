@@ -93,7 +93,7 @@ function renderController(name, color, state) {
     '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<section id="level-intro" class="level-intro" hidden><strong id="level-intro-title"></strong><p id="level-intro-copy"></p><small>Game begins when the player controller starts the level.</small></section>' +
     '<section id="burger-quiz" class="burger-quiz" hidden><strong>BUILD THIS BURGER</strong><div class="burger-quiz-columns"><div><small>RECIPE</small><div id="burger-quiz-stack" class="burger-quiz-stack"></div></div><div><small>YOUR BURGER</small><div id="burger-built-stack" class="burger-quiz-stack"><span>🍞</span></div></div></div></section>' +
-    '<section id="pie-screen" class="pie-screen" hidden><div class="pie-hud"><strong>KNIFE HIT</strong><span id="pie-score"></span></div><div class="pie-stage"><div id="pie-wheel" class="pie-wheel"><span class="pie-centre"></span></div><div class="pie-pointer"></div><div id="pie-knife" class="pie-knife">🔪</div><div id="pie-reject" class="pie-reject">✕</div></div><p id="pie-next-hint">Match the colour at the pointer</p></section>' +
+    '<section id="pie-screen" class="pie-screen" hidden><div class="pie-hud"><strong>KNIFE HIT</strong><span id="pie-score"></span></div><div class="pie-stage"><div id="pie-wheel" class="pie-wheel"><span class="pie-centre"></span></div><div id="pie-knife" class="pie-knife">🔪</div><div id="pie-reject" class="pie-reject">✕</div></div><p id="pie-next-hint">Throw from the bottom edge. Match the colour and avoid attached knives.</p></section>' +
     '<div class="sequence" id="sequence"><span>R</span><span>G</span><span>B</span></div>' +
     '<p id="input-hint" class="input-hint">Tap R → G → B in order</p>' +
     '<section id="flappy-screen" class="flappy-screen" hidden><div class="flappy-hud"><strong id="flappy-count">0 / 20 BLOCKERS</strong><span id="flappy-difficulty">EASY FLIGHT</span></div><div id="flappy-world" class="flappy-world" role="button" tabindex="0" aria-label="Tap to boost rocket"><div class="flappy-stars"></div><div id="flappy-obstacles" class="flappy-obstacles"></div><div id="flappy-rocket" class="flappy-rocket"><div class="rocket-window"><img id="flappy-avatar" alt="Your profile" hidden><span id="flappy-default">🚀</span></div><div class="rocket-flame"></div></div><div id="flappy-crash" class="flappy-crash">BOOST AGAIN!</div><div class="flappy-tap-hint">TAP ANYWHERE TO BOOST</div></div><div class="flappy-progress"><div id="flappy-progress-fill"></div></div></section>' +
@@ -272,8 +272,8 @@ function updateController(state) {
   else if (isFlappy && (mine.flappy?.penaltyMs || 0) > 0) setFeedback('ROCKET BUMPED — GET READY TO BOOST', 'warning');
   else if (isFlappy) setFeedback('Tap R, G or B to boost your rocket!', '');
   else if (isRace) setFeedback('Dodge traffic! R left · G centre · B right', '');
-  else if (isPie && mine.roundFeedback === 'wrong') setFeedback(state.pieLastMiss?.occupied ? 'Knife collision! That position is already occupied.' : 'Wrong colour — time your throw with the rotating wheel.', 'warning');
-  else if (isPie) setFeedback('Throw when the matching colour reaches the top. Avoid embedded knives!', '');
+  else if (isPie && mine.roundFeedback === 'wrong') setFeedback(state.pieLastMiss?.occupied ? 'Knife collision! That position is already occupied.' : 'Wrong colour — match the colour at the bottom edge.', 'warning');
+  else if (isPie) setFeedback('Throw from the bottom edge when its colour matches. Avoid attached knives!', '');
   else if (isIsland && mine.island?.penaltyMs > 0) setFeedback('SHARK BITE! Recovering for 1 second…', 'warning');
   else if (isIsland && mine.roundFeedback === 'bitten') setFeedback('Wrong colour! You fell back to the last island checkpoint.', 'warning');
   else if (isIsland) setFeedback('Preview the sharks, then press the matching colour to move forward!', '');
@@ -316,7 +316,7 @@ function renderKnifeWheel(state,mine) {
   root.querySelector('#knife-wheel').style.transform='rotate('+(-(state.pieAngle||0)*180/Math.PI)+'deg)';
   root.querySelector('#knife-wheel-score').textContent='R: '+(mine.pieHits?.R||0)+'/4　G: '+(mine.pieHits?.G||0)+'/4　B: '+(mine.pieHits?.B||0)+'/4';
   root.querySelector('#knife-wheel-speed').textContent='SPEED '+(state.pieSpeed||0.9).toFixed(1)+'×';
-  root.querySelector('#knife-wheel-knives').innerHTML=(mine.pieKnives||[]).map(k=>'<span class="embedded-knife '+k.color.toLowerCase()+'" style="--knife-angle:'+k.angle*180/Math.PI+'deg">🔪</span>').join('');
+  root.querySelector('#knife-wheel-knives').innerHTML=(mine.pieKnives||[]).map(k=>'<span class="embedded-knife '+k.color.toLowerCase()+'" style="--knife-angle:'+(90+k.angle*180/Math.PI)+'deg">🔪</span>').join('');
   if((state.pieLastHitId||0)>lastKnifeHitId){lastKnifeHitId=state.pieLastHitId;const launch=root.querySelector('.knife-launch');launch.classList.remove('throw');void launch.offsetWidth;launch.classList.add('throw');}
   if((state.pieMissId||0)>lastKnifeMissId){lastKnifeMissId=state.pieMissId;const el=root.querySelector('#knife-wheel-miss');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
 }
