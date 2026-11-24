@@ -249,7 +249,7 @@ function ensureIndividualBoard(scene, stage) {
     } else if (type === 'tri') {
       board.innerHTML = '<div class="tri-board-title">TRI COLOUR RUN</div><div class="tri-world-host"><div class="tri-pipes-host"></div><div class="tri-runner-host">🐦</div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
-      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host">🍔</div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host"><span class="stack-bread-base"></span></div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
     scene.replaceChildren(board);
   }
@@ -380,7 +380,7 @@ function renderIndividualBoard(board, state, player) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     const dropsHost = board.querySelector('.stack-drops-host');
     const activeDropIds = new Set();
-    const food = {R:'🥩',G:'🥬',B:'🍅',T:'🍞'};
+    const food = {R:'tomato',G:'vegetable',B:'meat',T:'top'};
     for (const drop of stack.drops || []) {
       activeDropIds.add(String(drop.id));
       let node = dropsHost.querySelector('[data-drop-id="' + drop.id + '"]');
@@ -390,7 +390,8 @@ function renderIndividualBoard(board, state, player) {
         node.dataset.dropId = String(drop.id);
         dropsHost.append(node);
       }
-      node.textContent = food[drop.ingredient] || '🍅';
+      node.textContent = '';
+      node.className = 'stack-drop stack-block stack-block-' + (food[drop.ingredient] || 'tomato');
       node.style.left = ([16.5,50,83.5][drop.lane] ?? 50) + '%';
       node.style.top = (Math.max(0,Math.min(1,drop.y))*100) + '%';
     }
@@ -410,8 +411,8 @@ function renderIndividualBoard(board, state, player) {
         layer.dataset.layerIndex = String(index);
         builtHost.append(layer);
       }
-      layer.textContent = food[item.ingredient] || '🍅';
-      layer.className = item.ingredient === 'T' ? 'stack-top-layer' : 'stack-layer';
+      layer.textContent = '';
+      layer.className = 'stack-layer stack-block stack-block-' + (food[item.ingredient] || 'tomato');
     });
     for (const node of builtHost.querySelectorAll('[data-layer-index]')) {
       if (!activeLayerIndexes.has(node.dataset.layerIndex)) node.remove();
@@ -438,9 +439,17 @@ function applyState(state) {
   renderSlots(state);
   renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) {
-    game.scale?.refresh();
-    game.scene.keys.RGBScene.updateState(state);
-    game.scene.keys.RGBScene.layout(game.scale.width, game.scale.height);
+    const scene = game.scene.keys.RGBScene;
+    scene.updateState(state);
+    requestAnimationFrame(() => {
+      if (!game || !game.isRunning()) return;
+      const root = $('#game-root');
+      const width = Math.max(320, root.clientWidth || window.innerWidth);
+      const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
+      game.scale.resize(width, height);
+      scene.layout(width, height);
+      scene.updateState(currentState || state);
+    });
   }
 }
 
@@ -845,6 +854,14 @@ async function createRoom() {
     backgroundColor: '#111827',
     scale: { mode: Phaser.Scale.RESIZE, width: 1200, height: 700 },
     scene: [RGBScene]
+  });
+  game.events.once('ready', () => {
+    const root = $('#game-root');
+    const width = Math.max(320, root.clientWidth || window.innerWidth);
+    const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
+    game.scale.resize(width, height);
+    game.scene.keys.RGBScene.layout(width, height);
+    if (currentState) game.scene.keys.RGBScene.updateState(currentState);
   });
   applyState(session);
 }
