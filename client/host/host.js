@@ -15,6 +15,7 @@ let token = sessionStorage.getItem('rgb-token');
 let socket;
 let game;
 let currentState;
+let renderRequestId = 0;
 let successAudioContext;
 
 function show(user) {
@@ -477,6 +478,7 @@ function renderIndividualBoard(board, state, player) {
 
 function applyState(state) {
   currentState = state;
+  const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
   if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
@@ -498,10 +500,18 @@ function applyState(state) {
     scene.scene.setVisible(true);
     scene.updateState(state);
     requestAnimationFrame(() => {
-      if (!game) return;
+      // Socket updates can arrive several times during a level switch. Ignore
+      // stale frames so an older stage cannot overwrite the latest render.
+      if (!game || requestId !== renderRequestId) return;
+      const latestState = currentState || state;
+      const latestIsIndividual = [3,4,5,7,8,9].includes(latestState.stage);
       const root = $('#game-root');
-      root.hidden = false;
-      root.style.display = 'block';
+      root.hidden = latestIsIndividual;
+      root.style.display = latestIsIndividual ? 'none' : 'block';
+      if (latestIsIndividual) {
+        game.canvas.style.display = 'none';
+        return;
+      }
       const width = Math.max(320, root.clientWidth || window.innerWidth);
       const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
       game.canvas.style.display = 'block';
@@ -510,13 +520,7 @@ function applyState(state) {
       scene.scene.setActive(true);
       scene.scene.setVisible(true);
       scene.layout(width, height);
-      scene.updateState(currentState || state);
-      if ([2,6,10].includes(state.stage)) {
-        scene.title?.setVisible(true);
-        scene.subtitle?.setVisible(true);
-        scene.stageText?.setVisible(true);
-        scene.statusText?.setVisible(true);
-      }
+      scene.updateState(latestState);
     });
   }
 }
@@ -710,6 +714,42 @@ class RGBScene extends Phaser.Scene {
   }
   updateState(state) {
     if (!this.title) return;
+    // Treat each session/level pair as a fresh scene. Phaser keeps scene
+    // instances alive between levels, so clear transient animations and cached
+    // round IDs before rendering a different level or a newly created room.
+    const renderKey = String(state.id || '') + ':' + state.stage;
+    if (this.renderKey !== renderKey) {
+      this.renderKey = renderKey;
+      this.tweens.killAll();
+      this.time.removeAllEvents();
+      this.celebrated.clear();
+      this.successSeen.clear();
+      this.lastDiceRound = null;
+      this.lastBurgerRound = null;
+      this.lastBurgerDrop = 0;
+      this.lastBurgerComplete = 0;
+      this.lastPieHit = 0;
+      this.lastUfoRound = null;
+      this.playerTexts.forEach((item) => item?.destroy());
+      this.playerTexts = [];
+      this.ufoTarget?.setVisible(false).setAlpha(1);
+      this.ufoOptions?.forEach((item) => item.setVisible(false).setAlpha(1));
+      this.ufoOptionLabels?.forEach((item) => item.setVisible(false));
+      this.matrixCells?.forEach((item) => item.setVisible(false));
+      this.matrixOptions?.forEach((item) => item.setVisible(false));
+      this.diceNumbers?.forEach((item) => item.setVisible(false).setScale(1).setAngle(0));
+      this.diceLabels?.forEach((item) => item.setVisible(false));
+      this.diceGraphics?.setVisible(false).clear();
+      this.ufoCity?.setVisible(false);
+      this.ufoLegendGraphics?.setVisible(false).clear();
+      this.burgerStackText?.setVisible(false);
+      this.burgerFallingText?.setVisible(false).setAlpha(1).setScale(1);
+      this.burgerTopBunText?.setVisible(false).setAlpha(1).setScale(1);
+      this.pieContainer?.setVisible(false);
+      this.piePointer?.setVisible(false);
+      this.pieHud?.setVisible(false);
+      this.pieKnife?.setVisible(false).setAlpha(1).setScale(1);
+    }
     const isDice = state.stage === 2;
     const isRace = state.stage === 3;
     const isFlappy = state.stage === 4;
