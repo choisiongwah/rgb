@@ -442,7 +442,7 @@ function applyState(state) {
     const scene = game.scene.keys.RGBScene;
     scene.updateState(state);
     requestAnimationFrame(() => {
-      if (!game || !game.isRunning()) return;
+      if (!game) return;
       const root = $('#game-root');
       const width = Math.max(320, root.clientWidth || window.innerWidth);
       const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
