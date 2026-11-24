@@ -823,7 +823,10 @@ export class SessionService {
       if (session.ufoPhase === 'flyby' || session.ufoPhase === 'choose') {
         session.ufoElapsedMs += delta;
         if (session.ufoElapsedMs >= UFO_FLYBY_MS) session.ufoPhase = 'choose';
-        if (session.ufoElapsedMs >= UFO_ROUND_MS || this.allUfoPlayersAttempted(session)) {
+        if (session.ufoElapsedMs >= UFO_ROUND_MS) {
+          // Original Alien scene starts the next quest after 2.8s if nobody answers.
+          this.rollNextUfoRound(session);
+        } else if (this.allUfoPlayersAttempted(session)) {
           this.beginUfoFeedback(session, null);
         }
       } else if (session.ufoPhase === 'feedback') {
