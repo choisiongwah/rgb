@@ -245,7 +245,7 @@ function ensureIndividualBoard(scene, stage) {
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
-      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="pie-flight-host"><i class="pie-ready-knife" aria-hidden="true"></i></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
     } else if (type === 'tri') {
       board.innerHTML = '<div class="tri-board-title">SHARK ISLAND · COLOUR STEPS</div><div class="tri-world-host"><div class="tri-platforms-host"></div><div class="tri-runner-host"><span class="tri-runner-fallback">🧑‍🚀</span></div><div class="tri-confetti-host"></div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
@@ -331,6 +331,7 @@ function renderIndividualBoard(board, state, player) {
       let knife = knivesHost.querySelector('[data-knife-id="' + item.id + '"]');
       if (!knife) {
         knife = document.createElement('i');
+        knife.className = 'pie-stuck-knife';
         knife.dataset.knifeId = String(item.id);
         knivesHost.append(knife);
       }
@@ -340,6 +341,16 @@ function renderIndividualBoard(board, state, player) {
     }
     for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
       if (!activeKnifeIds.has(node.dataset.knifeId)) node.remove();
+    }
+    const flightHost = board.querySelector('.pie-flight-host');
+    const hit = state.pieLastHit;
+    if (hit && hit.playerColor === player.color && Number(board.dataset.lastHitId || 0) !== Number(hit.id)) {
+      board.dataset.lastHitId = String(hit.id);
+      const flyingKnife = document.createElement('i');
+      flyingKnife.className = 'pie-flying-knife';
+      flyingKnife.style.setProperty('--knife-color', ({R:'#ef4444',G:'#22c55e',B:'#3b82f6'})[hit.color] || '#f8fafc');
+      flightHost.append(flyingKnife);
+      flyingKnife.addEventListener('animationend', () => flyingKnife.remove(), {once:true});
     }
     const miss = state.pieLastMiss;
     const missHost = board.querySelector('.pie-miss-host');
@@ -351,8 +362,10 @@ function renderIndividualBoard(board, state, player) {
       fallenKnife.style.setProperty('--miss-color', ({R:'#ef4444',G:'#22c55e',B:'#3b82f6'})[miss.color] || '#fff');
       missHost.append(fallenKnife);
       fallenKnife.addEventListener('animationend', () => fallenKnife.remove(), {once:true});
+      board.classList.add('pie-missed');
+      window.setTimeout(() => board.classList.remove('pie-missed'), 260);
     }
-    board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (Math.abs(state.pieSpeed) > 4.7 ? 'FAST SPIN' : 'SPINNING');
+    board.querySelector('.board-caption').textContent = 'R RED KNIFE  ·  G GREEN KNIFE  ·  B BLUE KNIFE  ·  HIT AN EMPTY MATCHING SPOT';
   } else if (state.stage === 8) {
     const tri = player.tri || {pipes:[],score:0};
     const platformsHost = board.querySelector('.tri-platforms-host');
