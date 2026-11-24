@@ -9,7 +9,7 @@ const inputSchema = z.object({
 const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
-  z.object({ action: z.literal('configure'), targetCycles: z.number().int() })
+  z.object({ action: z.literal('configure'), target: z.number().int() })
 ]);
 const room = (id) => 'session:' + id;
 
@@ -87,7 +87,7 @@ export function registerSocketHandlers(io, { sessions }) {
       const parsed = controlSchema.safeParse(payload);
       if (!parsed.success) return ack({ ok: false, error: 'INVALID_CONTROL' });
       try {
-        const { action, targetCycles } = parsed.data;
+        const { action, target } = parsed.data;
         const id = socket.data.playerSessionId;
         const token = socket.data.playerToken;
         let session;
@@ -98,7 +98,7 @@ export function registerSocketHandlers(io, { sessions }) {
         else if (action === 'next') session = sessions.nextLevel(id);
         else if (action === 'pause') session = sessions.setPaused(id, true);
         else if (action === 'resume') session = sessions.setPaused(id, false);
-        else if (action === 'configure') session = sessions.configure(id, token, targetCycles);
+        else if (action === 'configure') session = sessions.configure(id, token, target);
         const state = sessions.toPublicView(session);
         io.to(room(session.id)).emit('game:state', state);
         ack({ ok: true, state });
