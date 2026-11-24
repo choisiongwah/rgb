@@ -328,7 +328,7 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
-    wheel.style.transform = 'rotate(' + (-Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+    wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
     const readyKnife = board.querySelector('.pie-ready-knife');
     const throwPhase = player.pieThrow?.phase || '';
     readyKnife.classList.toggle('throwing', throwPhase === 'flying');
@@ -345,7 +345,7 @@ function renderIndividualBoard(board, state, player) {
         knivesHost.append(knife);
       }
       const knifeColors = {R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
-      knife.style.setProperty('--knife-angle', (Number(item.angle || 0)*180/Math.PI) + 'deg');
+      knife.style.setProperty('--knife-angle', (90 - Number(item.angle || 0)*180/Math.PI) + 'deg');
       knife.style.setProperty('--knife-color', knifeColors[item.color] || '#f8fafc');
     }
     for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
