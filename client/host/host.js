@@ -528,7 +528,7 @@ class RGBScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
-    this.ufoLegendGraphics = this.add.graphics().setDepth(4).setVisible(false);
+    this.ufoLegendGraphics = this.add.graphics().setDepth(-1).setVisible(false);
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
     this.subtitle = this.add.text(0, 0, '', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
