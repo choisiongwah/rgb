@@ -45,7 +45,7 @@ function renderSlots(state) {
            : state.stage === 4 ? (player.flappy?.blockersPassed || 0) + ' / 20'
           : state.stage === 5 ? player.successCount + ' / ' + state.burgerTarget
           : state.stage === 6 ? player.successCount + ' / ' + state.ufoTarget
-            : state.stage === 7 ? 'R ' + (player.pieHits?.R || 0) + '  G ' + (player.pieHits?.G || 0) + '  B ' + (player.pieHits?.B || 0)
+            : state.stage === 7 ? 'R ' + (player.pieHits?.R || 0) + '/' + state.pieHitsPerColor + '  G ' + (player.pieHits?.G || 0) + '/' + state.pieHitsPerColor + '  B ' + (player.pieHits?.B || 0) + '/' + state.pieHitsPerColor
             : state.stage === 10 ? player.successCount + ' / ' + state.matrixTarget
             : player.cycles + ' / ' + state.targetCycles;
     }
@@ -114,7 +114,7 @@ function ensureRaceDisplay() {
     name.textContent = color;
     const distance = document.createElement('strong');
     distance.className = 'race-distance';
-    distance.textContent = '0 / 3,000 m';
+    distance.textContent = '0 / ' + state.raceTargetMeters.toLocaleString() + ' m';
     header.append(name, distance);
     const status = document.createElement('p');
     status.className = 'race-player-status';
@@ -179,13 +179,13 @@ function renderRaceDisplay(state) {
     scene.hidden = !player.joined || !individual;
     const race = player.race || {};
     const stageProgress = {
-      4: (player.flappy?.blockersPassed || 0) + ' / 20 BLOCKERS',
+      4: (player.flappy?.blockersPassed || 0) + ' / ' + state.flappyTargetBlockers + ' BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
-      7: 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4',
+      7: 'R ' + (player.pieHits?.R || 0) + '/' + state.pieHitsPerColor + ' · G ' + (player.pieHits?.G || 0) + '/' + state.pieHitsPerColor + ' · B ' + (player.pieHits?.B || 0) + '/' + state.pieHitsPerColor,
       8: (player.tri?.score || 0) + ' / ' + state.triTarget + ' PIPES',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
-    distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / 3,000 m' : '';
+    distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / ' + state.raceTargetMeters.toLocaleString() + ' m' : '';
     footerText(column, state.stage);
     if (!player.joined) continue;
     if (individual) {
@@ -298,7 +298,7 @@ function renderIndividualBoard(board, state, player) {
       const bottomTop = (item.gapY + gap / 2) * 100;
       return '<div class="flappy-pipe top" style="left:' + (item.x * 100) + '%;height:' + topHeight + '%"></div><div class="flappy-pipe bottom" style="left:' + (item.x * 100) + '%;top:' + bottomTop + '%;height:' + (100-bottomTop) + '%"></div>';
     }).join('');
-    board.querySelector('.board-caption').textContent = (flight.blockersPassed || 0) + ' / 20 BLOCKERS · ' + ((flight.penaltyMs || 0) > 0 ? 'CRASH RECOVERY' : 'TAP ANY COLOUR TO BOOST');
+    board.querySelector('.board-caption').textContent = (flight.blockersPassed || 0) + ' / ' + state.flappyTargetBlockers + ' BLOCKERS · ' + ((flight.penaltyMs || 0) > 0 ? 'CRASH RECOVERY' : 'TAP ANY COLOUR TO BOOST');
   } else if (state.stage === 5) {
     const sequence = state.burgerSequence || [];
     const completedSequence = state.burgerCompletedSequence || [];
@@ -759,8 +759,8 @@ class RGBScene extends Phaser.Scene {
     const isMatrix = state.stage === 10;
     this.title.setText(isMatrix ? 'MATRIX MASTER' : isPie ? 'RGB KNIFE HIT' : isUfo ? 'UFO SPOTTER' : isBurger ? 'BURGER BUILDER' : isFlappy ? 'ROCKET FLIGHT' : isRace ? 'HIGHWAY DODGE' : isDice ? 'DICE REACTION' : 'RGB SEQUENCE RUSH');
     this.stageText.setText('LEVEL ' + state.stage + ' · ' + (state.paused ? 'PAUSED' : state.status.toUpperCase()));
-    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to 6 correct answers wins.' : isPie ? 'Throw from the bottom edge · Match the colour and avoid attached knives.' : isUfo ? 'Watch the UFO fly past, then identify it from the three coloured choices · First to 10 correct answers wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to 5 completed burgers wins.' : isFlappy ? 'Flap through 20 moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
-      ? 'Three unique dice · First to 8 correct answers wins.'
+    this.subtitle.setText(isMatrix ? 'Complete the missing square · First to ' + state.matrixTarget + ' correct answers wins.' : isPie ? 'Throw from the bottom edge · Match the colour and avoid attached knives.' : isUfo ? 'Watch the UFO fly past, then identify it from the three coloured choices · First to ' + state.ufoTarget + ' correct answers wins.' : isBurger ? 'Build the target burger in the original ingredient order · First to ' + state.burgerTarget + ' completed burgers wins.' : isFlappy ? 'Flap through ' + state.flappyTargetBlockers + ' moving blockers · Each player flies their own rocket.' : isRace ? 'Three-lane highway race · Each player races on their own phone.' : isDice
+      ? 'Three unique dice · First to ' + state.diceTarget + ' correct answers wins.'
       : 'Complete R → G → B. First to ' + state.targetCycles + ' cycles wins.');
     this.sequenceText.setVisible(!isMatrix && !isUfo);
     this.sequenceText.setText(isBurger ? 'STACK THE INGREDIENTS IN ORDER' : isFlappy ? 'TAP ANY BUTTON TO BOOST' : isRace || isDice ? 'R = LEFT       G = CENTRE       B = RIGHT' : 'R     →     G     →     B');
@@ -771,8 +771,8 @@ class RGBScene extends Phaser.Scene {
     this.statusText.setText(isMatrix ? (state.matrixPuzzle?.category || 'Mixed logic puzzles') + ' · ' + (state.matrixPuzzle?.difficulty ? ['','EASY','MEDIUM','HARD','EXPERT'][state.matrixPuzzle.difficulty] : 'READY') : state.status === 'waiting' ? 'Waiting for players'
       : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
       : state.paused ? 'GAME PAUSED'
-      : isFlappy ? 'First to 20 blockers wins · Keep your rocket in the moving gaps!'
-      : isRace ? 'First to 3,000 m wins · Avoid traffic and watch your speed!'
+      : isFlappy ? 'First to ' + state.flappyTargetBlockers + ' blockers wins · Keep your rocket in the moving gaps!'
+      : isRace ? 'First to ' + state.raceTargetMeters.toLocaleString() + ' m wins · Avoid traffic and watch your speed!'
       : isDice ? 'Tap the colour matching the largest number'
       : isPie ? ('KNIFE WHEEL ' + (state.pieSpeed || 0.9).toFixed(1) + '× · THROW ON COLOUR') : isUfo ? (state.ufoPhase === 'flyby' ? 'SPOT THE UFO · ROUND ' + state.ufoCycle : state.ufoPhase === 'feedback' ? 'ROUND COMPLETE · NEXT UFO INCOMING' : 'WHICH UFO JUST FLEW PAST? · ROUND ' + state.ufoCycle)
       : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
