@@ -854,7 +854,7 @@ class RGBScene extends Phaser.Scene {
         const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
         const progressLine = isFlappy
           ? (player.flappy?.blockersPassed || 0) + ' / 20 blockers\\n' + ['EASY','WIND','TIGHT GAPS','TURBULENCE'][Math.min(3, Math.floor((player.flappy?.blockersPassed || 0) / 6))]
-          : isRace ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / 3,000 m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
+          : isRace ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / ' + state.raceTargetMeters.toLocaleString() + ' m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
           : isBurger ? player.successCount + ' / ' + state.burgerTarget + ' burgers\\n' + (player.burgerProgressIndex || 0) + ' / ' + ((state.burgerSequence || []).length || 0) + ' ingredients'
           : player.cycles + ' / ' + state.targetCycles + ' cycles';
         const label = (player.player?.name || player.color) +
