@@ -21,7 +21,7 @@ function createTriState(random) {
 }
 function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
 function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
-function pieImpactAngle(wheelAngle) { return normalizeAngle(wheelAngle); }
+function pieImpactAngle(wheelAngle) { return normalizeAngle(Math.PI / 2 + wheelAngle); }
 function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<(10*Math.PI/180)); }
 const BURGER_STACK_TARGET = 5;
 const BURGER_STACK_MIN_LENGTH = 3;
@@ -44,7 +44,7 @@ function resetBurgerStackChallenge(stack, random) {
 }
 const PIE_HITS_PER_COLOR = 4;
 const PIE_COLORS = ['R', 'G', 'B'];
-function pieColorAtStrike(angle) { const turn = Math.PI * 2; const normalized = ((angle - Math.PI / 2) % turn + turn) % turn; return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
+function pieColorAtStrike(angle) { const turn = Math.PI * 2; const sectorStart = -Math.PI / 2 - Math.PI / 3; const normalized = normalizeAngle(angle - sectorStart); return PIE_COLORS[Math.floor(normalized / (turn / 3)) % 3]; }
 const UFO_ROUND_MS = 2800;
 const UFO_FLYBY_MS = 600;
 const UFO_FEEDBACK_MS = 1000;
