@@ -94,20 +94,28 @@
 .flappy-pipe.top{top:0;border-radius:0 0 8px 8px}
 .flappy-pipe.bottom{border-radius:8px 8px 0 0}
 .board-caption{flex:none;text-align:center;font-size:clamp(10px,1.25vw,15px);font-weight:1000;letter-spacing:.04em;color:#0f172a;text-shadow:0 1px #fff8}
-.individual-board.burger{background:radial-gradient(ellipse at center,#fde68a,#92400e);color:#431407}
-.burger-game-title{font-size:clamp(16px,2vw,25px);font-weight:1000;letter-spacing:.08em;text-shadow:0 2px #fff8}
-.burger-recipe{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:clamp(3px,.7vw,9px);width:100%}
-.burger-step{display:grid;place-items:center;width:clamp(28px,4vw,48px);height:clamp(28px,4vw,48px);font-size:clamp(18px,2.6vw,32px);border:2px solid #78350f;border-radius:10px;background:#fffbeb;opacity:.55}
-.burger-step.done{opacity:1;background:#bbf7d0;border-color:#15803d;transform:translateY(-3px)}
-.burger-step.current{opacity:1;border-color:#dc2626;box-shadow:0 0 0 3px #fca5a5;animation:burger-pulse .7s infinite alternate}
-@keyframes burger-pulse{to{transform:scale(1.12)}}
-.burger-plate{width:min(78%,230px);height:clamp(100px,22vh,180px);display:flex;align-items:flex-end;justify-content:center;padding:12px 12px 24px;border-radius:50%;background:radial-gradient(ellipse,#fff 0 48%,#cbd5e1 50% 58%,#64748b 60% 64%,#e2e8f0 66%);box-shadow:0 12px 18px #451a0344}
-.burger-stack{width:72%;display:flex;flex-direction:column-reverse;align-items:stretch;gap:2px}
-.burger-layer{height:clamp(12px,2.2vh,20px);display:grid;place-items:center;border:2px solid #78350f;border-radius:8px;font-size:clamp(11px,1.7vw,20px);line-height:1;background:linear-gradient(#fcd34d,#b45309)}
-.burger-layer.layer-G{background:linear-gradient(#86efac,#15803d)}
-.burger-layer.layer-B{background:linear-gradient(#fca5a5,#dc2626)}
+.individual-board.burger{background:radial-gradient(ellipse at center,#fde68a,#92400e);color:#431407;display:flex;flex-direction:column;justify-content:center;gap:clamp(8px,1.5vh,16px);padding:clamp(10px,2vh,20px)}
+.burger-stage{width:100%;flex:1;min-height:0;display:flex;align-items:center;justify-content:space-evenly;gap:clamp(8px,2vw,24px)}
+.burger-sample{width:42%;max-width:190px;min-width:105px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.burger-sample small{font-size:clamp(10px,1.2vw,14px);font-weight:1000;letter-spacing:.08em}
+.burger-model{width:100%;min-height:160px;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:12px 7px 0;position:relative}
+.burger-model-layers{display:flex;flex-direction:column-reverse;align-items:stretch;gap:3px;padding:0 7px}
+.burger-plate{position:relative;width:min(54%,240px);height:clamp(115px,25vh,190px);display:flex;align-items:flex-end;justify-content:center;padding:12px 12px 24px;border-radius:50%;background:radial-gradient(ellipse,#fff 0 48%,#cbd5e1 50% 58%,#64748b 60% 64%,#e2e8f0 66%);box-shadow:0 12px 18px #451a0344}
+.burger-stack{width:72%;display:flex;flex-direction:column;align-items:stretch;gap:3px;position:relative}
+.burger-bun{height:clamp(18px,3vh,28px);flex:0 0 auto;background:linear-gradient(#fcd98a,#b7791f);border:2px solid #854d0e;box-shadow:inset 0 4px 0 #fff5}
+.burger-bun.burger-base{border-radius:5px 5px 13px 13px}
+.burger-bun.burger-top{height:clamp(25px,4vh,38px);border-radius:50% 50% 7px 7px;background:linear-gradient(#fde68a,#d97706)}
+.burger-block{height:clamp(12px,2.2vh,20px);display:block;flex:0 0 auto;border:2px solid #78350f;border-radius:5px;box-shadow:inset 0 2px 0 #ffffff55}
+.burger-block.block-tomato{background:linear-gradient(#fca5a5,#dc2626);border-color:#991b1b}
+.burger-block.block-vegetable{background:linear-gradient(#bbf7d0,#16a34a);border-color:#166534}
+.burger-block.block-meat{background:linear-gradient(#a16207,#713f12);border-color:#451a03}
+.burger-feedback{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0}
+.burger-feedback.show{animation:burger-feedback-pop .95s ease-out}
+.burger-success,.burger-failure{font-size:clamp(48px,8vw,100px);font-weight:1000;text-shadow:0 4px 4px #0008}
+.burger-success{color:#22c55e}.burger-success b{display:block;font-size:.38em;text-align:center;color:#fff}
+.burger-failure{color:#ef4444}
+@keyframes burger-feedback-pop{0%{opacity:0;transform:scale(.35)}18%{opacity:1;transform:scale(1.15)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8)}}
 .burger-progress{font-size:clamp(10px,1.3vw,16px);font-weight:1000;letter-spacing:.04em;background:#fff8;padding:5px 10px;border-radius:999px}
-
 
 /* Host-side visual boards for individual levels 6–9 */
 .individual-board.ufo,.individual-board.pie,.individual-board.island,.individual-board.stack{position:relative;width:100%;height:100%;min-height:250px;overflow:hidden;border-radius:12px;color:#f8fafc;text-align:center;padding:10px;box-sizing:border-box}
