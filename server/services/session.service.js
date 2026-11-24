@@ -49,7 +49,7 @@ const UFO_ROUND_MS = 2800;
 const UFO_FLYBY_MS = 600;
 const UFO_FEEDBACK_MS = 1000;
 const UFO_PATH_COUNT = 5;
-function createUfoOptions(random) { const pool=[1,2,3,4,5,6,7,8,9]; for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];} const targetId=pool[0]; const options=pool.slice(0,3); return {targetId,options,correctIndex:options.indexOf(targetId)};}
+function createUfoOptions(random) { const targetId=1+Math.floor(random()*9); const correctIndex=Math.floor(random()*3); const pool=[1,2,3,4,5,6,7,8,9].filter(id=>id!==targetId); const options=[]; for(let i=0;i<3;i++){if(i===correctIndex)options.push(targetId);else{const pick=Math.floor(random()*pool.length);options.push(pool.splice(pick,1)[0]);}} return {targetId,options,correctIndex};}
 const BURGER_MIN_LENGTH = 3;
 const BURGER_MAX_LENGTH = 7;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
