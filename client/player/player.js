@@ -315,7 +315,6 @@ function updateController(state) {
   else if (isMatrix) setFeedback('Find the missing square in the matrix', '');
   else setFeedback('Tap R → G → B in order', '');
   renderControls(state);
-  const target = root.querySelector('#target-cycles');
   const configTarget = root.querySelector('#config-target');
   if (configTarget && root.querySelector('#config-panel').hidden) configTarget.value = String(({1:state.targetCycles,2:state.diceTarget,3:state.raceTargetMeters,4:state.flappyTargetBlockers,5:state.burgerTarget,6:state.ufoTarget,7:state.pieHitsPerColor,8:state.islandTarget,9:state.burgerStackTarget,10:state.matrixTarget})[state.stage] || 1);
 }
