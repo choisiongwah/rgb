@@ -312,19 +312,15 @@ function renderIndividualBoard(board, state, player) {
     const completedId = Number(state.burgerCompletedId || 0);
     if (player.color === state.burgerWinnerColor && completedId > Number(board.dataset.completedId || 0)) {
       board.dataset.completedId = String(completedId);
-      board.dataset.completedBuild = JSON.stringify([...completedSequence].reverse());
-      board.dataset.showCompletedUntil = String(Date.now() + 1100);
       feedback.innerHTML = '<span class="burger-success">O <b>+1</b></span>';
       feedback.classList.remove('show'); void feedback.offsetWidth; feedback.classList.add('show');
     }
-    const showCompletedBurger = player.color === state.burgerWinnerColor
-      && Number(board.dataset.showCompletedUntil || 0) > Date.now();
-    const buildOrder = showCompletedBurger
-      ? JSON.parse(board.dataset.completedBuild || '[]')
-      : targetOrder.slice(0, progress);
+    // The server resets burgerProgressIndex as soon as a player completes a
+    // burger. Render that reset immediately instead of holding the completed
+    // stack on screen until the next input arrives.
+    const buildOrder = targetOrder.slice(0, progress);
     stack.innerHTML = '<div class="burger-bun burger-base"></div>' +
-      buildOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('') +
-      (showCompletedBurger ? '<div class="burger-bun burger-top"></div>' : '');
+      buildOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('');
     const failureId = Number(player.burgerFailureId || 0);
     if (failureId > Number(board.dataset.failureId || 0)) {
       board.dataset.failureId = String(failureId);
