@@ -163,27 +163,41 @@ function renderControls(state) {
   const isPlaying = state.status === 'playing';
   const buttons = [];
   if (isController) {
-    if (state.status === 'waiting') buttons.push(['start', 'Start level', false, 'primary']);
-    if (isPlaying && state.stage === 1) buttons.push(['finish', 'Finish level', false, 'danger']);
-    if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', false, 'danger']);
-    if (state.stage > 1 || state.status !== 'waiting') buttons.push(['end', 'End game', false, 'danger']);
-    if (state.stage === 1) buttons.push(['config', 'Config', false, 'secondary']);
+    if (state.status === 'waiting') buttons.push(['start', 'Start level', 'primary']);
+    if (isPlaying && state.stage === 1) buttons.push(['finish', 'Finish level', 'danger']);
+    if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', 'danger']);
+    if (state.stage > 1 || state.status !== 'waiting') buttons.push(['end', 'End game', 'danger']);
+    if (state.stage === 1) buttons.push(['config', 'Config', 'secondary']);
   }
-  if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', false, 'secondary']);
-  if (isFinished) buttons.push(['next', 'Next level', false, 'primary']);
-  controls.innerHTML = '';
-  for (const [action, label, , style] of buttons) {
+  if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', 'secondary']);
+  if (isFinished) buttons.push(['next', 'Next level', 'primary']);
+
+  // Levels with frequent animation/state broadcasts (notably Level 6 UFO)
+  // update the controller many times per second. Replacing the controls DOM
+  // on every update can interrupt a touch/pointer sequence before its click
+  // event fires. Keep the actual buttons mounted unless the available actions
+  // change; only update their labels/styles when needed.
+  const signature = buttons.map(([action, label, style]) => action + ':' + label + ':' + style).join('|');
+  if (controls.dataset.signature === signature) return;
+
+  controls.dataset.signature = signature;
+  controls.replaceChildren();
+  for (const [action, label, style] of buttons) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = style;
+    button.dataset.action = action;
     button.textContent = label;
     button.addEventListener('click', () => {
+      const latest = latestState || state;
       if (action === 'end') {
         if (window.confirm('End this game and return everyone to Level 1? All scores from this game will be cleared.')) emitControl('end');
       } else if (action === 'config') {
-        root.querySelector('#target-cycles').value = state.targetCycles;
+        root.querySelector('#target-cycles').value = latest.targetCycles;
         root.querySelector('#config-panel').hidden = !root.querySelector('#config-panel').hidden;
-      } else emitControl(action);
+      } else {
+        emitControl(action);
+      }
     });
     controls.append(button);
   }
