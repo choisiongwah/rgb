@@ -14,11 +14,11 @@ const ISLAND_TARGET_SHARKS = 50;
 const ISLAND_MILESTONE_SIZE = 10;
 const ISLAND_COLORS = ['R','G','B'];
 function createIslandState(random, target = ISLAND_TARGET_SHARKS) { return { sharks: Array.from({length:target},()=>ISLAND_COLORS[Math.floor(random()*3)]), orientations: Array.from({length:target},()=>random()<0.5?'horizontal':'vertical'), progress:0, milestone:0, penaltyMs:0, biteId:0, nudgeId:0 }; }
-const TRI_TARGET_SCORE = 30;
+const TRI_TARGET_SCORE = 50;
 const TRI_COLORS = ['R','G','B'];
 function createTriState(random, target = TRI_TARGET_SCORE) {
   const initialCount = Math.min(6, target);
-  return { pipes: Array.from({length:initialCount},(_,index)=>({id:index+1,color:TRI_COLORS[Math.floor(random()*3)],x:((index+1)/(initialCount+1))})), nextId:initialCount+1, score:0, shift:0, lastCorrectId:0 };
+  return { pipes: Array.from({length:initialCount},(_,index)=>({id:index+1,color:TRI_COLORS[Math.floor(random()*3)],x:(2/6)+index*(1/6)})), nextId:initialCount+1, score:0, shift:0, lastCorrectId:0 };
 }
 function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
 function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
@@ -968,13 +968,13 @@ export class SessionService {
     if (!session) throw new Error('SESSION_NOT_FOUND');
     this.assertController(session, this.getSlot(id, token));
     if (session.status === 'playing') throw new Error('CONFIG_LOCKED_DURING_GAME');
-    const targetFields = { 1:'targetCycles', 2:'diceTarget', 3:'raceTargetMeters', 4:'flappyTargetBlockers', 5:'burgerTarget', 6:'ufoTarget', 7:'pieHitsPerColor', 8:'islandTarget', 9:'burgerStackTarget', 10:'matrixTarget' };
+    const targetFields = { 1:'targetCycles', 2:'diceTarget', 3:'raceTargetMeters', 4:'flappyTargetBlockers', 5:'burgerTarget', 6:'ufoTarget', 7:'pieHitsPerColor', 8:'triTarget', 9:'burgerStackTarget', 10:'matrixTarget' };
     const field = targetFields[session.stage];
     const min = session.stage === 3 ? 100 : session.stage === 8 ? 6 : MIN_TARGET_CYCLES;
     const max = session.stage === 3 ? 10000 : session.stage === 7 ? 20 : session.stage === 8 ? 200 : MAX_TARGET_CYCLES;
     if (!field || !Number.isInteger(target) || target < min || target > max) throw new Error('INVALID_LEVEL_TARGET');
     session[field] = target;
-    if (session.stage === 8) for (const player of session.players) player.island = createIslandState(this.random, target);
+    if (session.stage === 8) { session.islandTarget = target; for (const player of session.players) { player.island = createIslandState(this.random, target); player.tri = createTriState(this.random, target); } }
     if (session.stage === 9) for (const player of session.players) player.burgerStack = createBurgerStackState(this.random);
     return session;
   }
