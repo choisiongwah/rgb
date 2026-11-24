@@ -201,7 +201,7 @@ function renderControls(state) {
           5: ['Burgers to complete', 'Number of complete recipes required.', latest.burgerTarget, 1, 100],
           6: ['Correct UFO answers', 'Number of correct UFO identifications required.', latest.ufoTarget, 1, 100],
           7: ['Knives per colour', 'Attach this many red, green and blue knives.', latest.pieHitsPerColor, 1, 20],
-          8: ['Sharks to cross', 'Number of coloured sharks between start and destination (minimum 6).', latest.islandTarget, 6, 200],
+          8: ['Sharks to cross', 'Number of coloured shark steps between start and destination (minimum 6).', latest.triTarget, 6, 200],
           9: ['Burger challenges', 'Number of complete burger stacks required.', latest.burgerStackTarget, 1, 100],
           10: ['Correct puzzles', 'Number of matrix puzzles to solve.', latest.matrixTarget, 1, 100]
         };
