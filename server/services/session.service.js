@@ -17,7 +17,7 @@ function createIslandState(random) { return { sharks: Array.from({length:ISLAND_
 const TRI_TARGET_SCORE = 30;
 const TRI_COLORS = ['R','G','B'];
 function createTriState(random) {
-  return { pipes: Array.from({length:6},(_,index)=>({id:index+1,color:TRI_COLORS[Math.floor(random()*3)],x:(1/6)+index*(1/6)})), nextId:7, score:0, shift:0, lastCorrectId:0 };
+  return { pipes: Array.from({length:6},(_,index)=>({id:index+1,color:TRI_COLORS[Math.floor(random()*3)],x:(2/6)+index*(1/6)})), nextId:7, score:0, shift:0, lastCorrectId:0 };
 }
 function normalizeAngle(angle) { const turn=Math.PI*2; return ((angle%turn)+turn)%turn; }
 function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(b)); return Math.min(d,Math.PI*2-d); }
@@ -340,7 +340,7 @@ export class SessionService {
     if (session.stage === 8) {
       const state = slot.tri;
       if (!TRI_COLORS.includes(action)) throw new Error('INVALID_INPUT');
-      const nextPipe = state.pipes.filter((pipe) => pipe.x > (80/600) && pipe.x < 1).sort((a,b) => a.x-b.x)[0];
+      const nextPipe = state.pipes.filter((pipe) => pipe.x > (132/600) && pipe.x < 1).sort((a,b) => a.x-b.x)[0];
       if (!nextPipe) throw new Error('TRI_PIPE_NOT_READY');
       if (action !== nextPipe.color) {
         slot.roundFeedback = 'wrong';
