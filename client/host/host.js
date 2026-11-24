@@ -328,7 +328,11 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
-    wheel.style.transform = 'rotate(' + (Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+    wheel.style.transform = 'rotate(' + (-Number(state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
+    const readyKnife = board.querySelector('.pie-ready-knife');
+    const throwPhase = player.pieThrow?.phase || '';
+    readyKnife.classList.toggle('throwing', throwPhase === 'flying');
+    readyKnife.classList.toggle('falling', throwPhase === 'falling');
     const knivesHost = board.querySelector('.pie-knives-host');
     const activeKnifeIds = new Set();
     for (const item of player.pieKnives || []) {
