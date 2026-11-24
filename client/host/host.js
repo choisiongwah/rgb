@@ -300,7 +300,7 @@ function renderIndividualBoard(board, state, player) {
     const modelOrder = targetOrder.length ? targetOrder : ['B','G','R'];
     const model = board.querySelector('.burger-model');
     model.querySelector('.burger-recipe').innerHTML = modelOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('');
-    const buildOrder = player.color === state.burgerWinnerColor && Number(player.burgerCompletedId || 0) === Number(state.burgerCompletedId || 0)
+    const buildOrder = player.color === state.burgerWinnerColor && Number(state.burgerCompletedId || 0) > 0
       ? [...completedSequence].reverse() : targetOrder.slice(0, progress);
     const stack = board.querySelector('.burger-stack');
     stack.innerHTML = '<div class="burger-bun burger-base"></div>' +
