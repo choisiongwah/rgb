@@ -366,6 +366,9 @@ export class SessionService {
       }
       slot.successCount = state.score;
       if (state.score >= TRI_TARGET_SCORE) {
+        // The final platform has cleared the course; do not leave trailing
+        // platforms rendered after the finish condition is reached.
+        state.pipes = [];
         slot.completed = true;
         slot.place = session.nextPlace++;
         slot.pointsEarned = POINTS_BY_PLACE[slot.place] || 0;
