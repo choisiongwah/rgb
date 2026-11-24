@@ -247,7 +247,7 @@ function ensureIndividualBoard(scene, stage) {
     } else if (type === 'pie') {
       board.innerHTML = '<div class="pie-board-title">RGB KNIFE HIT</div><div class="pie-wheel-host"><div class="pie-sector red"></div><div class="pie-sector green"></div><div class="pie-sector blue"></div><div class="pie-wheel-core"></div><div class="pie-knives-host"></div><div class="pie-pointer-host"></div></div><div class="pie-miss-host"></div><div class="board-caption"></div>';
     } else if (type === 'tri') {
-      board.innerHTML = '<div class="tri-board-title">TRI COLOUR RUN</div><div class="tri-world-host"><div class="tri-pipes-host"></div><div class="tri-runner-host">🐦</div></div><div class="board-caption"></div>';
+      board.innerHTML = '<div class="tri-board-title">SHARK ISLAND · COLOUR STEPS</div><div class="tri-world-host"><div class="tri-platforms-host"></div><div class="tri-runner-host"><span class="tri-runner-fallback">🧑‍🚀</span></div><div class="tri-confetti-host"></div></div><div class="board-caption"></div>';
     } else if (type === 'stack') {
       board.innerHTML = '<div class="stack-board-title">BURGER STACK</div><div class="stack-world-host"><div class="stack-lanes-host"><i></i><i></i><i></i></div><div class="stack-drops-host"></div><div class="stack-catcher-host"><span class="stack-bread-base"></span></div><div class="stack-built-host"></div></div><div class="board-caption"></div>';
     } else board.innerHTML = '<div class="individual-fallback"></div>';
@@ -355,27 +355,53 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = 'R ' + (player.pieHits?.R || 0) + '/4 · G ' + (player.pieHits?.G || 0) + '/4 · B ' + (player.pieHits?.B || 0) + '/4  ·  ' + (Math.abs(state.pieSpeed) > 4.7 ? 'FAST SPIN' : 'SPINNING');
   } else if (state.stage === 8) {
     const tri = player.tri || {pipes:[],score:0};
+    const platformsHost = board.querySelector('.tri-platforms-host');
+    const activePlatformIds = new Set();
     const colorClass = {R:'red',G:'green',B:'blue'};
-    const pipesHost = board.querySelector('.tri-pipes-host');
-    const activePipeIds = new Set();
-    for (const pipe of tri.pipes || []) {
-      activePipeIds.add(String(pipe.id));
-      let pair = pipesHost.querySelector('[data-pipe-id="' + pipe.id + '"]');
-      if (!pair) {
-        pair = document.createElement('div');
-        pair.className = 'tri-pipe-pair';
-        pair.dataset.pipeId = String(pipe.id);
-        pair.innerHTML = '<i class="tri-pipe top"></i><i class="tri-pipe bottom"></i>';
-        pipesHost.append(pair);
+    for (const platform of tri.pipes || []) {
+      activePlatformIds.add(String(platform.id));
+      let node = platformsHost.querySelector('[data-platform-id="' + platform.id + '"]');
+      if (!node) {
+        node = document.createElement('span');
+        node.className = 'tri-platform';
+        node.dataset.platformId = String(platform.id);
+        platformsHost.append(node);
       }
-      pair.className = 'tri-pipe-pair ' + (colorClass[pipe.color] || 'red');
-      pair.style.left = (pipe.x * 100) + '%';
+      node.className = 'tri-platform ' + (colorClass[platform.color] || 'red');
+      node.style.left = (platform.x * 100) + '%';
     }
-    for (const node of pipesHost.querySelectorAll('[data-pipe-id]')) {
-      if (!activePipeIds.has(node.dataset.pipeId)) node.remove();
+    for (const node of platformsHost.querySelectorAll('[data-platform-id]')) {
+      if (!activePlatformIds.has(node.dataset.platformId)) node.remove();
     }
-    board.querySelector('.tri-runner-host').classList.toggle('wrong', player.roundFeedback === 'wrong');
-    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PIPES · MATCH THE NEXT PIPE COLOUR';
+    const runner = board.querySelector('.tri-runner-host');
+    const avatar = player.player?.avatar;
+    if (avatar) {
+      let image = runner.querySelector('img');
+      if (!image) { image = document.createElement('img'); runner.replaceChildren(image); }
+      if (image.src !== avatar) image.src = avatar;
+    } else {
+      runner.innerHTML = '<span class="tri-runner-fallback">' + (player.player?.character === 'racer' ? '🏃' : '🧑‍🚀') + '</span>';
+    }
+    const score = tri.score || 0;
+    if (runner.dataset.score !== String(score)) {
+      runner.dataset.score = String(score);
+      runner.classList.remove('stepping');
+      void runner.offsetWidth;
+      runner.classList.add('stepping');
+    }
+    runner.classList.toggle('wrong', player.roundFeedback === 'wrong');
+    const world = board.querySelector('.tri-world-host');
+    const confettiHost = board.querySelector('.tri-confetti-host');
+    if (player.completed && world.dataset.completed !== 'true') {
+      world.dataset.completed = 'true';
+      confettiHost.innerHTML = Array.from({length:36},(_,i)=>'<i style="--x:'+((i*37)%100)+'%;--delay:'+((i%9)*55)+'ms;--turn:'+((i*47)%360)+'deg"></i>').join('');
+      world.classList.add('tri-complete');
+    } else if (!player.completed && world.dataset.completed === 'true') {
+      world.dataset.completed = 'false';
+      confettiHost.innerHTML = '';
+      world.classList.remove('tri-complete');
+    }
+    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' PLATFORMS · MATCH THE NEXT PLATFORM';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     const dropsHost = board.querySelector('.stack-drops-host');
