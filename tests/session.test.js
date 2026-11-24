@@ -31,7 +31,7 @@ function createLevel3Session(count = 3, random = () => 0.99) {
   return { service, session, slots };
 }
 
-function completeCycles(service, session, slot, cycles = 20) {
+function completeCycles(service, session, slot, cycles = session.targetCycles) {
   for (let i = 0; i < cycles; i += 1) {
     for (const action of ['R', 'G', 'B']) service.submitInput(session.id, slot.token, action);
   }
@@ -386,14 +386,14 @@ describe('SessionService Level 2 Dice Reaction', () => {
 
   it('continues after first place so second and third place can finish', () => {
     const { service, session, slots } = createLevel2Session();
-    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[0], 'G');
+    for (let i = 0; i < session.diceTarget; i += 1) answerDice(service, session, slots[0], 'G');
     expect(slots[0].place).toBe(1);
-    expect(slots[0].successCount).toBe(8);
+    expect(slots[0].successCount).toBe(session.diceTarget);
     expect(session.status).toBe('playing');
-    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[1], 'G');
+    for (let i = 0; i < session.diceTarget; i += 1) answerDice(service, session, slots[1], 'G');
     expect(slots[1].place).toBe(2);
     expect(session.status).toBe('playing');
-    for (let i = 0; i < 8; i += 1) answerDice(service, session, slots[2], 'G');
+    for (let i = 0; i < session.diceTarget; i += 1) answerDice(service, session, slots[2], 'G');
     expect(slots[2].place).toBe(3);
     expect(session.status).toBe('finished');
     expect(slots.map((player) => player.pointsEarned)).toEqual([5, 3, 1]);
