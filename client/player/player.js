@@ -316,7 +316,7 @@ function updateController(state) {
   else setFeedback('Tap R → G → B in order', '');
   renderControls(state);
   const configTarget = root.querySelector('#config-target');
-  if (configTarget && root.querySelector('#config-panel').hidden) configTarget.value = String(({1:state.targetCycles,2:state.diceTarget,3:state.raceTargetMeters,4:state.flappyTargetBlockers,5:state.burgerTarget,6:state.ufoTarget,7:state.pieHitsPerColor,8:state.islandTarget,9:state.burgerStackTarget,10:state.matrixTarget})[state.stage] || 1);
+  if (configTarget && root.querySelector('#config-panel').hidden) configTarget.value = String(({1:state.targetCycles,2:state.diceTarget,3:state.raceTargetMeters,4:state.flappyTargetBlockers,5:state.burgerTarget,6:state.ufoTarget,7:state.pieHitsPerColor,8:state.triTarget,9:state.burgerStackTarget,10:state.matrixTarget})[state.stage] || 1);
 }
 
 function renderBurgerBuilder(state, mine) {
@@ -340,7 +340,7 @@ function renderBurgerStack(state, mine) {
   const stack = mine.burgerStack || {};
   const successes = stack.successCount || 0;
   const lane = stack.lane ?? 1;
-  root.querySelector('#burger-stack-progress').textContent = successes + ' / 4 BURGERS';
+  root.querySelector('#burger-stack-progress').textContent = successes + ' / ' + state.burgerStackTarget + ' BURGERS';
   root.querySelector('#burger-stack-difficulty').textContent = ['EASY STACK','QUICKER DROPS','FAST STACKING','MASTER CHEF'][Math.min(3, successes)];
   root.querySelector('#burger-stack-challenge').textContent = 'CHALLENGE ' + (stack.challengeNumber || 1) + ' · ' + (stack.challengeLength || 5) + ' LAYERS';
   const remaining = Math.ceil((stack.penaltyMs || 0) / 100) / 10;
@@ -382,7 +382,7 @@ function renderPie(state, mine) {
 function renderIsland(state, mine) {
   const island = mine.island || { progress:0, milestone:0, sharks:[], penaltyMs:0, biteId:0 };
   const progress = island.progress || 0;
-  root.querySelector('#island-progress').textContent = progress + ' / ' + state.islandTarget + ' SHARKS';
+  root.querySelector('#island-progress').textContent = progress + ' / ' + state.triTarget + ' SHARKS';
   root.querySelector('#island-milestone').textContent = island.milestone ? 'CHECKPOINT ' + island.milestone : 'START ISLAND';
   root.querySelector('#island-progress-fill').style.width = (progress / 50 * 100) + '%';
   const player = root.querySelector('#island-player');
