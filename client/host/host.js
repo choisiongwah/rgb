@@ -484,15 +484,29 @@ function applyState(state) {
   renderFinalResults(state);
   if (game?.scene?.keys?.RGBScene) {
     const scene = game.scene.keys.RGBScene;
+    scene.scene.setActive(true);
+    scene.scene.setVisible(true);
     scene.updateState(state);
     requestAnimationFrame(() => {
       if (!game) return;
       const root = $('#game-root');
+      root.hidden = false;
+      root.style.display = 'block';
       const width = Math.max(320, root.clientWidth || window.innerWidth);
       const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
+      game.canvas.style.display = 'block';
+      game.canvas.style.visibility = 'visible';
       game.scale.resize(width, height);
+      scene.scene.setActive(true);
+      scene.scene.setVisible(true);
       scene.layout(width, height);
       scene.updateState(currentState || state);
+      if ([2,6,10].includes(state.stage)) {
+        scene.title?.setVisible(true);
+        scene.subtitle?.setVisible(true);
+        scene.stageText?.setVisible(true);
+        scene.statusText?.setVisible(true);
+      }
     });
   }
 }
