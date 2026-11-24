@@ -188,8 +188,8 @@
 .tri-platform.red{background:linear-gradient(#fb7185,#dc2626);border-color:#991b1b}
 .tri-platform.green{background:linear-gradient(#86efac,#16a34a);border-color:#166534}
 .tri-platform.blue{background:linear-gradient(#93c5fd,#2563eb);border-color:#1e40af}
-.tri-runner-host{position:absolute;z-index:4;left:7%;bottom:calc(20% + 10px);transform:translate(-50%,0);font-size:clamp(30px,5vw,58px);filter:drop-shadow(0 5px 3px #0006);transition:bottom .16s}
-.tri-runner-host img{display:block;width:clamp(34px,5.4vw,64px);height:clamp(34px,5.4vw,64px);border-radius:50%;object-fit:cover;border:3px solid white;background:#fff}
+.tri-runner-host{position:absolute;z-index:4;left:16.7%;bottom:calc(20% + clamp(9px,1.7vh,16px));transform:translate(-50%,0);font-size:clamp(30px,5vw,58px);line-height:1;filter:drop-shadow(0 5px 3px #0006);transition:bottom .16s}
+.tri-runner-host img{display:block;width:clamp(34px,5.4vw,64px);height:clamp(34px,5.4vw,64px);border-radius:50%;object-fit:cover;border:3px solid white;background:#fff;vertical-align:bottom}
 .tri-runner-host.stepping{animation:tri-step .2s ease-out}
 .tri-runner-host.wrong{animation:tri-wrong .16s 2}
 @keyframes tri-step{0%{transform:translate(-50%,0) translateY(0)}45%{transform:translate(-50%,0) translateY(-24px)}100%{transform:translate(-50%,0) translateY(0)}}
