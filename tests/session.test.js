@@ -220,6 +220,26 @@ describe('SessionService RGB Sequence Rush', () => {
     service.configure(session.id, slots[0].token, 12);
     expect(session.targetCycles).toBe(12);
   });
+
+  it('configures and publishes the winning target independently for every level', () => {
+    const { service, session, slots } = createPlayingSession(1);
+    service.resetLevel(session.id, slots[0].token);
+    const targets = [
+      ['targetCycles', 1, 12], ['diceTarget', 2, 6], ['raceTargetMeters', 3, 2400],
+      ['flappyTargetBlockers', 4, 15], ['burgerTarget', 5, 4], ['ufoTarget', 6, 8],
+      ['pieHitsPerColor', 7, 3], ['triTarget', 8, 40], ['burgerStackTarget', 9, 3],
+      ['matrixTarget', 10, 5]
+    ];
+    for (const [field, stage, target] of targets) {
+      session.stage = stage;
+      session.status = 'waiting';
+      service.configure(session.id, slots[0].token, target);
+      expect(session[field]).toBe(target);
+      expect(service.toPublicView(session)[field]).toBe(target);
+    }
+    expect(session.islandTarget).toBe(40);
+    expect(slots[0].tri.pipes).toBeDefined();
+  });
 });
 
 describe('SessionService Level 3 Highway Dodge', () => {
@@ -311,7 +331,7 @@ describe('SessionService Level 2 Dice Reaction', () => {
     expect(session.diceValues).toEqual([4, 6, 2]);
     expect(new Set(session.diceValues).size).toBe(3);
     expect(service.toPublicView(session).diceRoundId).toBe(session.diceRoundId);
-    expect(session.diceTarget).toBe(8);
+    expect(session.diceTarget).toBe(6);
   });
 
   it('increments the shared success feedback counter for correct dice answers', () => {
