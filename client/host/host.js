@@ -241,7 +241,7 @@ function ensureIndividualBoard(scene, stage) {
     if (type === 'flappy') {
       board.innerHTML = '<div class="flappy-sky"><div class="flappy-cloud cloud-a"></div><div class="flappy-cloud cloud-b"></div><div class="flappy-stars">✦　 ·　 ✧　 ·　 ✦</div><div class="flappy-obstacles"></div><div class="flappy-rocket">🚀</div><div class="flappy-ground"></div></div><div class="board-caption">ROCKET FLIGHT · FLY THROUGH THE GAPS</div>';
     } else if (type === 'burger') {
-      board.innerHTML = '<div class="burger-game-title">BUILD THE BURGER</div><div class="burger-legend"><span><b>R</b> 🥩 MEAT</span><span><b>G</b> 🥬 LETTUCE</span><span><b>B</b> 🍅 TOMATO</span></div><div class="burger-stage"><div class="burger-sample"><small>MODEL BURGER</small><div class="burger-recipe"></div></div><div class="burger-plate"><div class="burger-stack"></div></div></div><div class="burger-progress"></div>';
+      board.innerHTML = '<div class="burger-stage"><div class="burger-sample"><small>MODEL BURGER</small><div class="burger-model"><div class="burger-model-layers burger-recipe"></div><div class="burger-bun burger-top"></div><div class="burger-bun burger-base"></div></div></div><div class="burger-plate"><div class="burger-stack"><div class="burger-bun burger-base"></div></div><div class="burger-feedback"></div></div></div><div class="burger-progress"></div>';
     } else if (type === 'ufo') {
       board.innerHTML = '<div class="ufo-board-title">UFO SPOTTER</div><div class="ufo-target-caption">WATCH THE TARGET</div><div class="ufo-target"></div><div class="ufo-options"></div><div class="board-caption"></div>';
     } else if (type === 'pie') {
@@ -254,6 +254,26 @@ function ensureIndividualBoard(scene, stage) {
     scene.replaceChildren(board);
   }
   return board;
+}
+
+function playBurgerErrorBuzz() {
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    const context = successAudioContext || new AudioCtor();
+    successAudioContext = context;
+    if (context.state === 'suspended') context.resume();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(190, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(85, context.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(); oscillator.stop(context.currentTime + 0.29);
+  } catch { /* Audio may be blocked until a user gesture. */ }
 }
 
 function renderIndividualBoard(board, state, player) {
@@ -273,11 +293,33 @@ function renderIndividualBoard(board, state, player) {
     board.querySelector('.board-caption').textContent = (flight.blockersPassed || 0) + ' / 20 BLOCKERS · ' + ((flight.penaltyMs || 0) > 0 ? 'CRASH RECOVERY' : 'TAP ANY COLOUR TO BOOST');
   } else if (state.stage === 5) {
     const sequence = state.burgerSequence || [];
+    const completedSequence = state.burgerCompletedSequence || [];
     const progress = Math.max(0, Math.min(sequence.length, player.burgerProgressIndex || 0));
-    const labels = {R:'🥩',G:'🥬',B:'🍅'};
+    const ingredientClass = {R:'tomato',G:'vegetable',B:'meat'};
     const targetOrder = [...sequence].reverse();
-    board.querySelector('.burger-recipe').innerHTML = targetOrder.map((key,index) => '<span class="burger-step ' + (index < progress ? 'done' : index === progress ? 'current' : '') + '">' + labels[key] + '</span>').join('');
-    board.querySelector('.burger-stack').innerHTML = Array.from({length:progress},(_,index) => '<span class="burger-layer layer-' + targetOrder[index] + '">' + labels[targetOrder[index]] + '</span>').join('');
+    const modelOrder = targetOrder.length ? targetOrder : ['B','G','R'];
+    const model = board.querySelector('.burger-model');
+    model.querySelector('.burger-recipe').innerHTML = modelOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('');
+    const buildOrder = player.color === state.burgerWinnerColor && Number(player.burgerCompletedId || 0) === Number(state.burgerCompletedId || 0)
+      ? [...completedSequence].reverse() : targetOrder.slice(0, progress);
+    const stack = board.querySelector('.burger-stack');
+    stack.innerHTML = '<div class="burger-bun burger-base"></div>' +
+      buildOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('') +
+      (player.color === state.burgerWinnerColor && Number(player.burgerCompletedId || 0) === Number(state.burgerCompletedId || 0) && state.burgerCompletedId > 0 ? '<div class="burger-bun burger-top"></div>' : '');
+    const feedback = board.querySelector('.burger-feedback');
+    const completedId = Number(state.burgerCompletedId || 0);
+    if (player.color === state.burgerWinnerColor && completedId > Number(board.dataset.completedId || 0)) {
+      board.dataset.completedId = String(completedId);
+      feedback.innerHTML = '<span class="burger-success">O <b>+1</b></span>';
+      feedback.classList.remove('show'); void feedback.offsetWidth; feedback.classList.add('show');
+    }
+    const failureId = Number(player.burgerFailureId || 0);
+    if (failureId > Number(board.dataset.failureId || 0)) {
+      board.dataset.failureId = String(failureId);
+      feedback.innerHTML = '<span class="burger-failure">✕</span>';
+      feedback.classList.remove('show'); void feedback.offsetWidth; feedback.classList.add('show');
+      playBurgerErrorBuzz();
+    }
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
     const wheel = board.querySelector('.pie-wheel-host');
