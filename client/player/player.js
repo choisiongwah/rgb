@@ -104,7 +104,7 @@ function renderController(name, color, state) {
     '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
-    '<section id="config-panel" class="config-panel" hidden><label for="target-cycles">Cycles to win</label><input id="target-cycles" type="number" min="1" max="100" value="20"><button id="save-config">Save config</button></section>';
+    '<section id="config-panel" class="config-panel" hidden><label id="config-target-label" for="config-target">Winning target</label><p id="config-target-help">Set the target for this level.</p><input id="config-target" type="number" min="1" max="100" value="10"><button id="save-config">Save level settings</button></section>';
   document.querySelector('#player-name').textContent = name;
   document.querySelector('#player-color').textContent = color + ' PLAYER';
   root.querySelectorAll('[data-a]').forEach((button) => {
@@ -149,8 +149,8 @@ function renderController(name, color, state) {
   flightWorld.addEventListener('pointerdown', jump);
   flightWorld.addEventListener('keydown', (event) => { if ([' ', 'Enter', 'ArrowUp'].includes(event.key)) jump(event); });
   root.querySelector('#save-config').addEventListener('click', () => {
-    const targetCycles = Number(root.querySelector('#target-cycles').value);
-    emitControl('configure', { targetCycles });
+    const target = Number(root.querySelector('#config-target').value);
+    emitControl('configure', { target });
     root.querySelector('#config-panel').hidden = true;
   });
   updateController(state);
@@ -167,7 +167,7 @@ function renderControls(state) {
     if (isPlaying && state.stage === 1) buttons.push(['finish', 'Finish level', 'danger']);
     if (state.status !== 'waiting') buttons.push(['reset', 'Reset level', 'danger']);
     if (state.stage > 1 || state.status !== 'waiting') buttons.push(['end', 'End game', 'danger']);
-    if (state.stage === 1) buttons.push(['config', 'Config', 'secondary']);
+    if (state.status === 'waiting') buttons.push(['config', 'Config', 'secondary']);
   }
   if (isPlaying) buttons.push([state.paused ? 'resume' : 'pause', state.paused ? 'Resume' : 'Pause', 'secondary']);
   if (isFinished) buttons.push(['next', 'Next level', 'primary']);
@@ -193,7 +193,23 @@ function renderControls(state) {
       if (action === 'end') {
         if (window.confirm('End this game and return everyone to Level 1? All scores from this game will be cleared.')) emitControl('end');
       } else if (action === 'config') {
-        root.querySelector('#target-cycles').value = latest.targetCycles;
+        const targetConfig = {
+          1: ['Cycles to win', 'Complete the R → G → B sequence this many times.', latest.targetCycles, 1, 100],
+          2: ['Correct answers to win', 'Number of correct dice rounds required.', latest.diceTarget, 1, 100],
+          3: ['Race distance (metres)', 'Distance required to reach the finish line.', latest.raceTargetMeters, 100, 10000],
+          4: ['Blockers to pass', 'Number of obstacles to clear.', latest.flappyTargetBlockers, 1, 100],
+          5: ['Burgers to complete', 'Number of complete recipes required.', latest.burgerTarget, 1, 100],
+          6: ['Correct UFO answers', 'Number of correct UFO identifications required.', latest.ufoTarget, 1, 100],
+          7: ['Knives per colour', 'Attach this many red, green and blue knives.', latest.pieHitsPerColor, 1, 20],
+          8: ['Sharks to cross', 'Number of coloured sharks between start and destination (minimum 6).', latest.islandTarget, 6, 200],
+          9: ['Burger challenges', 'Number of complete burger stacks required.', latest.burgerStackTarget, 1, 100],
+          10: ['Correct puzzles', 'Number of matrix puzzles to solve.', latest.matrixTarget, 1, 100]
+        };
+        const [label, help, value, min, max] = targetConfig[latest.stage];
+        root.querySelector('#config-target-label').textContent = label;
+        root.querySelector('#config-target-help').textContent = help;
+        const input = root.querySelector('#config-target');
+        input.min = String(min); input.max = String(max); input.value = String(value);
         root.querySelector('#config-panel').hidden = !root.querySelector('#config-panel').hidden;
       } else {
         emitControl(action);
@@ -300,7 +316,8 @@ function updateController(state) {
   else setFeedback('Tap R → G → B in order', '');
   renderControls(state);
   const target = root.querySelector('#target-cycles');
-  if (target && document.activeElement !== target) target.value = state.targetCycles;
+  const configTarget = root.querySelector('#config-target');
+  if (configTarget && root.querySelector('#config-panel').hidden) configTarget.value = String(({1:state.targetCycles,2:state.diceTarget,3:state.raceTargetMeters,4:state.flappyTargetBlockers,5:state.burgerTarget,6:state.ufoTarget,7:state.pieHitsPerColor,8:state.islandTarget,9:state.burgerStackTarget,10:state.matrixTarget})[state.stage] || 1);
 }
 
 function renderBurgerBuilder(state, mine) {
@@ -314,7 +331,7 @@ function renderBurgerBuilder(state, mine) {
 }
 function renderKnifeWheel(state,mine) {
   root.querySelector('#knife-wheel').style.transform='rotate('+(-(state.pieAngle||0)*180/Math.PI)+'deg)';
-  root.querySelector('#knife-wheel-score').textContent='R: '+(mine.pieHits?.R||0)+'/4　G: '+(mine.pieHits?.G||0)+'/4　B: '+(mine.pieHits?.B||0)+'/4';
+  root.querySelector('#knife-wheel-score').textContent='R: '+(mine.pieHits?.R||0)+'/'+state.pieHitsPerColor+'　G: '+(mine.pieHits?.G||0)+'/'+state.pieHitsPerColor+'　B: '+(mine.pieHits?.B||0)+'/'+state.pieHitsPerColor;
   root.querySelector('#knife-wheel-speed').textContent='SPEED '+(state.pieSpeed||0.9).toFixed(1)+'×';
   root.querySelector('#knife-wheel-knives').innerHTML=(mine.pieKnives||[]).map(k=>'<span class="embedded-knife '+k.color.toLowerCase()+'" style="--knife-angle:'+(90+k.angle*180/Math.PI)+'deg">🔪</span>').join('');
   if((state.pieLastHitId||0)>lastKnifeHitId){lastKnifeHitId=state.pieLastHitId;const launch=root.querySelector('.knife-launch');launch.classList.remove('throw');void launch.offsetWidth;launch.classList.add('throw');}
@@ -352,7 +369,7 @@ function renderBurgerStack(state, mine) {
 function renderPie(state, mine) {
   const wheel = root.querySelector('#pie-wheel');
   wheel.style.transform = 'rotate(' + ((state.pieAngle || 0) * 180 / Math.PI) + 'deg)';
-  root.querySelector('#pie-score').textContent = 'R ' + (mine.pieHits?.R || 0) + '/6 · G ' + (mine.pieHits?.G || 0) + '/6 · B ' + (mine.pieHits?.B || 0) + '/6';
+  root.querySelector('#pie-score').textContent = 'R ' + (mine.pieHits?.R || 0) + '/' + state.pieHitsPerColor + ' · G ' + (mine.pieHits?.G || 0) + '/' + state.pieHitsPerColor + ' · B ' + (mine.pieHits?.B || 0) + '/' + state.pieHitsPerColor;
   root.querySelector('#pie-next-hint').textContent = 'Watch the pointer · Press the matching colour';
   if ((state.pieLastHitId || 0) > lastPieHitId) {
     lastPieHitId = state.pieLastHitId;
@@ -366,7 +383,7 @@ function renderPie(state, mine) {
 function renderIsland(state, mine) {
   const island = mine.island || { progress:0, milestone:0, sharks:[], penaltyMs:0, biteId:0 };
   const progress = island.progress || 0;
-  root.querySelector('#island-progress').textContent = progress + ' / 50 SHARKS';
+  root.querySelector('#island-progress').textContent = progress + ' / ' + state.islandTarget + ' SHARKS';
   root.querySelector('#island-milestone').textContent = island.milestone ? 'CHECKPOINT ' + island.milestone : 'START ISLAND';
   root.querySelector('#island-progress-fill').style.width = (progress / 50 * 100) + '%';
   const player = root.querySelector('#island-player');
@@ -386,7 +403,7 @@ function renderIsland(state, mine) {
 function renderRace(state, mine) {
   const race = mine.race || {};
   const distance = Math.floor(race.distanceMeters || 0);
-  root.querySelector('#race-distance').textContent = distance.toLocaleString() + ' m / 3,000 m';
+  root.querySelector('#race-distance').textContent = distance.toLocaleString() + ' m / ' + state.raceTargetMeters.toLocaleString() + ' m';
   root.querySelector('#race-speed').textContent = (race.speedMultiplier || 1).toFixed(1) + '× SPEED';
   root.querySelector('#race-progress-fill').style.width = (distance / 3000 * 100) + '%';
   root.querySelector('#race-lane-label').textContent = ['LEFT LANE', 'CENTRE LANE', 'RIGHT LANE'][race.lane ?? 1];
@@ -433,7 +450,7 @@ function renderFlappy(state, mine) {
   const flight = mine.flappy || {};
   const passed = flight.blockersPassed || 0;
   const tier = Math.min(4, Math.floor(passed / 6) + 1);
-  root.querySelector('#flappy-count').textContent = passed + ' / 20 BLOCKERS';
+  root.querySelector('#flappy-count').textContent = passed + ' / ' + state.flappyTargetBlockers + ' BLOCKERS';
   root.querySelector('#flappy-difficulty').textContent = ['EASY FLIGHT','WIND PICKING UP','TIGHTER GAPS','MAXIMUM TURBULENCE'][tier - 1];
   root.querySelector('#flappy-progress-fill').style.width = (passed / 20 * 100) + '%';
   const rocket = root.querySelector('#flappy-rocket');
