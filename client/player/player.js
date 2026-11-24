@@ -123,7 +123,8 @@ function renderController(name, color, state) {
         if (!result.ok) { playErrorSound(); setFeedback(readableError(result.error), 'warning'); }
         else if (!result.correct) { playErrorSound(); if (latestState?.stage === 7) { const reject = root.querySelector('#pie-reject'); reject.classList.remove('show'); void reject.offsetWidth; reject.classList.add('show'); const knife = root.querySelector('#pie-knife'); knife.classList.remove('reject'); void knife.offsetWidth; knife.classList.add('reject'); } setFeedback(latestState?.stage === 5
           ? '✕ Wrong ingredient — wait for the next burger'
-          : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
+          : latestState?.stage === 6 ? '✕ Wrong UFO — wait for the next round'
+            : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
             : 'Wrong colour — sequence restarted', 'warning'); }
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
         else if (result.pointAwarded) setFeedback(latestState?.stage === 6 ? 'Correct UFO! +1 point' : latestState?.stage === 7 ? 'Knife hit!' : latestState?.stage === 8 ? 'Safe crossing!' : 'Perfect burger! +1 point', 'success');
@@ -222,7 +223,7 @@ function updateController(state) {
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
       !mine.activeForRound || (isDice && mine.roundAttempted) ||
       (isBurger && mine.burgerRoundAttempted) ||
-      (isUfo && (state.ufoPhase !== 'choose' || mine.ufoRoundAttempted)) ||
+      (isUfo && (state.ufoPhase === 'feedback' || mine.ufoRoundAttempted)) ||
       (isMatrix && mine.matrixRoundAttempted) ||
       (isRace && (mine.race?.penaltyMs || 0) > 0) ||
       (isIsland && (mine.island?.penaltyMs || 0) > 0) ||
@@ -267,10 +268,10 @@ function updateController(state) {
   else if (isBurger) setFeedback('Build the target burger in order: R meat · G lettuce · B tomato.', '');
   else if (isBurgerStack && mine.burgerStack?.successCount > 0) setFeedback('Burger challenge ' + mine.burgerStack.successCount + ' complete — keep stacking!', 'success');
   else if (isBurgerStack) setFeedback('Catch each ingredient in the matching lane to build a perfect burger!', '');
-  else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Memorise the UFO before it disappears!', '');
-  else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong UFO — wait for the next fly-by', 'warning');
-  else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct UFO! +1 point', 'success');
-  else if (isUfo) setFeedback('Choose the matching UFO', '');
+  else if (isUfo && state.ufoPhase === 'flyby') setFeedback('Spot the UFO and choose its matching position — R, G or B!', '');
+  else if (isUfo && mine.ufoRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('Wrong answer — wait for the next UFO!', 'warning');
+  else if (isUfo && mine.roundFeedback === 'correct') setFeedback('Correct! +1 point — next UFO incoming', 'success');
+  else if (isUfo) setFeedback('Which UFO just flew past? Press R, G or B.', '');
   else if (isBurger && mine.burgerRoundAttempted && mine.roundFeedback === 'wrong') setFeedback('✕ Wrong ingredient — wait for the next burger', 'warning');
   else if (isBurger && mine.roundFeedback === 'correct') setFeedback('Burger complete! +1 point · Next recipe loading', 'success');
   else if (isBurger && mine.burgerRoundAttempted) setFeedback('Wrong ingredient — wait for the next burger', 'warning');
@@ -468,7 +469,9 @@ function readableError(code) {
     DUPLICATE_INPUT: 'Input already received',
     STALE_ROUND: 'That dice roll has passed — use the current dice',
     STALE_BURGER_ROUND: 'That burger recipe has passed — use the current recipe',
-    ALREADY_ANSWERED: 'You already answered this dice roll',
+    ALREADY_ANSWERED: 'You already answered this round',
+    UFO_NOT_READY: 'This UFO round has ended — watch for the next one',
+    STALE_UFO_ROUND: 'That UFO has passed — answer the current one',
     FINISH_NOT_AVAILABLE: 'This level runs until all three places are decided',
     RACE_PENALTY_ACTIVE: 'Recovering from a crash — wait 2 seconds',
     FLAPPY_RECOVERING: 'Rocket recovering — tap again in a moment',
