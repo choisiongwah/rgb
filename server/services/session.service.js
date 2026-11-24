@@ -130,7 +130,7 @@ export class SessionService {
     const session = {
       id, host, status: 'waiting', paused: false, createdAt: Date.now(),
       stage: 1, nextPlace: 1, controllerColor: null,
-      targetCycles: DEFAULT_TARGET_CYCLES, diceTarget: DICE_TARGET, raceTargetMeters: RACE_TARGET_METERS, flappyTargetBlockers: FLAPPY_TARGET_BLOCKERS, islandTarget: ISLAND_TARGET_SHARKS, triTarget: TRI_TARGET_SCORE, burgerStackTarget: BURGER_STACK_TARGET, pieHitsPerColor: PIE_HITS_PER_COLOR, pieHitsPerColor: PIE_HITS_PER_COLOR,
+      targetCycles: DEFAULT_TARGET_CYCLES, diceTarget: DICE_TARGET, raceTargetMeters: RACE_TARGET_METERS, flappyTargetBlockers: FLAPPY_TARGET_BLOCKERS, islandTarget: ISLAND_TARGET_SHARKS, triTarget: TRI_TARGET_SCORE, burgerStackTarget: BURGER_STACK_TARGET, pieHitsPerColor: PIE_HITS_PER_COLOR,
       diceValues: null, diceRoundId: 0,
       burgerTarget: BURGER_TARGET_POINTS, burgerSequence: null, burgerRoundId: 0,
       burgerLastDropId: 0, burgerLastDrop: null, burgerCompletedId: 0, burgerWinnerColor: null, burgerCompletedSequence: null,
@@ -1015,7 +1015,7 @@ export class SessionService {
       burgerRoundId: session.burgerRoundId, burgerLastDropId: session.burgerLastDropId,
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
-      islandTarget: ISLAND_TARGET_SHARKS, triTarget: TRI_TARGET_SCORE, burgerStackTarget: BURGER_STACK_TARGET, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
+      islandTarget: session.islandTarget, triTarget: session.triTarget, burgerStackTarget: session.burgerStackTarget, pieHitsPerColor: session.pieHitsPerColor, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
       matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle ? { roundId: session.matrixPuzzle.roundId, difficulty: session.matrixPuzzle.difficulty, category: session.matrixPuzzle.category, cells: session.matrixPuzzle.cells, options: session.matrixPuzzle.options } : null, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPathIndex: session.ufoPathIndex, ufoWinnerColor: session.ufoWinnerColor, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
