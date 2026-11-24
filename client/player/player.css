@@ -83,7 +83,7 @@ body:has(.burger-builder-screen:not([hidden])) .pad button{height:13vh;min-heigh
 .knife-wheel{position:relative;width:min(62vw,48vh,290px);aspect-ratio:1;border-radius:50%;background:conic-gradient(from -60deg,#f00 0 33.333%,#00e51b 33.333% 66.666%,#0800ff 66.666% 100%);border:3px solid #050505;transition:transform .08s linear}
 .knife-wheel-core{position:absolute;left:50%;top:50%;width:8%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:#050505}
 .knife-wheel-knives{position:absolute;inset:0;pointer-events:none}
-.embedded-knife{position:absolute;left:50%;top:50%;width:18px;height:clamp(44px,13vw,66px);display:flex;align-items:center;justify-content:center;font-size:clamp(27px,8vw,40px);transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(min(31vw,24vh,145px) * -1));transform-origin:center}
+.embedded-knife{position:absolute;left:50%;top:50%;width:18px;height:clamp(28px,8vw,38px);display:flex;align-items:center;justify-content:center;font-size:clamp(22px,6vw,29px);transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(min(31vw,24vh,145px) * -1));transform-origin:center}
 .embedded-knife.r{filter:drop-shadow(0 0 3px #f00)}.embedded-knife.g{filter:drop-shadow(0 0 3px #0f0)}.embedded-knife.b{filter:drop-shadow(0 0 3px #22f)}
 .knife-launch{position:absolute;bottom:5%;left:50%;transform:translateX(-50%);font-size:clamp(34px,10vw,52px);filter:grayscale(1) brightness(2)}
 .knife-wheel-miss{position:absolute;top:18%;left:0;right:0;text-align:center;font-size:clamp(20px,6vw,30px);font-weight:1000;color:#f87171;text-shadow:0 3px #7f1d1d;opacity:0;pointer-events:none}
