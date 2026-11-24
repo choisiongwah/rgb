@@ -135,7 +135,7 @@
 .individual-board.stack{background:linear-gradient(#7dd3fc,#164e63)}
 .stack-world-host{position:relative;height:180px;margin-top:8px;border-radius:10px;background:linear-gradient(#0c4a6e,#164e63);overflow:hidden}
 .stack-lanes-host{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}.stack-lanes-host i{border-right:1px dashed #ffffff55}
-.stack-drops-host,.stack-built-host{position:absolute;inset:0}.stack-drop{position:absolute;transform:translateX(-50%);font-size:20px}.stack-catcher-host{position:absolute;bottom:34px;transform:translateX(-50%);font-size:25px;transition:left .12s}.stack-built-host{top:auto;bottom:4px;display:flex;justify-content:center;align-items:end;font-size:18px}
+.stack-drops-host,.stack-built-host{position:absolute;inset:0}.stack-drop{position:absolute;transform:translateX(-50%);width:clamp(22px,3vw,38px);height:clamp(10px,1.7vh,18px)}.stack-catcher-host{position:absolute;bottom:34px;transform:translateX(-50%);width:clamp(48px,6vw,76px);height:clamp(12px,1.8vh,20px);transition:left .12s}.stack-built-host{top:auto;bottom:4px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px}.stack-layer{display:block;width:clamp(40px,5.5vw,68px);height:clamp(9px,1.4vh,15px);border:2px solid #78350f;border-radius:4px}.stack-block-tomato{background:linear-gradient(#fca5a5,#dc2626);border-color:#991b1b}.stack-block-vegetable{background:linear-gradient(#bbf7d0,#16a34a);border-color:#166534}.stack-block-meat{background:linear-gradient(#a16207,#713f12);border-color:#451a03}.stack-block-top{height:clamp(12px,1.8vh,19px);border-radius:50% 50% 5px 5px;background:linear-gradient(#fde68a,#d97706);border-color:#92400e}.stack-bread-base{display:block;width:100%;height:100%;border:2px solid #92400e;border-radius:4px 4px 9px 9px;background:linear-gradient(#fde68a,#b7791f);box-sizing:border-box}
 .board-caption{font-size:10px;font-weight:800;margin-top:7px;letter-spacing:.3px}
 @keyframes ufo-flyby{from{transform:translateX(-35px) rotate(-8deg)}to{transform:translateX(35px) rotate(8deg)}}
 .player-join-link{display:block;margin:4px auto 8px;color:#93c5fd;font-size:12px;text-decoration:underline;overflow-wrap:anywhere}
@@ -229,3 +229,11 @@
 .stack-built-host .stack-top-layer{border-radius:50% 50% 5px 5px;background:linear-gradient(#fcd34d,#b45309);border-width:2px}
 
 .stack-built-host{bottom:58px!important;left:50%;right:auto;width:clamp(48px,12vw,90px);height:55%;transform:translateX(-50%)}
+
+
+/* Keep the Phaser canvas measurable after returning from an individual-level display. */
+#room.shared-mode{display:flex!important;flex-direction:column!important;overflow:hidden}
+#room.shared-mode #game-root{display:block!important;flex:0 0 70dvh!important;width:100%;height:70dvh!important;min-height:220px!important;visibility:visible!important;overflow:hidden}
+#room.shared-mode #game-root canvas{display:block!important;width:100%!important;height:100%!important;visibility:visible!important}
+#room.shared-mode #player-strip{display:grid!important;flex:0 0 30dvh!important;width:100%;height:30dvh!important;min-height:0!important;visibility:visible!important}
+#room.individual-mode #game-root,#room.individual-mode #player-strip{display:none!important}
