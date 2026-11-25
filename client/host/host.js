@@ -114,7 +114,7 @@ function ensureRaceDisplay() {
     name.textContent = color;
     const distance = document.createElement('strong');
     distance.className = 'race-distance';
-    distance.textContent = '0 / ' + state.raceTargetMeters.toLocaleString() + ' m';
+    distance.textContent = 'WAITING';
     header.append(name, distance);
     const status = document.createElement('p');
     status.className = 'race-player-status';
