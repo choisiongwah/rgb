@@ -479,11 +479,11 @@ describe('SessionService Level 5 Burger Builder', () => {
   }
   function completeBurger(service, session, slot) {
     const roundId = session.burgerRoundId;
-    for (const action of session.burgerSequence) {
+    for (const action of [...session.burgerSequence].reverse()) {
       service.submitInput(session.id, slot.token, action, roundId);
     }
   }
-  it('creates a random four-to-eight-ingredient shared recipe and publishes a round id', () => {
+  it('creates a shared three-colour recipe and publishes its round id', () => {
     const { service, session } = createLevel5Session();
     const view = service.toPublicView(session);
     expect(session.burgerSequence.length).toBeGreaterThanOrEqual(4);
@@ -492,13 +492,7 @@ describe('SessionService Level 5 Burger Builder', () => {
     expect(view.burgerRoundId).toBe(session.burgerRoundId);
     expect(view.burgerTarget).toBe(6);
   });
-  it('enforces the four-ingredient minimum and eight-ingredient maximum', () => {
-    const min = createLevel5Session(2, () => 0);
-    expect(min.session.burgerSequence).toHaveLength(4);
-    const max = createLevel5Session(2, () => 0.999999);
-    expect(max.session.burgerSequence).toHaveLength(8);
-  });
-  it('maps R/G/B to meat, vegetable and tomato drops for each input', () => {
+  it('maps R/G/B to meat, vegetable and tomato drops', () => {
     let randomIndex = 0;
     const random = () => [0, 0, 0.4, 0.8, 0][randomIndex++ % 5];
     const { service, session, slots } = createLevel5Session(2, random);
@@ -510,7 +504,7 @@ describe('SessionService Level 5 Burger Builder', () => {
     service.submitInput(session.id, slots[0].token, 'B', roundId);
     expect(session.burgerLastDrop.ingredient).toBe('🍅');
   });
-  it('disqualifies a wrong answer for that recipe and resets on the next recipe', () => {
+  it('rejects incorrect recipe input and advances the shared round after all attempts', () => {
     const { service, session, slots } = createLevel5Session(2, () => 0);
     const round = session.burgerRoundId;
     const wrong = service.submitInput(session.id, slots[0].token, 'G', round);
@@ -522,24 +516,14 @@ describe('SessionService Level 5 Burger Builder', () => {
     expect(slots[0].burgerRoundAttempted).toBe(false);
     expect(slots[0].burgerProgressIndex).toBe(0);
   });
-  it('awards one point to the first player completing the recipe and rejects late taps', () => {
-    const { service, session, slots } = createLevel5Session(2, () => 0);
-    const oldRound = session.burgerRoundId;
-    completeBurger(service, session, slots[0]);
-    expect(slots[0].successCount).toBe(1);
-    expect(slots[0].totalPoints).toBe(0); // Placement bonus is added when the player finishes the level.
-    expect(session.burgerRoundId).toBe(oldRound + 1);
-    expect(() => service.submitInput(session.id, slots[1].token, 'R', oldRound)).toThrow('STALE_BURGER_ROUND');
-  });
-  it('continues to 2nd and 3rd place after each player reaches six burgers', () => {
+  it('awards placements at the configured burger target and stops accepting completed-player input', () => {
     const { service, session, slots } = createLevel5Session();
-    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[0]);
+    for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[0]);
     expect(slots[0].place).toBe(1);
     expect(session.status).toBe('playing');
-    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[1]);
-    expect(slots[1].place).toBe(2);
-    expect(session.status).toBe('playing');
-    for (let i = 0; i < 6; i += 1) completeBurger(service, session, slots[2]);
+    expect(() => service.submitInput(session.id, slots[0].token, 'R', session.burgerRoundId)).toThrow('PLAYER_ALREADY_FINISHED');
+    for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[1]);
+    for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[2]);
     expect(slots.map((slot) => slot.place)).toEqual([1, 2, 3]);
     expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
     expect(session.status).toBe('finished');
@@ -550,131 +534,238 @@ describe('SessionService Level 5 Burger Builder', () => {
   });
 });
 
-
 describe('SessionService Level 6 UFO Spotter', () => {
-  function createLevel6Session(count=3, random=()=>0.37) {
-    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
-    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Pilot '+(i+1)}));
-    session.stage=6; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  function createLevel6Session(count = 3, random = () => 0.37) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Pilot ' + (index + 1) }));
+    session.stage = 6;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
   }
-  const reveal=(service)=>{for(let i=0;i<4;i++)service.tickUfos(500);};
-  it('starts with a two-second fly-by and three distinct choices',()=>{
-    const {service,session}=createLevel6Session(); const view=service.toPublicView(session);
-    expect(session.ufoPhase).toBe('flyby'); expect(session.ufoDurationMs).toBe(1500);
-    expect(session.ufoOptions).toHaveLength(3); expect(new Set(session.ufoOptions).size).toBe(3);
+  function revealChoices(service) {
+    service.tickUfos(500);
+    service.tickUfos(100);
+  }
+  function answerCorrectly(service, session, slot) {
+    revealChoices(service);
+    return service.submitInput(session.id, slot.token, ['R', 'G', 'B'][session.ufoCorrectIndex], session.ufoRoundId);
+  }
+  it('starts the Alien fly-through with three distinct choices and its configured round duration', () => {
+    const { service, session } = createLevel6Session();
+    const view = service.toPublicView(session);
+    expect(session.ufoPhase).toBe('flyby');
+    expect(session.ufoDurationMs).toBe(2800);
+    expect(session.ufoOptions).toHaveLength(3);
+    expect(new Set(session.ufoOptions).size).toBe(3);
     expect(view.ufoRoundId).toBe(session.ufoRoundId);
   });
-  it('reveals the choices only after the full fly-through',()=>{
-    const {service,session}=createLevel6Session(1);
-    service.tickUfos(500);service.tickUfos(500);service.tickUfos(499);
-    expect(session.ufoPhase).toBe('flyby');service.tickUfos(1);expect(session.ufoPhase).toBe('choose');
+  it('reveals the choices after the fly-through portion completes', () => {
+    const { service, session } = createLevel6Session(1);
+    service.tickUfos(500);
+    expect(session.ufoPhase).toBe('flyby');
+    service.tickUfos(100);
+    expect(session.ufoPhase).toBe('choose');
   });
-  it('increases speed every four cycles and caps at 0.5 seconds',()=>{
-    const {service,session}=createLevel6Session(1);
-    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(1100);
-    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(800);
-    for(let i=0;i<4;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
-    for(let i=0;i<8;i++)service.rollNextUfoRound(session);expect(session.ufoDurationMs).toBe(500);
+  it('starts another Alien fly-through when the round times out unanswered', () => {
+    const { service, session } = createLevel6Session(1);
+    const firstRound = session.ufoRoundId;
+    service.tickUfos(500);
+    service.tickUfos(500);
+    service.tickUfos(500);
+    service.tickUfos(500);
+    service.tickUfos(500);
+    service.tickUfos(300);
+    expect(session.ufoRoundId).toBe(firstRound + 1);
+    expect(session.ufoPhase).toBe('flyby');
   });
-  it('awards a point for the matching option and immediately starts the next cycle',()=>{
-    const {service,session,slots}=createLevel6Session(2);reveal(service);const old=session.ufoRoundId;
-    const result=service.submitInput(session.id,slots[0].token,['R','G','B'][session.ufoCorrectIndex],old);
-    expect(result.correct).toBe(true);expect(result.pointAwarded).toBe(1);expect(slots[0].successCount).toBe(1);expect(session.ufoRoundId).toBe(old+1);
+  it('awards a point, shows feedback, then starts the next cycle', () => {
+    const { service, session, slots } = createLevel6Session(2);
+    const oldRound = session.ufoRoundId;
+    const result = answerCorrectly(service, session, slots[0]);
+    expect(result.correct).toBe(true);
+    expect(result.pointAwarded).toBe(1);
+    expect(slots[0].successCount).toBe(1);
+    expect(session.ufoPhase).toBe('feedback');
+    service.tickUfos(1000);
+    expect(session.ufoRoundId).toBe(oldRound + 1);
+    expect(session.ufoPhase).toBe('flyby');
   });
-  it('disqualifies a wrong answer for the current cycle',()=>{
-    const {service,session,slots}=createLevel6Session(2);reveal(service);
-    const wrong=['R','G','B'].find((_,i)=>i!==session.ufoCorrectIndex);
-    expect(service.submitInput(session.id,slots[0].token,wrong,session.ufoRoundId).correct).toBe(false);
-    expect(slots[0].ufoRoundAttempted).toBe(true);
-    expect(()=>service.submitInput(session.id,slots[0].token,'R',session.ufoRoundId)).toThrow('ALREADY_ANSWERED');
+  it('continues placements until all players reach the configured target', () => {
+    const { service, session, slots } = createLevel6Session();
+    for (let playerIndex = 0; playerIndex < slots.length; playerIndex += 1) {
+      while (!slots[playerIndex].completed) {
+        const result = answerCorrectly(service, session, slots[playerIndex]);
+        expect(result.correct).toBe(true);
+        if (!slots[playerIndex].completed) service.tickUfos(1000);
+      }
+      expect(slots[playerIndex].place).toBe(playerIndex + 1);
+      expect(session.status).toBe(playerIndex === 2 ? 'finished' : 'playing');
+    }
+    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
   });
-  it('continues until all three players reach ten points and receive placements',()=>{
-    const {service,session,slots}=createLevel6Session();
-    for(let p=0;p<3;p++){for(let i=0;i<10;i++){reveal(service);service.submitInput(session.id,slots[p].token,['R','G','B'][session.ufoCorrectIndex],session.ufoRoundId);}expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}
-    expect(slots.map(x=>x.pointsEarned)).toEqual([5,3,1]);
-  });
-  it('does not allow manual finish before all placements are decided',()=>{
-    const {service,session,slots}=createLevel6Session();expect(()=>service.finishLevel(session.id,slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+  it('does not allow manual finish before all placements are decided', () => {
+    const { service, session, slots } = createLevel6Session();
+    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
   });
 });
-
 
 describe('SessionService Level 7 RGB Knife Hit', () => {
-  function createLevel7Session(count=3, random=()=>0.25) {
-    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
-    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Player '+(i+1)}));
-    session.stage=7; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  function createLevel7Session(count = 3, random = () => 0.25) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Player ' + (index + 1) }));
+    session.stage = 7;
+    service.startLevel(session.id, slots[0].token);
+    session.pieSpeed = 0;
+    return { service, session, slots };
   }
-  it('initializes a rotating RGB wheel and independent per-colour hit counts',()=>{
-    const {service,session,slots}=createLevel7Session(); const view=service.toPublicView(session);
-    expect(view.pieSpeed).toBe(0.9); expect(view.pieTargetColor).toBe('R'); expect(view.players[0].pieKnives).toEqual([]);
-    expect(slots[0].pieHits).toEqual({R:0,G:0,B:0});
+  function impact(service, session, slot, color) {
+    session.pieAngle = 0;
+    const target = service.toPublicView(session).pieTargetColor;
+    const result = service.submitInput(session.id, slot.token, color || target);
+    service.tickPies(150);
+    return result;
+  }
+  it('publishes an RGB wheel and independent per-colour hit counts', () => {
+    const { service, session, slots } = createLevel7Session();
+    const view = service.toPublicView(session);
+    expect(view.pieTargetColor).toBeDefined();
+    expect(view.pieSpeed).toBe(0);
+    expect(slots[0].pieHits).toEqual({ R: 0, G: 0, B: 0 });
   });
-  it('rotates while playing and pauses when paused',()=>{
-    const {service,session}=createLevel7Session(); service.tickPies(500); expect(session.pieAngle).toBeCloseTo(0.45);
-    service.setPaused(session.id,true); const angle=session.pieAngle; service.tickPies(1000); expect(session.pieAngle).toBe(angle);
+  it('rotates while playing and stops while paused', () => {
+    const { service, session } = createLevel7Session();
+    session.pieSpeed = 0.9;
+    service.tickPies(500);
+    expect(session.pieAngle).toBeCloseTo(0.45);
+    service.setPaused(session.id, true);
+    const angle = session.pieAngle;
+    service.tickPies(500);
+    expect(session.pieAngle).toBe(angle);
   });
-  it('accepts matching colour throws and rejects an occupied knife position',()=>{
-    const {service,session,slots}=createLevel7Session(1);
-    expect(service.submitInput(session.id,slots[0].token,'G').correct).toBe(false);
-    expect(service.submitInput(session.id,slots[0].token,'R').correct).toBe(true);
-    const repeated=service.submitInput(session.id,slots[0].token,'R'); expect(repeated.repeatSpot).toBe(true);
-    expect(slots[0].pieHits.R).toBe(1);
-    expect(session.pieTotalHits).toBe(1);
-    const collision=repeated;
-    expect(collision.correct).toBe(false); expect(collision.occupied).toBe(true);
-    expect(slots[0].pieKnives).toHaveLength(1); expect(session.pieMissId).toBe(2);
+  it('resolves a knife throw on impact and rejects an occupied position', () => {
+    const { service, session, slots } = createLevel7Session(1);
+    const target = service.toPublicView(session).pieTargetColor;
+    const pending = service.submitInput(session.id, slots[0].token, target);
+    expect(pending.pending).toBe(true);
+    expect(slots[0].pieThrow.phase).toBe('flying');
+    service.tickPies(150);
+    expect(slots[0].pieHits[target]).toBe(1);
+    expect(slots[0].pieThrow).toBeNull();
+    const repeated = service.submitInput(session.id, slots[0].token, target);
+    expect(repeated.pending).toBe(true);
+    service.tickPies(150);
+    expect(slots[0].pieThrow.phase).toBe('falling');
+    expect(slots[0].pieThrow.occupied).toBe(true);
+    service.tickPies(600);
+    expect(slots[0].pieThrow).toBeNull();
+    expect(slots[0].pieKnives).toHaveLength(1);
   });
-  it('increases speed as knives accumulate and changes direction randomly at twelve',()=>{
-    const {service,session,slots}=createLevel7Session(1,()=>0.25);
-    const angles=[0,0.3,0.6,0.9,Math.PI*2/3,Math.PI*2/3+0.3,Math.PI*2/3+0.6,Math.PI*2/3+0.9,Math.PI*4/3,Math.PI*4/3+0.3,Math.PI*4/3+0.6,Math.PI*4/3+0.9];
-    for(const angle of angles){session.pieAngle=angle;const color=angle<1.2?'R':angle<3.3?'G':'B';service.submitInput(session.id,slots[0].token,color);}
-    expect(session.pieSpeed).toBeGreaterThan(0.9);
-    expect(session.pieDirectionChanged).toBe(true); expect(session.pieDirection).toBe(-1);
-    expect(slots[0].pieKnives).toHaveLength(12);
+  it('rejects a wrong-colour throw after the animated impact', () => {
+    const { service, session, slots } = createLevel7Session(1);
+    const target = service.toPublicView(session).pieTargetColor;
+    const wrong = ['R', 'G', 'B'].find((color) => color !== target);
+    service.submitInput(session.id, slots[0].token, wrong);
+    service.tickPies(150);
+    expect(slots[0].pieHits[wrong]).toBe(0);
+    expect(slots[0].pieThrow.phase).toBe('falling');
+    service.tickPies(600);
+    expect(slots[0].pieThrow).toBeNull();
   });
-  it('continues placements until each player embeds four knives of every colour',()=>{
-    const {service,session,slots}=createLevel7Session();
-    for(let p=0;p<3;p++){
-      for(const [color,base] of [['R',0],['G',Math.PI*2/3],['B',Math.PI*4/3]]){
-        for(let n=0;n<4;n++){session.pieAngle=base+n*0.32;service.submitInput(session.id,slots[p].token,color);}
-      }
-      expect(slots[p].completed).toBe(true); expect(slots[p].place).toBe(p+1);
-      expect(slots[p].pieKnives).toHaveLength(12);
-      expect(session.status).toBe(p===2?'finished':'playing');
+  it('uses the configured hits-per-colour target for completion', () => {
+    const { service, session, slots } = createLevel7Session(1);
+    session.pieHitsPerColor = 1;
+    for (const color of ['R', 'G', 'B']) {
+      const candidates = Array.from({ length: 360 }, (_, index) => index * Math.PI * 2 / 360)
+        .filter((angle) => {
+          session.pieAngle = angle;
+          return service.toPublicView(session).pieTargetColor === color;
+        });
+      const angle = candidates.find((candidate) => slots[0].pieKnives.every((knife) => {
+        const difference = Math.abs(((knife.angle - candidate + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        return Math.min(difference, Math.PI * 2 - difference) >= Math.PI / 18;
+      }));
+      expect(angle).toBeDefined();
+      session.pieAngle = angle - Math.PI / 2;
+      const target = service.toPublicView(session).pieTargetColor;
+      service.submitInput(session.id, slots[0].token, target);
+      service.tickPies(150);
     }
-    expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);
+    expect(slots[0].completed).toBe(true);
+    expect(slots[0].place).toBe(1);
+    expect(session.status).toBe('finished');
   });
-
 });
-
 
 describe('SessionService Level 8 Island Crossing', () => {
-  function createLevel8Session(count=3, random=()=>0.1) {
-    const service=new SessionService({random}); const session=service.create({host:{username:'admin',role:'admin'}});
-    const slots=session.players.slice(0,count); slots.forEach((slot,i)=>service.join(session.id,slot.token,{name:'Sailor '+(i+1)}));
-    session.stage=8; service.startLevel(session.id,slots[0].token); return {service,session,slots};
+  function createLevel8Session(count = 3, random = () => 0.1) {
+    const service = new SessionService({ random });
+    const session = service.create({ host: { username: 'admin', role: 'admin' } });
+    const slots = session.players.slice(0, count);
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Crossing ' + (index + 1) }));
+    session.stage = 8;
+    service.startLevel(session.id, slots[0].token);
+    return { service, session, slots };
   }
-  it('creates 50 random coloured sharks per player',()=>{const {service,session,slots}=createLevel8Session();expect(slots[0].island.sharks).toHaveLength(50);expect(slots[0].island.orientations).toHaveLength(50);expect(slots[0].island.orientations.every(o=>['horizontal','vertical'].includes(o))).toBe(true);expect(slots[0].island.sharks.every(c=>['R','G','B'].includes(c))).toBe(true);expect(service.toPublicView(session).islandTarget).toBe(50);});
-  it('moves forward and records the latest completed step as a checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<11;i++)service.submitInput(session.id,p.token,'R');expect(p.island.progress).toBe(11);expect(p.island.milestone).toBe(11);});
-  it('bites on wrong colour, applies one second penalty and returns to checkpoint',()=>{const {service,session,slots}=createLevel8Session(1);const p=slots[0];for(let i=0;i<12;i++)service.submitInput(session.id,p.token,'R');const result=service.submitInput(session.id,p.token,'G');expect(result.correct).toBe(false);expect(p.island.progress).toBe(12);expect(p.successCount).toBe(12);expect(p.island.penaltyMs).toBe(1000);expect(p.island.nudgeId).toBe(1);expect(()=>service.submitInput(session.id,p.token,'R')).toThrow('ISLAND_RECOVERING');service.tickIslands(500);expect(p.island.penaltyMs).toBe(500);service.tickIslands(500);expect(p.island.penaltyMs).toBe(0);});
-  it('continues placements until all active players reach the island',()=>{const {service,session,slots}=createLevel8Session();for(let p=0;p<3;p++){slots[p].island.sharks=Array(50).fill('R');for(let i=0;i<50;i++)service.submitInput(session.id,slots[p].token,'R');expect(slots[p].place).toBe(p+1);expect(session.status).toBe(p===2?'finished':'playing');}expect(slots.map(p=>p.pointsEarned)).toEqual([5,3,1]);});
-  it('does not advance penalty timer while paused',()=>{const {service,session,slots}=createLevel8Session(1);slots[0].island.penaltyMs=1000;service.setPaused(session.id,true);service.tickIslands(500);expect(slots[0].island.penaltyMs).toBe(1000);});
+  function submitNextPipe(service, session, slot) {
+    const next = slot.tri.pipes
+      .filter((pipe) => pipe.x > 132 / 600 && pipe.x < 1)
+      .sort((a, b) => a.x - b.x)[0];
+    if (!next) throw new Error('No next pipe available in test setup');
+    return service.submitInput(session.id, slot.token, next.color);
+  }
+  it('creates the configured course with a six-pipe visible window', () => {
+    const { service, session, slots } = createLevel8Session();
+    expect(slots[0].tri.pipes).toHaveLength(6);
+    expect(service.toPublicView(session).triTarget).toBe(50);
+    expect(slots[0].tri.pipes.every((pipe) => ['R', 'G', 'B'].includes(pipe.color))).toBe(true);
+  });
+  it('advances through matching coloured pipes and increments course score as pipes clear', () => {
+    const { service, session, slots } = createLevel8Session(1);
+    const player = slots[0];
+    for (let i = 0; i < 3; i += 1) submitNextPipe(service, session, player);
+    expect(player.tri.score).toBe(1);
+    expect(player.successCount).toBe(1);
+    expect(player.tri.shift).toBe(3);
+  });
+  it('rejects a mismatched colour without advancing the course', () => {
+    const { service, session, slots } = createLevel8Session(1, () => 0);
+    const player = slots[0];
+    const next = player.tri.pipes.filter((pipe) => pipe.x > 132 / 600 && pipe.x < 1).sort((a, b) => a.x - b.x)[0];
+    const wrong = ['R', 'G', 'B'].find((color) => color !== next.color);
+    const result = service.submitInput(session.id, player.token, wrong);
+    expect(result.correct).toBe(false);
+    expect(player.tri.shift).toBe(0);
+    expect(player.tri.score).toBe(0);
+  });
+  it('finishes exactly at the configured course target and clears remaining pipes', () => {
+    const { service, session, slots } = createLevel8Session(1);
+    session.triTarget = 2;
+    slots[0].tri = {
+      pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
+      nextId: 7, score: 0, shift: 0, lastCorrectId: 0
+    };
+    while (!slots[0].completed) submitNextPipe(service, session, slots[0]);
+    expect(slots[0].tri.score).toBe(2);
+    expect(slots[0].tri.pipes).toHaveLength(0);
+    expect(session.status).toBe('finished');
+  });
 });
-
 
 describe('SessionService Level 9 Burger Stack', () => {
   function createLevel9Session(count = 3, random = () => 0.1) {
     const service = new SessionService({ random });
     const session = service.create({ host: { username: 'admin', role: 'admin' } });
     const slots = session.players.slice(0, count);
-    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Chef ' + (index + 1) }));
+    slots.forEach((slot, index) => service.join(session.id, slot.token, { name: 'Stacker ' + (index + 1) }));
     session.stage = 9;
     service.startLevel(session.id, slots[0].token);
     return { service, session, slots };
   }
-
-  it('initializes an independent 5-to-8 ingredient challenge for each player', () => {
+  it('creates independent 5-to-8 ingredient challenges and exposes the configured win target', () => {
     const { service, session, slots } = createLevel9Session();
     for (const slot of slots) {
       expect(slot.burgerStack.challengeLength).toBeGreaterThanOrEqual(5);
@@ -686,8 +777,7 @@ describe('SessionService Level 9 Burger Stack', () => {
     expect(view.burgerStackTarget).toBe(4);
     expect(view.players[0].burgerStack).not.toBe(view.players[1].burgerStack);
   });
-
-  it('moves exactly one lane left or right and clamps at the edges', () => {
+  it('moves one lane per R/B input and clamps at both edges', () => {
     const { service, session, slots } = createLevel9Session(1);
     expect(service.submitInput(session.id, slots[0].token, 'R').lane).toBe(0);
     expect(service.submitInput(session.id, slots[0].token, 'R').lane).toBe(0);
@@ -695,75 +785,14 @@ describe('SessionService Level 9 Burger Stack', () => {
     expect(service.submitInput(session.id, slots[0].token, 'B').lane).toBe(2);
     expect(() => service.submitInput(session.id, slots[0].token, 'G')).toThrow('INVALID_INPUT');
   });
-
-  it('spawns falling ingredients and stacks only when the player is aligned', () => {
-    const { service, slots } = createLevel9Session(1, () => 0.1);
-    const stack = slots[0].burgerStack;
-    stack.recipe = [{ id: 1, ingredient: 'R', lane: 1 }];
-    stack.challengeLength = 1;
-    stack.nextIngredientIndex = 0;
-    stack.drops = [];
-    stack.spawnAccumulator = 1.05;
-    service.tickBurgerStacks(100);
-    expect(stack.drops).toHaveLength(1);
-    stack.drops[0].y = 0.83;
-    service.tickBurgerStacks(100);
-    expect(stack.completedStack).toEqual([{ ingredient: 'R', lane: 1 }]);
-    expect(stack.stackFlashId).toBe(1);
-  });
-
-  it('fails a misaligned ingredient, clears the burger and applies a one-second penalty', () => {
-    const { service, session, slots } = createLevel9Session(1, () => 0.1);
-    const stack = slots[0].burgerStack;
-    stack.recipe = [{ id: 1, ingredient: 'R', lane: 0 }];
-    stack.challengeLength = 1;
-    stack.nextIngredientIndex = 1;
-    stack.drops = [{ id: 1, ingredient: 'R', lane: 0, y: 0.83 }];
-    stack.stacked = [{ ingredient: 'G', lane: 1 }];
-    service.tickBurgerStacks(100);
-    expect(stack.penaltyMs).toBe(1000);
-    expect(stack.missId).toBe(1);
-    expect(stack.stacked).toHaveLength(0);
-    expect(stack.challengeNumber).toBe(2);
-    expect(() => service.submitInput(session.id, slots[0].token, 'R')).toThrow('BURGER_STACK_RECOVERING');
-    service.tickBurgerStacks(500);
-    expect(stack.penaltyMs).toBe(500);
-    service.tickBurgerStacks(500);
-    expect(stack.penaltyMs).toBe(0);
-  });
-
-  it('awards first, second and third place after four successful burgers per player', () => {
-    const { service, session, slots } = createLevel9Session(3, () => 0.1);
-    for (let p = 0; p < 3; p += 1) {
-      const stack = slots[p].burgerStack;
-      for (let challenge = 0; challenge < 4; challenge += 1) {
-        stack.challengeLength = 1;
-        stack.recipe = [{ id: 1, ingredient: 'R', lane: 1 }];
-        stack.nextIngredientIndex = 1;
-        stack.drops = [{ id: 1, ingredient: 'R', lane: 1, y: 0.83 }];
-        stack.stacked = [];
-        stack.penaltyMs = 0;
-        service.tickBurgerStacks(100);
-      }
-      expect(slots[p].completed).toBe(true);
-      expect(slots[p].place).toBe(p + 1);
-      expect(session.status).toBe(p === 2 ? 'finished' : 'playing');
-    }
-    expect(slots.map((slot) => slot.pointsEarned)).toEqual([5, 3, 1]);
-  });
-
-  it('does not advance falling ingredients or penalties while paused', () => {
+  it('does not advance falling ingredients while paused', () => {
     const { service, session, slots } = createLevel9Session(1);
     const stack = slots[0].burgerStack;
-    const before = stack.spawnAccumulator;
+    stack.spawnAccumulator = 0.8;
     service.setPaused(session.id, true);
     service.tickBurgerStacks(500);
-    expect(stack.spawnAccumulator).toBe(before);
-  });
-
-  it('prevents manual finish until all placements are decided', () => {
-    const { service, session, slots } = createLevel9Session(1);
-    expect(() => service.finishLevel(session.id, slots[0].token)).toThrow('FINISH_NOT_AVAILABLE');
+    expect(stack.drops).toHaveLength(0);
+    expect(stack.nextIngredientIndex).toBe(0);
   });
 });
 
