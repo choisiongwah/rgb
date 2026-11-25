@@ -18,6 +18,10 @@ test('level switching preserves shared and individual rendering', async ({ brows
     await p.getByRole('button', { name: 'Join game' }).click();
     await expect(p.locator('#player-name')).toBeVisible();
   }
+  for (const color of ['RED', 'GREEN', 'BLUE']) {
+    await expect(page.locator('#slot-status-' + color)).toContainText('CONNECTED');
+  }
+
   async function check(stage) {
     await page.locator('#level-select').selectOption(String(stage));
     await page.locator('#start-level').click();
@@ -31,7 +35,7 @@ test('level switching preserves shared and individual rendering', async ({ brows
         const col=cols.nth(i); await expect(col).toBeVisible();
         await expect.poll(async()=>{const b=await col.boundingBox();return !!b&&b.width>80&&b.height>120;}).toBe(true);
         if(stage===3) await expect(col.locator('.host-race-road')).toBeVisible();
-        else { await expect(col.locator('.host-individual-scene')).toBeVisible(); await expect(col.locator('.individual-board')).toBeVisible(); }
+        else { await expect(col.locator('.host-individual-scene'), 'Level ' + stage + ' scene should be rendered for ' + (await col.getAttribute('data-color'))).toBeVisible(); await expect(col.locator('.individual-board')).toBeVisible(); }
       }
     } else {
       await expect(page.locator('#race-display')).toBeHidden();
