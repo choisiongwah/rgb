@@ -613,18 +613,19 @@ class RGBScene extends Phaser.Scene {
     const legendPad=Math.max(5,width*.012), legendTop=height*.77, legendHeight=height*.23;
     const legendWidth=(width-legendPad*2)/3;
     legendColors.forEach((color,i)=>{this.ufoLegendGraphics?.fillStyle(color,1);this.ufoLegendGraphics?.fillRect(legendPad+i*legendWidth,legendTop,legendWidth-legendPad,legendHeight);});
-    this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.865).setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104)));
-    this.ufoOptionLabels?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.965).setFontSize(Math.max(12,Math.min(20,width*.018))));
+    this.ufoOptions?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.865).setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104)));
+    this.ufoOptionLabels?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.965).setFontSize(Math.max(12,Math.min(20,width*.018))));
     this.ufoTarget?.setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104));
     const matrixCellSize = Math.min(width * 0.19, height * 0.145, 138);
     const matrixGap = Math.min(width * 0.025, 22);
     const matrixTop = height * 0.38;
     this.matrixCells?.forEach((cell, index) => {
+      if (!cell) return;
       const row = Math.floor(index / 3), col = index % 3;
       cell.setPosition(center + (col - 1) * (matrixCellSize + matrixGap), matrixTop + row * (matrixCellSize * 0.78))
         .setFontSize(Math.max(17, Math.min(32, matrixCellSize * 0.25)));
     });
-    this.matrixOptions?.forEach((option, index) => option.setPosition(width * (index + 0.5) / 3, height * 0.83)
+    this.matrixOptions?.forEach((option, index) => option?.setPosition(width * (index + 0.5) / 3, height * 0.83)
       .setFontSize(Math.max(12, Math.min(19, width * 0.017))));
     this.subtitle?.setPosition(center, height * 0.16).setFontSize(Math.max(12, Math.min(20, width * 0.017)));
     this.stageText?.setPosition(center, height * 0.26).setFontSize(Math.max(16, Math.min(25, width * 0.021)));
@@ -633,7 +634,7 @@ class RGBScene extends Phaser.Scene {
     this.burgerFallingText?.setPosition(center, height * 0.22);
     this.burgerTopBunText?.setPosition(center, height * 0.62);
     this.statusText?.setPosition(center, height * 0.88).setFontSize(Math.max(13, Math.min(23, width * 0.019)));
-    this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, height * 0.53));
+    this.playerTexts?.forEach((item, index) => item?.setPosition(width * (index + 0.5) / 3, height * 0.53));
     const size = Math.min(height * 0.27, width * 0.15, 170);
     const gap = Math.min(width * 0.055, 54);
     const y = height * 0.59;
@@ -790,12 +791,14 @@ class RGBScene extends Phaser.Scene {
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
     this.matrixCells.forEach((cell, index) => {
+      if (!cell) return;
       const visible = isMatrix;
       cell.setVisible(visible);
       cell.setText(index === 8 ? '?' : (state.matrixPuzzle?.cells?.[index] || (state.status === 'waiting' ? ['●','▲','■','▲','■','●','■','●'][index] : '')));
       cell.setColor(index === 8 ? '#fbbf24' : '#f8fafc').setBackgroundColor(index === 8 ? '#493d20' : '#243247');
     });
     this.matrixOptions.forEach((option, index) => {
+      if (!option) return;
       option.setVisible(isMatrix);
       option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || (state.status === 'waiting' ? ['●','▲','■'][index] : '')));
     });
