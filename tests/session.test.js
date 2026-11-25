@@ -623,6 +623,7 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     session.stage = 7;
     service.startLevel(session.id, slots[0].token);
     session.pieSpeed = 0;
+    session.pieTargetSpeed = 0;
     return { service, session, slots };
   }
   function impact(service, session, slot, color) {
@@ -676,7 +677,8 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     service.tickPies(150);
     expect(slots[0].pieHits[wrong]).toBe(0);
     expect(slots[0].pieThrow.phase).toBe('falling');
-    service.tickPies(600);
+    service.tickPies(500);
+    service.tickPies(100);
     expect(slots[0].pieThrow).toBeNull();
   });
   it('uses the configured hits-per-colour target for completion', () => {
