@@ -20,6 +20,7 @@ let lastBurgerStackFlashId = 0;
 let lastBurgerStackMissId = 0;
 let errorAudioContext;
 function playErrorSound() {
+  return; // Player devices are input-only; feedback is shown on the host display.
   try {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtor) return;
@@ -121,7 +122,7 @@ function renderController(name, color, state) {
       socket.emit('player:input', payload, (result) => {
         button.classList.remove('pressed');
         if (!result.ok) { playErrorSound(); setFeedback(readableError(result.error), 'warning'); }
-        else if (!result.correct) { playErrorSound(); if (latestState?.stage === 7) { const reject = root.querySelector('#pie-reject'); reject.classList.remove('show'); void reject.offsetWidth; reject.classList.add('show'); const knife = root.querySelector('#pie-knife'); knife.classList.remove('reject'); void knife.offsetWidth; knife.classList.add('reject'); } setFeedback(latestState?.stage === 5
+        else if (!result.correct) { playErrorSound(); setFeedback(latestState?.stage === 5
           ? '✕ Wrong ingredient — wait for the next burger'
           : latestState?.stage === 6 ? '✕ Wrong UFO — wait for the next round'
             : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
@@ -477,11 +478,8 @@ function renderFlappy(state, mine) {
   }
 }
 
-function setFeedback(message, kind) {
-  const el = document.querySelector('#feedback');
-  if (!el) return;
-  el.textContent = message;
-  el.className = kind || '';
+function setFeedback() {
+  // The phone is an input console. Gameplay feedback is rendered on the host screen.
 }
 function ordinal(place) { return place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : place + 'th'; }
 function readableError(code) {
