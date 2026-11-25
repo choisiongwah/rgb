@@ -1,14 +1,14 @@
 import QRCode from 'qrcode';
 import Phaser from 'phaser';
-import ufo01Url from './ufo/ufo-01.svg?url';
-import ufo02Url from './ufo/ufo-02.svg?url';
-import ufo03Url from './ufo/ufo-03.svg?url';
-import ufo04Url from './ufo/ufo-04.svg?url';
-import ufo05Url from './ufo/ufo-05.svg?url';
-import ufo06Url from './ufo/ufo-06.svg?url';
-import ufo07Url from './ufo/ufo-07.svg?url';
-import ufo08Url from './ufo/ufo-08.svg?url';
-import ufo09Url from './ufo/ufo-09.svg?url';
+import ufo01Url from './ufo/ufo-01.svg?url&no-inline';
+import ufo02Url from './ufo/ufo-02.svg?url&no-inline';
+import ufo03Url from './ufo/ufo-03.svg?url&no-inline';
+import ufo04Url from './ufo/ufo-04.svg?url&no-inline';
+import ufo05Url from './ufo/ufo-05.svg?url&no-inline';
+import ufo06Url from './ufo/ufo-06.svg?url&no-inline';
+import ufo07Url from './ufo/ufo-07.svg?url&no-inline';
+import ufo08Url from './ufo/ufo-08.svg?url&no-inline';
+import ufo09Url from './ufo/ufo-09.svg?url&no-inline';
 import { io } from 'socket.io-client';
 import './host.css';
 
