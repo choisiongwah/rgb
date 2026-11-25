@@ -34,6 +34,21 @@ function show(user) {
   $('#dashboard').hidden = false;
   $('#welcome').textContent = 'Signed in as ' + user.username + ' (' + user.role + ')';
 }
+let playerFeedbackTimer = null;
+function showPlayerFeedback(feedback) {
+  const panel = $('#player-feedback');
+  if (!panel || !feedback) return;
+  const color = String(feedback.color || '').toLowerCase();
+  const names = { red: 'RED PLAYER', green: 'GREEN PLAYER', blue: 'BLUE PLAYER' };
+  const title = panel.querySelector('.feedback-player');
+  const message = panel.querySelector('.feedback-message');
+  panel.className = 'player-feedback ' + (['red','green','blue'].includes(color) ? color : '') + ' ' + (feedback.kind || 'warning');
+  title.textContent = (feedback.name || names[color] || 'PLAYER') + ' · ' + (feedback.kind === 'wrong' ? 'TRY AGAIN' : feedback.kind === 'success' ? 'NICE MOVE' : 'NOTICE');
+  message.textContent = feedback.message || 'Check the game screen';
+  panel.hidden = false;
+  clearTimeout(playerFeedbackTimer);
+  playerFeedbackTimer = setTimeout(() => { panel.hidden = true; }, 2400);
+}
 function renderSlots(state) {
   for (const player of state.players) {
     const status = $('#slot-status-' + player.color);
@@ -988,6 +1003,7 @@ async function createRoom() {
     else $('#error').textContent = ack.error;
   }));
   socket.on('game:state', applyState);
+  socket.on('host:player-feedback', showPlayerFeedback);
 
   game?.destroy(true);
   game = new Phaser.Game({
