@@ -589,18 +589,19 @@ describe('SessionService Level 6 UFO Spotter', () => {
     expect(result.pointAwarded).toBe(1);
     expect(slots[0].successCount).toBe(1);
     expect(session.ufoPhase).toBe('feedback');
-    service.tickUfos(1000);
+    service.tickUfos(500);
+    service.tickUfos(500);
     expect(session.ufoRoundId).toBe(oldRound + 1);
     expect(session.ufoPhase).toBe('flyby');
   });
   it('continues placements until all players reach the configured target', () => {
     const { service, session, slots } = createLevel6Session();
     for (let playerIndex = 0; playerIndex < slots.length; playerIndex += 1) {
-      if (playerIndex > 0) service.tickUfos(1000);
+      if (playerIndex > 0) { service.tickUfos(500); service.tickUfos(500); }
       while (!slots[playerIndex].completed) {
         const result = answerCorrectly(service, session, slots[playerIndex]);
         expect(result.correct).toBe(true);
-        if (!slots[playerIndex].completed) service.tickUfos(1000);
+        if (!slots[playerIndex].completed) { service.tickUfos(500); service.tickUfos(500); }
       }
       expect(slots[playerIndex].place).toBe(playerIndex + 1);
       expect(session.status).toBe(playerIndex === 2 ? 'finished' : 'playing');
@@ -662,7 +663,8 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
     service.tickPies(150);
     expect(slots[0].pieThrow.phase).toBe('falling');
     expect(slots[0].pieThrow.occupied).toBe(true);
-    service.tickPies(600);
+    service.tickPies(500);
+    service.tickPies(100);
     expect(slots[0].pieThrow).toBeNull();
     expect(slots[0].pieKnives).toHaveLength(1);
   });
