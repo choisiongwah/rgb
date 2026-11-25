@@ -506,19 +506,17 @@ function applyState(state) {
       const latestState = currentState || state;
       const latestIsIndividual = [3,4,5,7,8,9].includes(latestState.stage);
       const root = $('#game-root');
-      root.hidden = latestIsIndividual;
-      root.style.display = latestIsIndividual ? 'none' : 'block';
-      if (latestIsIndividual) {
-        game.canvas.style.display = 'none';
-        return;
-      }
+      // The room mode class owns visibility. Do not toggle the Phaser canvas
+      // itself: display:none can leave the Scale Manager with stale dimensions
+      // when returning from an individual-column level.
+      if (latestIsIndividual) return;
       const width = Math.max(320, root.clientWidth || window.innerWidth);
       const height = Math.max(220, root.clientHeight || Math.round(window.innerHeight * 0.7));
-      game.canvas.style.display = 'block';
       game.canvas.style.visibility = 'visible';
-      game.scale.resize(width, height);
       scene.scene.setActive(true);
       scene.scene.setVisible(true);
+      game.scale.resize(width, height);
+      game.scale.refresh();
       scene.layout(width, height);
       scene.updateState(latestState);
     });
