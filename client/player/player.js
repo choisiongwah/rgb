@@ -18,27 +18,7 @@ let lastKnifeMissId = 0;
 let lastKnifeHitId = 0;
 let lastBurgerStackFlashId = 0;
 let lastBurgerStackMissId = 0;
-let errorAudioContext;
-function playErrorSound() {
-  return; // Player devices are input-only; feedback is shown on the host display.
-  try {
-    const AudioCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtor) return;
-    errorAudioContext ||= new AudioCtor();
-    if (errorAudioContext.state === 'suspended') errorAudioContext.resume();
-    const now = errorAudioContext.currentTime;
-    const oscillator = errorAudioContext.createOscillator();
-    const gain = errorAudioContext.createGain();
-    oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(260, now);
-    oscillator.frequency.exponentialRampToValueAtTime(115, now + 0.18);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-    oscillator.connect(gain); gain.connect(errorAudioContext.destination);
-    oscillator.start(now); oscillator.stop(now + 0.23);
-  } catch { /* Audio remains optional when the browser blocks playback. */ }
-}
+function playErrorSound() { /* Gameplay feedback is displayed on the host screen. */ }
 const raceObstacleNodes = new Map();
 
 if (!sessionId || !joinToken) {
@@ -91,7 +71,6 @@ function emitControl(action, extra = {}) {
 
 function renderController(name, color, state) {
   root.innerHTML = '<header><div><h1 id="player-name"></h1><p id="player-color"></p></div><span id="connection-state">Connected</span></header>' +
-    '<p id="feedback" aria-live="polite">Waiting for the game to start</p>' +
     '<section id="level-intro" class="level-intro" hidden><strong id="level-intro-title"></strong><p id="level-intro-copy"></p><small>Game begins when the player controller starts the level.</small></section>' +
     '<section id="burger-quiz" class="burger-quiz" hidden><strong>BUILD THIS BURGER</strong><div class="burger-quiz-columns"><div><small>RECIPE</small><div id="burger-quiz-stack" class="burger-quiz-stack"></div></div><div><small>YOUR BURGER</small><div id="burger-built-stack" class="burger-quiz-stack"><span>🍞</span></div></div></div></section>' +
     '<section id="pie-screen" class="pie-screen" hidden><div class="pie-hud"><strong>KNIFE HIT</strong><span id="pie-score"></span></div><div class="pie-stage"><div id="pie-wheel" class="pie-wheel"><span class="pie-centre"></span></div><div id="pie-knife" class="pie-knife">🔪</div><div id="pie-reject" class="pie-reject">✕</div></div><p id="pie-next-hint">Throw from the bottom edge. Match the colour and avoid attached knives.</p></section>' +
