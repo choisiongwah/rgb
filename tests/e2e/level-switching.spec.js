@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('level switching preserves shared and individual rendering', async ({ browser, page }) => {
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.goto('/');
   await page.locator('input[name="username"]').fill('playwright-admin');
   await page.locator('input[name="password"]').fill('playwright-test-password');
