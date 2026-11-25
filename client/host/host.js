@@ -1,9 +1,19 @@
 import QRCode from 'qrcode';
 import Phaser from 'phaser';
+import ufo01Url from './ufo/ufo-01.svg?url&no-inline';
+import ufo02Url from './ufo/ufo-02.svg?url&no-inline';
+import ufo03Url from './ufo/ufo-03.svg?url&no-inline';
+import ufo04Url from './ufo/ufo-04.svg?url&no-inline';
+import ufo05Url from './ufo/ufo-05.svg?url&no-inline';
+import ufo06Url from './ufo/ufo-06.svg?url&no-inline';
+import ufo07Url from './ufo/ufo-07.svg?url&no-inline';
+import ufo08Url from './ufo/ufo-08.svg?url&no-inline';
+import ufo09Url from './ufo/ufo-09.svg?url&no-inline';
 import { io } from 'socket.io-client';
 import './host.css';
 
 const $ = (selector) => document.querySelector(selector);
+const UFO_TEXTURE_URLS = [ufo01Url, ufo02Url, ufo03Url, ufo04Url, ufo05Url, ufo06Url, ufo07Url, ufo08Url, ufo09Url];
 const UFO_FLIGHT_PATHS = [
   { x:115, y:160, xEnd:115, yEnd:310, flipY:true },
   { x:115, y:170, xEnd:260, yEnd:170 },
@@ -17,6 +27,7 @@ let game;
 let currentState;
 let renderRequestId = 0;
 let successAudioContext;
+let levelSelectionPending = false;
 
 function show(user) {
   $('#login').hidden = true;
@@ -481,14 +492,16 @@ function applyState(state) {
   const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
-  if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
+  if (levelSelect && !levelSelectionPending && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
   const isIndividualDisplay = [3,4,5,7,8,9].includes(state.stage);
   const room = $('#room');
   room.classList.toggle('individual-mode', isIndividualDisplay);
   room.classList.toggle('shared-mode', !isIndividualDisplay);
   $('#race-display').hidden = !isIndividualDisplay;
-  $('#game-root').hidden = isIndividualDisplay;
+  // Keep the Phaser parent in the layout at all times. Hiding it with the
+  // hidden attribute collapses it to 0x0 and can invalidate WebGL framebuffers.
+  $('#game-root').hidden = false;
   $('#player-strip').hidden = isIndividualDisplay;
   $('#host-actions').hidden = false;
   if (isIndividualDisplay) renderRaceDisplay(state);
@@ -525,7 +538,7 @@ function applyState(state) {
 
 class RGBScene extends Phaser.Scene {
   constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.lastPieHit = 0; this.audioContext = null; }
-  preload() { for(let id=1;id<=9;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
+  preload() { UFO_TEXTURE_URLS.forEach((url, index) => this.load.svg('ufo-' + (index + 1), url, { width: 180, height: 100 })); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
@@ -600,18 +613,19 @@ class RGBScene extends Phaser.Scene {
     const legendPad=Math.max(5,width*.012), legendTop=height*.77, legendHeight=height*.23;
     const legendWidth=(width-legendPad*2)/3;
     legendColors.forEach((color,i)=>{this.ufoLegendGraphics?.fillStyle(color,1);this.ufoLegendGraphics?.fillRect(legendPad+i*legendWidth,legendTop,legendWidth-legendPad,legendHeight);});
-    this.ufoOptions?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.865).setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104)));
-    this.ufoOptionLabels?.forEach((o,i)=>o.setPosition(width*(i+.5)/3,height*.965).setFontSize(Math.max(12,Math.min(20,width*.018))));
+    this.ufoOptions?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.865).setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104)));
+    this.ufoOptionLabels?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.965).setFontSize(Math.max(12,Math.min(20,width*.018))));
     this.ufoTarget?.setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104));
     const matrixCellSize = Math.min(width * 0.19, height * 0.145, 138);
     const matrixGap = Math.min(width * 0.025, 22);
     const matrixTop = height * 0.38;
     this.matrixCells?.forEach((cell, index) => {
+      if (!cell) return;
       const row = Math.floor(index / 3), col = index % 3;
       cell.setPosition(center + (col - 1) * (matrixCellSize + matrixGap), matrixTop + row * (matrixCellSize * 0.78))
         .setFontSize(Math.max(17, Math.min(32, matrixCellSize * 0.25)));
     });
-    this.matrixOptions?.forEach((option, index) => option.setPosition(width * (index + 0.5) / 3, height * 0.83)
+    this.matrixOptions?.forEach((option, index) => option?.setPosition(width * (index + 0.5) / 3, height * 0.83)
       .setFontSize(Math.max(12, Math.min(19, width * 0.017))));
     this.subtitle?.setPosition(center, height * 0.16).setFontSize(Math.max(12, Math.min(20, width * 0.017)));
     this.stageText?.setPosition(center, height * 0.26).setFontSize(Math.max(16, Math.min(25, width * 0.021)));
@@ -620,7 +634,7 @@ class RGBScene extends Phaser.Scene {
     this.burgerFallingText?.setPosition(center, height * 0.22);
     this.burgerTopBunText?.setPosition(center, height * 0.62);
     this.statusText?.setPosition(center, height * 0.88).setFontSize(Math.max(13, Math.min(23, width * 0.019)));
-    this.playerTexts?.forEach((item, index) => item.setPosition(width * (index + 0.5) / 3, height * 0.53));
+    this.playerTexts?.forEach((item, index) => item?.setPosition(width * (index + 0.5) / 3, height * 0.53));
     const size = Math.min(height * 0.27, width * 0.15, 170);
     const gap = Math.min(width * 0.055, 54);
     const y = height * 0.59;
@@ -777,12 +791,14 @@ class RGBScene extends Phaser.Scene {
       : 'Race to ' + state.targetCycles + ' completed cycles!');
     this.diceGraphics.setVisible(isDice);
     this.matrixCells.forEach((cell, index) => {
+      if (!cell) return;
       const visible = isMatrix;
       cell.setVisible(visible);
       cell.setText(index === 8 ? '?' : (state.matrixPuzzle?.cells?.[index] || (state.status === 'waiting' ? ['●','▲','■','▲','■','●','■','●'][index] : '')));
       cell.setColor(index === 8 ? '#fbbf24' : '#f8fafc').setBackgroundColor(index === 8 ? '#493d20' : '#243247');
     });
     this.matrixOptions.forEach((option, index) => {
+      if (!option) return;
       option.setVisible(isMatrix);
       option.setText(['R','G','B'][index] + ' · ' + (state.matrixPuzzle?.options?.[index] || (state.status === 'waiting' ? ['●','▲','■'][index] : '')));
     });
@@ -909,6 +925,7 @@ async function createRoom() {
   const config = await configResponse.json();
   const publicBaseUrl = (config.publicBaseUrl || location.origin).replace(/\/$/, '');
 
+  levelSelectionPending = false;
   $('#room').hidden = false;
   $('#results-page').hidden = true;
   $('#review-results').hidden = true;
@@ -1009,6 +1026,7 @@ $('#logout').addEventListener('click', async () => {
   location.reload();
 });
 $('#create').addEventListener('click', createRoom);
+$('#level-select').addEventListener('change', () => { levelSelectionPending = true; });
 $('#start-level').addEventListener('click', () => {
   const stage = Number($('#level-select').value);
   $('#start-level').disabled = true;
@@ -1018,7 +1036,11 @@ $('#start-level').addEventListener('click', () => {
     $('#start-level').disabled = false;
     delete $('#start-level').dataset.pending;
     if (!ack?.ok) $('#error').textContent = ack?.error || 'Could not start selected level';
-    else $('#error').textContent = '';
+    else {
+      levelSelectionPending = false;
+      if (ack.state) $('#level-select').value = String(ack.state.stage);
+      $('#error').textContent = '';
+    }
   });
 });
 $('#review-results').addEventListener('click', () => {
