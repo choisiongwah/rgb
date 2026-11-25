@@ -176,7 +176,7 @@
 #room.shared-mode #game-root{display:block!important;flex:0 0 70dvh;height:70dvh;min-height:0;position:relative;z-index:2}
 #room.shared-mode #player-strip{display:grid!important;flex:0 0 30dvh;height:30dvh;min-height:0;position:relative;z-index:2}
 #room.individual-mode #race-display{display:grid!important;position:absolute;inset:0;width:100%;height:100%;z-index:3}
-#room.individual-mode #game-root,#room.individual-mode #player-strip{display:none!important}
+#room.individual-mode #game-root{display:block!important;visibility:hidden!important;pointer-events:none!important;flex:0 0 70dvh;height:70dvh;min-height:0;position:relative;z-index:2}\n#room.individual-mode #player-strip{display:none!important}
 
 
 /* Level 8 — compact coloured stepping platforms and player character. */
