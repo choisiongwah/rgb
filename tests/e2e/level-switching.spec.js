@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test';
 test('level switching preserves shared and individual rendering', async ({ browser, page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.stack || error.message));
+  page.on('requestfailed', request => errors.push('REQUEST FAILED ' + request.url() + ': ' + request.failure()?.errorText));
+  page.on('response', response => { if (response.url().includes('/ufo-') && response.status() >= 400) errors.push('UFO ASSET HTTP ' + response.status() + ' ' + response.url()); });
   await page.goto('/');
   await page.locator('input[name="username"]').fill('playwright-admin');
   await page.locator('input[name="password"]').fill('playwright-test-password');
@@ -29,7 +31,8 @@ test('level switching preserves shared and individual rendering', async ({ brows
     await expect(page.locator('#room')).toHaveClass(individual ? /individual-mode/ : /shared-mode/);
     if (individual) {
       await expect(page.locator('#race-display')).toBeVisible();
-      await expect(page.locator('#game-root')).toBeHidden();
+      await expect(page.locator('#game-root')).toBeVisible();
+      await expect.poll(async () => { const b = await page.locator('#game-root').boundingBox(); return !!b && b.width > 200 && b.height > 120; }).toBe(true);
       const cols = page.locator('.race-column'); await expect(cols).toHaveCount(3);
       for (let i=0;i<3;i++) {
         const col=cols.nth(i); await expect(col).toBeVisible();
