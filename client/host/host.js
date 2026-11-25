@@ -1,9 +1,19 @@
 import QRCode from 'qrcode';
 import Phaser from 'phaser';
+import ufo01Url from './ufo/ufo-01.svg?url';
+import ufo02Url from './ufo/ufo-02.svg?url';
+import ufo03Url from './ufo/ufo-03.svg?url';
+import ufo04Url from './ufo/ufo-04.svg?url';
+import ufo05Url from './ufo/ufo-05.svg?url';
+import ufo06Url from './ufo/ufo-06.svg?url';
+import ufo07Url from './ufo/ufo-07.svg?url';
+import ufo08Url from './ufo/ufo-08.svg?url';
+import ufo09Url from './ufo/ufo-09.svg?url';
 import { io } from 'socket.io-client';
 import './host.css';
 
 const $ = (selector) => document.querySelector(selector);
+const UFO_TEXTURE_URLS = [ufo01Url, ufo02Url, ufo03Url, ufo04Url, ufo05Url, ufo06Url, ufo07Url, ufo08Url, ufo09Url];
 const UFO_FLIGHT_PATHS = [
   { x:115, y:160, xEnd:115, yEnd:310, flipY:true },
   { x:115, y:170, xEnd:260, yEnd:170 },
@@ -489,7 +499,9 @@ function applyState(state) {
   room.classList.toggle('individual-mode', isIndividualDisplay);
   room.classList.toggle('shared-mode', !isIndividualDisplay);
   $('#race-display').hidden = !isIndividualDisplay;
-  $('#game-root').hidden = isIndividualDisplay;
+  // Keep the Phaser parent in the layout at all times. Hiding it with the
+  // hidden attribute collapses it to 0x0 and can invalidate WebGL framebuffers.
+  $('#game-root').hidden = false;
   $('#player-strip').hidden = isIndividualDisplay;
   $('#host-actions').hidden = false;
   if (isIndividualDisplay) renderRaceDisplay(state);
@@ -526,7 +538,7 @@ function applyState(state) {
 
 class RGBScene extends Phaser.Scene {
   constructor() { super('RGBScene'); this.celebrated = new Set(); this.successSeen = new Map(); this.lastDiceRound = null; this.lastBurgerRound = null; this.lastBurgerDrop = 0; this.lastBurgerComplete = 0; this.lastPieHit = 0; this.audioContext = null; }
-  preload() { for(let id=1;id<=9;id++) this.load.svg('ufo-'+id,new URL('./ufo/ufo-'+String(id).padStart(2,'0')+'.svg',import.meta.url).href,{width:180,height:100}); }
+  preload() { UFO_TEXTURE_URLS.forEach((url, index) => this.load.svg('ufo-' + (index + 1), url, { width: 180, height: 100 })); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
     this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
