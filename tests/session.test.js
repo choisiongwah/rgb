@@ -497,6 +497,7 @@ describe('SessionService Level 5 Burger Builder', () => {
     const random = () => [0, 0, 0.4, 0.8, 0][randomIndex++ % 5];
     const { service, session, slots } = createLevel5Session(2, random);
     const roundId = session.burgerRoundId;
+    session.burgerSequence = ['B', 'G', 'R'];
     service.submitInput(session.id, slots[0].token, 'R', roundId);
     expect(session.burgerLastDrop).toMatchObject({ action: 'R', ingredient: '🥩', color: 'RED' });
     service.submitInput(session.id, slots[0].token, 'G', roundId);
@@ -685,7 +686,8 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
           return service.toPublicView(session).pieTargetColor === color;
         });
       const angle = candidates.find((candidate) => slots[0].pieKnives.every((knife) => {
-        const difference = Math.abs(((knife.angle - candidate + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        const impactAngle = Math.PI / 2 + candidate;
+        const difference = Math.abs(((knife.angle - impactAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
         return Math.min(difference, Math.PI * 2 - difference) >= Math.PI / 18;
       }));
       expect(angle).toBeDefined();
