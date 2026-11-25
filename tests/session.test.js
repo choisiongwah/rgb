@@ -596,6 +596,7 @@ describe('SessionService Level 6 UFO Spotter', () => {
   it('continues placements until all players reach the configured target', () => {
     const { service, session, slots } = createLevel6Session();
     for (let playerIndex = 0; playerIndex < slots.length; playerIndex += 1) {
+      if (playerIndex > 0) service.tickUfos(1000);
       while (!slots[playerIndex].completed) {
         const result = answerCorrectly(service, session, slots[playerIndex]);
         expect(result.correct).toBe(true);
@@ -691,7 +692,7 @@ describe('SessionService Level 7 RGB Knife Hit', () => {
         return Math.min(difference, Math.PI * 2 - difference) >= Math.PI / 18;
       }));
       expect(angle).toBeDefined();
-      session.pieAngle = angle - Math.PI / 2;
+      session.pieAngle = angle;
       const target = service.toPublicView(session).pieTargetColor;
       service.submitInput(session.id, slots[0].token, target);
       service.tickPies(150);
