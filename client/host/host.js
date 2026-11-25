@@ -17,6 +17,7 @@ let game;
 let currentState;
 let renderRequestId = 0;
 let successAudioContext;
+let levelSelectionPending = false;
 
 function show(user) {
   $('#login').hidden = true;
@@ -481,7 +482,7 @@ function applyState(state) {
   const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
-  if (levelSelect && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
+  if (levelSelect && !levelSelectionPending && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
   const isIndividualDisplay = [3,4,5,7,8,9].includes(state.stage);
   const room = $('#room');
@@ -909,6 +910,7 @@ async function createRoom() {
   const config = await configResponse.json();
   const publicBaseUrl = (config.publicBaseUrl || location.origin).replace(/\/$/, '');
 
+  levelSelectionPending = false;
   $('#room').hidden = false;
   $('#results-page').hidden = true;
   $('#review-results').hidden = true;
@@ -1009,6 +1011,7 @@ $('#logout').addEventListener('click', async () => {
   location.reload();
 });
 $('#create').addEventListener('click', createRoom);
+$('#level-select').addEventListener('change', () => { levelSelectionPending = true; });
 $('#start-level').addEventListener('click', () => {
   const stage = Number($('#level-select').value);
   $('#start-level').disabled = true;
@@ -1018,7 +1021,11 @@ $('#start-level').addEventListener('click', () => {
     $('#start-level').disabled = false;
     delete $('#start-level').dataset.pending;
     if (!ack?.ok) $('#error').textContent = ack?.error || 'Could not start selected level';
-    else $('#error').textContent = '';
+    else {
+      levelSelectionPending = false;
+      if (ack.state) $('#level-select').value = String(ack.state.stage);
+      $('#error').textContent = '';
+    }
   });
 });
 $('#review-results').addEventListener('click', () => {
