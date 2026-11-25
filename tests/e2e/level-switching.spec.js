@@ -31,7 +31,7 @@ test('level switching preserves shared and individual rendering', async ({ brows
     await expect(page.locator('#room')).toHaveClass(individual ? /individual-mode/ : /shared-mode/);
     if (individual) {
       await expect(page.locator('#race-display')).toBeVisible();
-      await expect(page.locator('#game-root')).toBeVisible();
+      await expect(page.locator('#game-root')).toHaveAttribute('aria-label', 'Shared game screen');
       await expect.poll(async () => { const b = await page.locator('#game-root').boundingBox(); return !!b && b.width > 200 && b.height > 120; }).toBe(true);
       const cols = page.locator('.race-column'); await expect(cols).toHaveCount(3);
       for (let i=0;i<3;i++) {
