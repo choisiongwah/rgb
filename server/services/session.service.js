@@ -8,7 +8,7 @@ const MAX_TARGET_CYCLES = 100;
 const DICE_TARGET = 6;
 const RACE_TARGET_METERS = 3000;
 const FLAPPY_TARGET_BLOCKERS = 20;
-const BURGER_TARGET_POINTS = 5;
+const BURGER_TARGET_POINTS = 6;
 const UFO_TARGET_POINTS = 10;
 const ISLAND_TARGET_SHARKS = 50;
 const ISLAND_MILESTONE_SIZE = 10;
@@ -25,7 +25,7 @@ function angleDistance(a,b) { const d=Math.abs(normalizeAngle(a)-normalizeAngle(
 function pieImpactAngle(wheelAngle) { return normalizeAngle(Math.PI / 2 + wheelAngle); }
 function pieOccupied(knives,angle) { return knives.some((knife)=>angleDistance(knife.angle,angle)<(10*Math.PI/180)); }
 const BURGER_STACK_TARGET = 4;
-const BURGER_STACK_MIN_LENGTH = 3;
+const BURGER_STACK_MIN_LENGTH = 4;
 const BURGER_STACK_MAX_LENGTH = 7;
 const BURGER_STACK_INGREDIENTS = ['R','G','B'];
 function createBurgerStackState(random) {
@@ -51,10 +51,10 @@ const UFO_FLYBY_MS = 600;
 const UFO_FEEDBACK_MS = 1000;
 const UFO_PATH_COUNT = 5;
 function createUfoOptions(random) { const targetId=1+Math.floor(random()*9); const correctIndex=Math.floor(random()*3); const pool=[1,2,3,4,5,6,7,8,9].filter(id=>id!==targetId); const options=[]; for(let i=0;i<3;i++){if(i===correctIndex)options.push(targetId);else{const pick=Math.floor(random()*pool.length);options.push(pool.splice(pick,1)[0]);}} return {targetId,options,correctIndex};}
-const BURGER_MIN_LENGTH = 3;
-const BURGER_MAX_LENGTH = 7;
+const BURGER_MIN_LENGTH = 4;
+const BURGER_MAX_LENGTH = 8;
 const BURGER_INGREDIENTS = ['R', 'G', 'B'];
-const BURGER_EMOJI = { R: '🍅', G: '🥬', B: '🥩' };
+const BURGER_EMOJI = { R: '🥩', G: '🥬', B: '🍅' };
 function createBurgerSequence(random) {
   const length = BURGER_MIN_LENGTH + Math.floor(random() * (BURGER_MAX_LENGTH - BURGER_MIN_LENGTH + 1));
   return Array.from({ length }, () => BURGER_INGREDIENTS[Math.floor(random() * BURGER_INGREDIENTS.length)]);
@@ -356,7 +356,7 @@ export class SessionService {
       for (const pipe of state.pipes) {
         if (pipe.x < -(50/600)) {
           state.score += 1;
-          // Generate exactly 30 platforms in the whole course, then let
+          // Generate exactly the configured number of platforms in the whole course, then let
           // the remaining platforms clear naturally without replacements.
           if (state.nextId <= session.triTarget) {
             pipe.x = rightmost + (100/600);
