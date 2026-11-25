@@ -355,9 +355,12 @@ export class SessionService {
       let rightmost = Math.max(...state.pipes.map((pipe) => pipe.x));
       for (const pipe of state.pipes) {
         if (pipe.x < -(50/600)) {
+          if (state.score >= session.triTarget) {
+            pipe.x = -1;
+            continue;
+          }
           state.score += 1;
-          // Generate exactly the configured number of platforms in the whole course, then let
-          // the remaining platforms clear naturally without replacements.
+          // Generate exactly the configured number of platforms in the whole course.
           if (state.nextId <= session.triTarget) {
             pipe.x = rightmost + (100/600);
             rightmost = pipe.x;
