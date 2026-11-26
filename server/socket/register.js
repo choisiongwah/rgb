@@ -12,6 +12,7 @@ const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('configure'), target: z.number().int() })
 ]);
 const room = (id) => 'session:' + id;
+const hostRoom = (id) => 'session:' + id + ':host';
 
 export function registerSocketHandlers(io, { sessions }) {
   io.use((socket, next) => {
@@ -57,6 +58,7 @@ export function registerSocketHandlers(io, { sessions }) {
         }
         socket.data.hostSessionId = sessionId;
         socket.join(room(sessionId));
+        socket.join(hostRoom(sessionId));
         ack({ ok: true, session: sessions.toHostView(session) });
       });
       return;
@@ -122,11 +124,43 @@ export function registerSocketHandlers(io, { sessions }) {
         );
         const state = sessions.toPublicView(result.session);
         io.to(room(result.session.id)).emit('game:state', state);
+        if (result.correct === false || result.pointAwarded || result.cycleCompleted) {
+          const feedback = result.correct === false
+            ? ({ 1: 'Sequence restarted', 2: 'Wrong dice position', 5: 'Wrong ingredient', 6: 'Wrong UFO — watch the next one', 7: 'Missed the pie — try another colour', 8: 'Wrong shark colour — check the next step', 10: 'Wrong pattern position' }[result.session.stage] || 'Not quite — watch the main screen')
+            : (result.cycleCompleted ? 'Challenge completed!' : 'Correct answer!');
+          io.to(hostRoom(result.session.id)).emit('host:player-feedback', {
+            color: result.slot.color,
+            name: result.slot.player?.name || result.slot.color + ' Player',
+            stage: result.session.stage,
+            kind: result.correct === false ? 'wrong' : 'success',
+            message: feedback
+          });
+        }
         ack({
           ok: true, correct: result.correct, reset: result.reset,
           cycleCompleted: result.cycleCompleted, pointAwarded: result.pointAwarded || 0
         });
       } catch (error) {
+        const session = sessions.get(socket.data.playerSessionId);
+        const slot = session?.players.find((player) => player.token === socket.data.playerToken);
+        if (session && slot) {
+          const messages = {
+            GAME_PAUSED: 'Game paused — wait for the host',
+            LEVEL_NOT_RUNNING: 'Wait for the host to start the level',
+            PLAYER_ALREADY_FINISHED: 'You have completed this level',
+            NOT_IN_THIS_LEVEL: 'You are not active in this level',
+            RACE_PENALTY_ACTIVE: 'Crash! Recovering — 2 seconds',
+            FLAPPY_RECOVERING: 'Rocket recovering — tap again shortly',
+            BURGER_STACK_RECOVERING: 'Missed ingredient — recovering'
+          };
+          io.to(hostRoom(session.id)).emit('host:player-feedback', {
+            color: slot.color,
+            name: slot.player?.name || slot.color + ' Player',
+            stage: session.stage,
+            kind: 'warning',
+            message: messages[error.message] || 'Input not accepted'
+          });
+        }
         ack({ ok: false, error: error.message });
       }
     });

@@ -254,3 +254,33 @@
 .pie-ready-knife.falling{animation:pie-hitknife-fall .6s cubic-bezier(.5,.05,.8,.5) forwards}
 @keyframes pie-hitknife-launch{from{bottom:5%;opacity:1}to{bottom:calc(100% - 12px);opacity:1}}
 @keyframes pie-hitknife-fall{0%{bottom:calc(100% - 12px);transform:translateX(-50%) rotate(0);opacity:1}100%{bottom:-35%;transform:translateX(-50%) rotate(286deg);opacity:0}}
+
+/* Gameplay feedback belongs on the shared host display, not on the phone console. */
+.player-feedback{position:absolute;z-index:9;top:clamp(64px,10vh,100px);left:50%;transform:translateX(-50%);width:min(88vw,560px);display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 22px;border:2px solid #64748b;border-radius:16px;background:#0f172aee;box-shadow:0 12px 35px #0009;text-align:center;pointer-events:none;animation:player-feedback-in .18s ease-out}
+.player-feedback[hidden]{display:none!important}
+.player-feedback .feedback-player{font-size:clamp(11px,1.3vw,15px);font-weight:1000;letter-spacing:.13em;color:#e2e8f0}
+.player-feedback .feedback-message{font-size:clamp(17px,2.2vw,27px);font-weight:1000;color:#fff;text-wrap:balance}
+.player-feedback.red{border-color:#ef4444}.player-feedback.red .feedback-player{color:#fca5a5}
+.player-feedback.green{border-color:#22c55e}.player-feedback.green .feedback-player{color:#86efac}
+.player-feedback.blue{border-color:#3b82f6}.player-feedback.blue .feedback-player{color:#93c5fd}
+.player-feedback.wrong{background:#451a1aee;border-color:#ef4444}
+.player-feedback.success{background:#052e24ee;border-color:#22c55e}
+.player-feedback.warning{background:#422006ee;border-color:#f59e0b}
+@keyframes player-feedback-in{from{opacity:0;translate:0 -10px;scale:.96}to{opacity:1;translate:0 0;scale:1}}
+@media(max-width:620px){.player-feedback{top:64px;width:calc(100vw - 24px);padding:10px 14px;border-radius:12px}}
+
+/* Give every individual player column an explicit, equal grid track.
+   This prevents a column from collapsing during rapid shared/individual mode switches. */
+#room.individual-mode #race-display{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  align-items:stretch!important;
+  align-content:stretch!important;
+}
+#room.individual-mode #race-display>.race-column{
+  display:flex!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+}
