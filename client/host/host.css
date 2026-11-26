@@ -310,3 +310,9 @@
 .pie-knives-host .pie-stuck-knife{
   transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 14px));
 }
+
+/* Preserve the rim anchor throughout the stick-in animation as well as after it. */
+@keyframes pie-knife-stick{
+  from{opacity:.25;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 26px))}
+  to{opacity:1;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 14px))}
+}
