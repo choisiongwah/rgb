@@ -40,30 +40,29 @@ function showPlayerFeedback(feedback) {
   if (!feedback) return;
   const color = String(feedback.color || '').toLowerCase();
   const names = { red: 'RED PLAYER', green: 'GREEN PLAYER', blue: 'BLUE PLAYER' };
+  if (!['red','green','blue'].includes(color)) return;
   const individualStages = [3,4,5,7,8,9];
-  if (individualStages.includes(Number(feedback.stage)) && ['red','green','blue'].includes(color)) {
-    const column = $('#race-display')?.querySelector('[data-color="' + color.toUpperCase() + '"]');
-    if (!column) return;
-    let panel = column.querySelector('.column-feedback');
-    if (!panel) {
-      panel = document.createElement('aside');
-      panel.className = 'column-feedback';
-      panel.setAttribute('role', 'status');
-      panel.setAttribute('aria-live', 'polite');
-      panel.innerHTML = '<strong class="column-feedback-title"></strong><span class="column-feedback-message"></span>';
-      column.append(panel);
-    }
-    panel.className = 'column-feedback ' + (feedback.kind || 'warning');
-    panel.querySelector('.column-feedback-title').textContent =
-      (feedback.name || names[color]) + ' · ' + (feedback.kind === 'wrong' ? 'TRY AGAIN' : feedback.kind === 'success' ? 'NICE MOVE' : 'NOTICE');
-    panel.querySelector('.column-feedback-message').textContent = feedback.message || 'Check your next move';
-    panel.hidden = false;
-    clearTimeout(columnFeedbackTimers.get(color));
-    columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800));
-    return;
+  const column = individualStages.includes(Number(feedback.stage))
+    ? $('#race-display')?.querySelector('[data-color="' + color.toUpperCase() + '"]')
+    : $('#player-strip')?.querySelector('.player-panel[data-color="' + color.toUpperCase() + '"]');
+  if (!column) return;
+  let panel = column.querySelector('.column-feedback');
+  if (!panel) {
+    panel = document.createElement('aside');
+    panel.className = 'column-feedback';
+    panel.setAttribute('role', 'status');
+    panel.setAttribute('aria-live', 'polite');
+    panel.innerHTML = '<strong class="column-feedback-title"></strong><span class="column-feedback-message"></span>';
+    column.append(panel);
   }
-  const panel = $('#player-feedback');
-  if (!panel) return;
+  panel.className = 'column-feedback ' + (feedback.kind || 'warning');
+  panel.querySelector('.column-feedback-title').textContent =
+    (feedback.name || names[color]) + ' · ' + (feedback.kind === 'wrong' ? 'TRY AGAIN' : feedback.kind === 'success' ? 'NICE MOVE' : 'NOTICE');
+  panel.querySelector('.column-feedback-message').textContent = feedback.message || 'Check your next move';
+  panel.hidden = false;
+  clearTimeout(columnFeedbackTimers.get(color));
+  columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800);
+  return;
   const title = panel.querySelector('.feedback-player');
   const message = panel.querySelector('.feedback-message');
   panel.className = 'player-feedback ' + (['red','green','blue'].includes(color) ? color : '') + ' ' + (feedback.kind || 'warning');
@@ -399,7 +398,7 @@ function renderIndividualBoard(board, state, player) {
         knivesHost.append(knife);
       }
       const knifeColors = {R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
-      knife.style.setProperty('--knife-angle', (90 + Number(item.angle || 0)*180/Math.PI) + 'deg');
+      knife.style.setProperty('--knife-angle', (Number(item.angle || 0)*180/Math.PI) + 'deg');
       knife.style.setProperty('--knife-color', knifeColors[item.color] || '#f8fafc');
     }
     for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
@@ -567,9 +566,11 @@ function applyState(state) {
       game.canvas.style.visibility = 'visible';
       scene.scene.setActive(true);
       scene.scene.setVisible(true);
-      game.scale.resize(width, height);
-      game.scale.refresh();
-      scene.layout(width, height);
+      const scaleSize = game.scale.gameSize;
+      if (!scaleSize || scaleSize.width !== width || scaleSize.height !== height) {
+        game.scale.resize(width, height);
+        scene.layout(width, height);
+      }
       scene.updateState(latestState);
     });
   }
@@ -1024,6 +1025,7 @@ async function createRoom() {
     const result = document.createElement('div');
     result.id = 'result-' + player.color;
     result.className = 'player-result';
+    card.dataset.color = player.color;
     card.append(title, mascot, qr, joinLink, status, count, result);
     $('#player-strip').append(card);
   }
