@@ -284,3 +284,29 @@
   min-width:0!important;
   min-height:0!important;
 }
+
+
+/* Per-player feedback is anchored to the owning player panel/column. */
+.player-panel,.race-column{position:relative}
+.column-feedback{position:absolute;z-index:30;left:8px;right:8px;top:8px;display:flex;flex-direction:column;gap:4px;padding:9px 11px;border:2px solid #ef4444;border-radius:10px;background:#451a1aF2;color:#fff;text-align:center;box-shadow:0 5px 16px #0008;pointer-events:none;animation:player-feedback-in .16s ease-out}
+.column-feedback[hidden]{display:none!important}
+.column-feedback.success{background:#052e24F2;border-color:#22c55e}
+.column-feedback.warning{background:#422006F2;border-color:#f59e0b}
+.column-feedback-title{font-size:clamp(10px,1.3vw,14px);font-weight:900;letter-spacing:.04em}
+.column-feedback-message{font-size:clamp(12px,1.5vw,16px);font-weight:800}
+.player-panel .column-feedback{top:6px;left:8px;right:8px}
+.race-column .column-feedback{top:8px;left:8px;right:8px}
+
+/* Stacked ingredients must retain their ingredient-specific colours.
+   The generic stack span style otherwise overrides these backgrounds. */
+.stack-built-host span.stack-block-meat{background:linear-gradient(#a16207,#713f12)!important;border-color:#451a03!important}
+.stack-built-host span.stack-block-vegetable{background:linear-gradient(#bbf7d0,#16a34a)!important;border-color:#166534!important}
+.stack-built-host span.stack-block-tomato{background:linear-gradient(#fca5a5,#dc2626)!important;border-color:#991b1b!important}
+.stack-built-host span.stack-block-top{background:linear-gradient(#fde68a,#d97706)!important;border-color:#92400e!important}
+
+/* Anchor each stuck Level 7 knife at the wheel's outer rim. The wheel is
+   the query container, so the radial offset follows its actual rendered size. */
+.pie-wheel-host{container-type:inline-size}
+.pie-knives-host .pie-stuck-knife{
+  transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 14px));
+}
