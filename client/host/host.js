@@ -35,11 +35,35 @@ function show(user) {
   $('#welcome').textContent = 'Signed in as ' + user.username + ' (' + user.role + ')';
 }
 let playerFeedbackTimer = null;
+const columnFeedbackTimers = new Map();
 function showPlayerFeedback(feedback) {
-  const panel = $('#player-feedback');
-  if (!panel || !feedback) return;
+  if (!feedback) return;
   const color = String(feedback.color || '').toLowerCase();
   const names = { red: 'RED PLAYER', green: 'GREEN PLAYER', blue: 'BLUE PLAYER' };
+  const individualStages = [3,4,5,7,8,9];
+  if (individualStages.includes(Number(feedback.stage)) && ['red','green','blue'].includes(color)) {
+    const column = $('#race-display')?.querySelector('[data-color="' + color.toUpperCase() + '"]');
+    if (!column) return;
+    let panel = column.querySelector('.column-feedback');
+    if (!panel) {
+      panel = document.createElement('aside');
+      panel.className = 'column-feedback';
+      panel.setAttribute('role', 'status');
+      panel.setAttribute('aria-live', 'polite');
+      panel.innerHTML = '<strong class="column-feedback-title"></strong><span class="column-feedback-message"></span>';
+      column.append(panel);
+    }
+    panel.className = 'column-feedback ' + (feedback.kind || 'warning');
+    panel.querySelector('.column-feedback-title').textContent =
+      (feedback.name || names[color]) + ' · ' + (feedback.kind === 'wrong' ? 'TRY AGAIN' : feedback.kind === 'success' ? 'NICE MOVE' : 'NOTICE');
+    panel.querySelector('.column-feedback-message').textContent = feedback.message || 'Check your next move';
+    panel.hidden = false;
+    clearTimeout(columnFeedbackTimers.get(color));
+    columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800));
+    return;
+  }
+  const panel = $('#player-feedback');
+  if (!panel) return;
   const title = panel.querySelector('.feedback-player');
   const message = panel.querySelector('.feedback-message');
   panel.className = 'player-feedback ' + (['red','green','blue'].includes(color) ? color : '') + ' ' + (feedback.kind || 'warning');
@@ -404,7 +428,7 @@ function renderIndividualBoard(board, state, player) {
       board.classList.add('pie-missed');
       window.setTimeout(() => board.classList.remove('pie-missed'), 260);
     }
-    board.querySelector('.board-caption').textContent = 'THROW FROM THE BOTTOM EDGE · MATCH THE COLOUR · AVOID ATTACHED KNIVES';
+    board.querySelector('.board-caption').textContent = 'THROW FROM BOTTOM · MATCH COLOUR · AVOID KNIVES';
   } else if (state.stage === 8) {
     const tri = player.tri || {pipes:[],score:0};
     const platformsHost = board.querySelector('.tri-platforms-host');
@@ -461,7 +485,7 @@ function renderIndividualBoard(board, state, player) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     const dropsHost = board.querySelector('.stack-drops-host');
     const activeDropIds = new Set();
-    const food = {R:'tomato',G:'vegetable',B:'meat',T:'top'};
+    const food = {R:'meat',G:'vegetable',B:'tomato',T:'top'};
     for (const drop of stack.drops || []) {
       activeDropIds.add(String(drop.id));
       let node = dropsHost.querySelector('[data-drop-id="' + drop.id + '"]');
@@ -852,7 +876,7 @@ class RGBScene extends Phaser.Scene {
       this.tweens.killTweensOf(this.ufoTarget);
       this.ufoTarget.setTexture('ufo-'+(state.ufoTargetId||1))
         .setPosition(path.x*sx,path.y*sy).setFlipY(Boolean(path.flipY)).setAlpha(1).setVisible(true);
-      this.tweens.add({targets:this.ufoTarget,x:path.xEnd*sx,y:path.yEnd*sy,duration:300,yoyo:true,ease:'Power1',
+      this.tweens.add({targets:this.ufoTarget,x:path.xEnd*sx,y:path.yEnd*sy,duration:600,ease:'Sine.InOut',
         onComplete:()=>this.ufoTarget.setVisible(false)});
     }
     if(!isUfo){this.ufoTarget.setVisible(false);this.ufoOptions.forEach(o=>o.setVisible(false));this.ufoOptionLabels.forEach(o=>o.setVisible(false));this.ufoLegendGraphics?.setVisible(false);}
