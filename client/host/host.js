@@ -858,9 +858,17 @@ class RGBScene extends Phaser.Scene {
       this.pieGraphics.fillStyle(0x050505,1);this.pieGraphics.fillCircle(0,0,radius*.12);
       for(const player of state.players.filter(p=>p.joined)){
         for(const knife of player.pieKnives||[]){
-          const a=knife.angle-state.pieAngle, x=Math.cos(a)*radius*.88, y=Math.sin(a)*radius*.88;
-          this.pieGraphics.lineStyle(5,0xffffff,1);this.pieGraphics.lineBetween(x-Math.cos(a)*22,y-Math.sin(a)*22,x+Math.cos(a)*22,y+Math.sin(a)*22);
-          this.pieGraphics.fillStyle(({R:0xef4444,G:0x22c55e,B:0x3b82f6})[knife.color]||0xffffff,1);this.pieGraphics.fillCircle(x,y,5);
+          // The server stores the wheel-local impact angle. Convert it back to
+          // the current screen angle so the knife stays embedded at the exact
+          // point on the rim where it landed as the wheel continues rotating.
+          const a=knife.angle-state.pieAngle, ux=Math.cos(a), uy=Math.sin(a);
+          const inner=radius*.70, outer=radius*.98;
+          this.pieGraphics.lineStyle(6,0xffffff,1);
+          this.pieGraphics.lineBetween(ux*inner,uy*inner,ux*outer,uy*outer);
+          this.pieGraphics.lineStyle(2,0x334155,1);
+          this.pieGraphics.strokeLineShape(new Phaser.Geom.Line(ux*inner,uy*inner,ux*outer,uy*outer));
+          this.pieGraphics.fillStyle(({R:0xef4444,G:0x22c55e,B:0x3b82f6})[knife.color]||0xffffff,1);
+          this.pieGraphics.fillCircle(ux*inner,uy*inner,5);
         }
       }
       this.pieHud.setText('R / G / B · HIT THE MATCHING COLOUR');
