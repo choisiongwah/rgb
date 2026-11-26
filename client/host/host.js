@@ -61,16 +61,7 @@ function showPlayerFeedback(feedback) {
   panel.querySelector('.column-feedback-message').textContent = feedback.message || 'Check your next move';
   panel.hidden = false;
   clearTimeout(columnFeedbackTimers.get(color));
-  columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800);
-  return;
-  const title = panel.querySelector('.feedback-player');
-  const message = panel.querySelector('.feedback-message');
-  panel.className = 'player-feedback ' + (['red','green','blue'].includes(color) ? color : '') + ' ' + (feedback.kind || 'warning');
-  title.textContent = (feedback.name || names[color] || 'PLAYER') + ' · ' + (feedback.kind === 'wrong' ? 'TRY AGAIN' : feedback.kind === 'success' ? 'NICE MOVE' : 'NOTICE');
-  message.textContent = feedback.message || 'Check the game screen';
-  panel.hidden = false;
-  clearTimeout(playerFeedbackTimer);
-  playerFeedbackTimer = setTimeout(() => { panel.hidden = true; }, 2400);
+  columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800));
 }
 function renderSlots(state) {
   for (const player of state.players) {
