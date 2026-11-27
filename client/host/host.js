@@ -416,6 +416,26 @@ function ensureIndividualBoard(scene, stage) {
   return board;
 }
 
+function playWrongAnswerBuzz() {
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    const context = successAudioContext || new AudioCtor();
+    successAudioContext = context;
+    if (context.state === 'suspended') context.resume();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(260, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(115, context.currentTime + 0.19);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(); oscillator.stop(context.currentTime + 0.23);
+  } catch { /* Audio may be blocked until a user gesture. */ }
+}
+
 function playBurgerErrorBuzz() {
   try {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
@@ -650,6 +670,14 @@ function renderIndividualBoard(board, state, player) {
 function applyState(state) {
   const previousState = currentState;
   currentState = state;
+  // Play one short error cue when a player's answer changes into a wrong
+  // result. Level 5 already has its own failure-ID cue, so avoid doubling it.
+  if (previousState && previousState.id === state.id && previousState.stage === state.stage && state.stage !== 5) {
+    for (const player of state.players || []) {
+      const before = previousState.players?.find((item) => item.color === player.color);
+      if (player.joined && player.roundFeedback === 'wrong' && before?.roundFeedback !== 'wrong') playWrongAnswerBuzz();
+    }
+  }
   const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
@@ -714,8 +742,36 @@ class RGBScene extends Phaser.Scene {
   preload() { UFO_TEXTURE_URLS.forEach((url, index) => this.load.svg('ufo-' + (index + 1), url, { width: 180, height: 100 })); }
   create() {
     this.cameras.main.setBackgroundColor('#111827');
-    this.ufoCity = this.add.graphics().setDepth(-2).setVisible(false);
-    this.ufoLegendGraphics = this.add.graphics().setDepth(-1).setVisible(false);
+    // Build the Level 6 city once as a texture. Live UFO state packets must
+    // never clear/repaint the scenery; only the UFO sprite and HUD change.
+    const cityPainter = this.make.graphics({ x: 0, y: 0, add: false });
+    cityPainter.fillStyle(0x0f172a, 1);
+    cityPainter.fillRect(0, 224, 1200, 476);
+    const buildings = 9;
+    for (let i = 0; i < buildings; i += 1) {
+      const x = i * 1200 / buildings;
+      const buildingHeight = 700 * (0.22 + ((i * 7) % 4) * 0.055);
+      cityPainter.fillStyle(i % 2 ? 0x1e293b : 0x273449, 1);
+      cityPainter.fillRect(x + 2, 504 - buildingHeight, 1200 / buildings - 4, buildingHeight);
+      cityPainter.fillStyle(0xfbbf24, 0.48);
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 3; col += 1) {
+          const wx = x + 8 + col * Math.max(8, 1200 / buildings * 0.27);
+          const wy = 504 - buildingHeight + 12 + row * 17;
+          if (wy < 486) cityPainter.fillRect(wx, wy, 5, 7);
+        }
+      }
+    }
+    cityPainter.fillStyle(0x334155, 1);
+    cityPainter.fillRect(0, 504, 1200, 196);
+    cityPainter.generateTexture('ufo-city-background', 1200, 700);
+    cityPainter.destroy();
+    this.ufoCity = this.add.image(0, 0, 'ufo-city-background').setOrigin(0).setDepth(-2).setVisible(false);
+    this.ufoLegendGraphics = this.add.container(0, 0).setDepth(-1).setVisible(false);
+    this.ufoLegendRects = [0xff1100, 0x00da09, 0x2196f3].map((color) =>
+      this.add.rectangle(0, 0, 1, 1, color, 1).setOrigin(0)
+    );
+    this.ufoLegendGraphics.add(this.ufoLegendRects);
     this.title = this.add.text(0, 0, 'RGB SEQUENCE RUSH', { fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
     this.subtitle = this.add.text(0, 0, '', { fontSize: '18px', color: '#cbd5e1' }).setOrigin(0.5, 0);
     this.stageText = this.add.text(0, 0, 'LEVEL 1 · WAITING', { fontSize: '22px', color: '#fbbf24', fontStyle: 'bold' }).setOrigin(0.5, 0);
@@ -755,37 +811,13 @@ class RGBScene extends Phaser.Scene {
   }
   layout(width, height) {
     const center = width / 2;
-    if (this.ufoCity) {
-      const city = this.ufoCity;
-      city.clear();
-      city.fillStyle(0x0f172a, 1);
-      city.fillRect(0, height * 0.32, width, height * 0.68);
-      const buildings = 9;
-      for (let i = 0; i < buildings; i += 1) {
-        const x = i * width / buildings;
-        const buildingHeight = height * (0.22 + ((i * 7) % 4) * 0.055);
-        city.fillStyle(i % 2 ? 0x1e293b : 0x273449, 1);
-        city.fillRect(x + 2, height * 0.72 - buildingHeight, width / buildings - 4, buildingHeight);
-        city.fillStyle(0xfbbf24, 0.48);
-        for (let row = 0; row < 4; row += 1) {
-          for (let col = 0; col < 3; col += 1) {
-            const wx = x + 8 + col * Math.max(8, width / buildings * 0.27);
-            const wy = height * 0.72 - buildingHeight + 12 + row * 17;
-            if (wy < height * 0.7 - 4) city.fillRect(wx, wy, 5, 7);
-          }
-        }
-      }
-      city.fillStyle(0x334155, 1);
-      city.fillRect(0, height * 0.72, width, height * 0.28);
-    }
+    this.ufoCity?.setPosition(0, 0).setDisplaySize(width, height);
     this.title?.setPosition(center, height * 0.045).setFontSize(Math.max(20, Math.min(36, width * 0.03)));
     this.pieContainer?.setPosition(center,height*.52); this.pieHud?.setPosition(center,height*.88); this.pieKnife?.setPosition(center,height*.78);
     this.ufoWindow?.setPosition(center,height*.46).setSize(width*.78,Math.max(22,height*.055)).setVisible(false);
-    this.ufoLegendGraphics?.clear();
-    const legendColors=[0xff1100,0x00da09,0x2196f3];
     const legendPad=Math.max(5,width*.012), legendTop=height*.77, legendHeight=height*.23;
     const legendWidth=(width-legendPad*2)/3;
-    legendColors.forEach((color,i)=>{this.ufoLegendGraphics?.fillStyle(color,1);this.ufoLegendGraphics?.fillRect(legendPad+i*legendWidth,legendTop,legendWidth-legendPad,legendHeight);});
+    this.ufoLegendRects?.forEach((rect,i)=>rect.setPosition(legendPad+i*legendWidth,legendTop).setSize(legendWidth-legendPad,legendHeight));
     this.ufoOptions?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.865).setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104)));
     this.ufoOptionLabels?.forEach((o,i)=>o?.setPosition(width*(i+.5)/3,height*.965).setFontSize(Math.max(12,Math.min(20,width*.018))));
     this.ufoTarget?.setDisplaySize(Math.min(width*.16,112),Math.min(height*.17,104));
@@ -926,7 +958,7 @@ class RGBScene extends Phaser.Scene {
       this.diceLabels?.forEach((item) => item.setVisible(false));
       this.diceGraphics?.setVisible(false).clear();
       this.ufoCity?.setVisible(false);
-      this.ufoLegendGraphics?.setVisible(false).clear();
+      this.ufoLegendGraphics?.setVisible(false);
       this.burgerStackText?.setVisible(false);
       this.burgerFallingText?.setVisible(false).setAlpha(1).setScale(1);
       this.burgerTopBunText?.setVisible(false).setAlpha(1).setScale(1);
