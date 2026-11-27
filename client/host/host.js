@@ -561,9 +561,9 @@ function renderIndividualBoard(board, state, player) {
       runner.innerHTML = '<span class="tri-runner-fallback">' + (player.player?.character === 'racer' ? '🏃' : '🧑‍🚀') + '</span>';
     }
     const score = tri.score || 0;
-    // Start on the shore, then stand on the fixed stepping position after the first correct move.
+    // Keep the runner aligned with the first stepping platform from the very first frame.
     runner.style.left = '16.7%';
-    runner.style.bottom = score > 0 ? 'calc(20% + clamp(9px,1.7vh,16px))' : '4%';
+    runner.style.bottom = 'calc(20% + clamp(9px,1.7vh,16px))';
     if (runner.dataset.score !== String(score)) {
       runner.dataset.score = String(score);
       runner.classList.remove('stepping');
