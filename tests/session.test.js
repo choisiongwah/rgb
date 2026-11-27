@@ -478,26 +478,31 @@ describe('SessionService Level 5 Burger Builder', () => {
     return { service, session, slots };
   }
   function completeBurger(service, session, slot) {
-    const roundId = session.burgerRoundId;
-    for (const action of [...session.burgerSequence].reverse()) {
+    const roundId = slot.burgerRoundId;
+    for (const action of [...slot.burgerSequence].reverse()) {
       service.submitInput(session.id, slot.token, action, roundId);
     }
   }
-  it('creates a shared three-colour recipe and publishes its round id', () => {
-    const { service, session } = createLevel5Session();
+  it('creates independent recipes and round ids for each player', () => {
+    const { service, session, slots } = createLevel5Session();
     const view = service.toPublicView(session);
-    expect(session.burgerSequence.length).toBeGreaterThanOrEqual(4);
-    expect(session.burgerSequence.length).toBeLessThanOrEqual(8);
-    expect(session.burgerSequence.every((item) => ['R', 'G', 'B'].includes(item))).toBe(true);
-    expect(view.burgerRoundId).toBe(session.burgerRoundId);
+    for (const slot of slots) {
+      expect(slot.burgerSequence.length).toBeGreaterThanOrEqual(4);
+      expect(slot.burgerSequence.length).toBeLessThanOrEqual(8);
+      expect(slot.burgerSequence.every((item) => ['R', 'G', 'B'].includes(item))).toBe(true);
+    }
+    expect(view.players[0].burgerSequence).toEqual(slots[0].burgerSequence);
+    expect(view.players[1].burgerSequence).toEqual(slots[1].burgerSequence);
+    expect(view.players[0].burgerRoundId).toBe(slots[0].burgerRoundId);
+    expect(view.players[1].burgerRoundId).toBe(slots[1].burgerRoundId);
     expect(view.burgerTarget).toBe(6);
   });
   it('maps R/G/B to meat, vegetable and tomato drops', () => {
     let randomIndex = 0;
     const random = () => [0, 0, 0.4, 0.8, 0][randomIndex++ % 5];
     const { service, session, slots } = createLevel5Session(2, random);
-    const roundId = session.burgerRoundId;
-    session.burgerSequence = ['B', 'G', 'R'];
+    const roundId = slots[0].burgerRoundId;
+    slots[0].burgerSequence = ['B', 'G', 'R'];
     service.submitInput(session.id, slots[0].token, 'R', roundId);
     expect(session.burgerLastDrop).toMatchObject({ action: 'R', ingredient: '🥩', color: 'RED' });
     service.submitInput(session.id, slots[0].token, 'G', roundId);
@@ -507,14 +512,15 @@ describe('SessionService Level 5 Burger Builder', () => {
   });
   it('rejects incorrect recipe input and advances the shared round after all attempts', () => {
     const { service, session, slots } = createLevel5Session(2, () => 0);
-    const round = session.burgerRoundId;
+    const round = slots[0].burgerRoundId;
     const wrong = service.submitInput(session.id, slots[0].token, 'G', round);
     expect(wrong.correct).toBe(false);
     expect(slots[0].burgerRoundAttempted).toBe(true);
-    expect(() => service.submitInput(session.id, slots[0].token, 'R', round)).toThrow('ALREADY_ANSWERED');
+    expect(() => service.submitInput(session.id, slots[0].token, 'R', round)).toThrow('STALE_BURGER_ROUND');
+    const otherRound = slots[1].burgerRoundId;
     completeBurger(service, session, slots[1]);
-    expect(session.burgerRoundId).toBe(round + 1);
-    expect(slots[0].burgerRoundAttempted).toBe(false);
+    expect(slots[1].burgerRoundId).toBe(otherRound + 1);
+    expect(slots[0].burgerRoundId).toBe(round + 1);
     expect(slots[0].burgerProgressIndex).toBe(0);
   });
   it('awards placements at the configured burger target and stops accepting completed-player input', () => {
@@ -522,7 +528,7 @@ describe('SessionService Level 5 Burger Builder', () => {
     for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[0]);
     expect(slots[0].place).toBe(1);
     expect(session.status).toBe('playing');
-    expect(() => service.submitInput(session.id, slots[0].token, 'R', session.burgerRoundId)).toThrow('PLAYER_ALREADY_FINISHED');
+    expect(() => service.submitInput(session.id, slots[0].token, 'R', slots[0].burgerRoundId)).toThrow('PLAYER_ALREADY_FINISHED');
     for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[1]);
     for (let i = 0; i < session.burgerTarget; i += 1) completeBurger(service, session, slots[2]);
     expect(slots.map((slot) => slot.place)).toEqual([1, 2, 3]);
