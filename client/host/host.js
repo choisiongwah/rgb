@@ -334,7 +334,7 @@ function renderRaceDisplay(state) {
       4: (player.flappy?.blockersPassed || 0) + ' / ' + state.flappyTargetBlockers + ' BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
       7: 'R ' + (player.pieHits?.R || 0) + '/' + state.pieHitsPerColor + ' · G ' + (player.pieHits?.G || 0) + '/' + state.pieHitsPerColor + ' · B ' + (player.pieHits?.B || 0) + '/' + state.pieHitsPerColor,
-      8: (player.tri?.score || 0) + ' / ' + state.triTarget + ' SHARKS',
+      8: (player.tri?.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget - 1)) + ' SHARKS',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
     distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / ' + state.raceTargetMeters.toLocaleString() + ' m' : '';
@@ -601,7 +601,7 @@ function renderIndividualBoard(board, state, player) {
       confettiHost.innerHTML = '';
       world.classList.remove('tri-complete');
     }
-    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + state.triTarget + ' SHARKS · MATCH THE NEXT COLOUR';
+    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget - 1)) + ' SHARKS · MATCH THE NEXT COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     const dropsHost = board.querySelector('.stack-drops-host');
