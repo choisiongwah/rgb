@@ -10,7 +10,6 @@ const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character:
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
   z.object({ action: z.literal('configure'), target: z.number().int() }),
-  z.object({ action: z.literal('configure-all'), targets: z.record(z.string(), z.number().int()) }),
   z.object({ action: z.literal('configure-all'), targets: z.record(z.string(), z.number().int()) })
 ]);
 const room = (id) => 'session:' + id;
