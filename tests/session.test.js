@@ -760,7 +760,7 @@ describe('SessionService Level 8 Island Crossing', () => {
   it('rejects a mismatched colour without advancing the course', () => {
     const { service, session, slots } = createLevel8Session(1, () => 0);
     const player = slots[0];
-    const next = player.tri.pipes.filter((pipe) => pipe.x > 0 && pipe.x < 1).sort((a, b) => Math.abs(a.x - 1 / 6) - Math.abs(b.x - 1 / 6) || a.x - b.x)[0];
+    const next = player.tri.pipes.filter((pipe) => pipe.x > 0 && pipe.x < 1).sort((a, b) => Math.abs(a.x - 1 / 3) - Math.abs(b.x - 1 / 6) || a.x - b.x)[0];
     const wrong = ['R', 'G', 'B'].find((color) => color !== next.color);
     const result = service.submitInput(session.id, player.token, wrong);
     expect(result.correct).toBe(false);
