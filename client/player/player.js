@@ -91,6 +91,8 @@ function renderController(name, color, state) {
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       if (button.disabled || !socket?.connected) return;
+      // Level 9 keeps the standard R/G/B console, but only R and B move lanes.
+      if (latestState?.stage === 9 && button.dataset.a === 'G') return;
       const thisInput = inputId++;
       button.classList.add('pressed');
       const payload = { action: latestState?.stage === 4 ? 'JUMP' : button.dataset.a, inputId: thisInput };
@@ -229,7 +231,6 @@ function updateController(state) {
     root.querySelector('#level-intro-copy').textContent = introCopy[state.stage][1];
   }
   root.querySelectorAll('[data-a]').forEach((button) => {
-    button.hidden = isBurgerStack && button.dataset.a === 'G';
     button.disabled = state.status !== 'playing' || state.paused || mine.completed ||
       !mine.activeForRound || (isDice && mine.roundAttempted) ||
       (isBurger && mine.burgerRoundAttempted) ||
