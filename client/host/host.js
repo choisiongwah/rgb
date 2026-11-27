@@ -317,7 +317,7 @@ function renderRaceDisplay(state) {
     status.textContent = !player.joined ? 'SCAN QR TO JOIN'
       : player.completed ? ordinal(player.place) + ' PLACE'
         : player.connected ? '' : 'DISCONNECTED';
-    status.classList.toggle('connected', Boolean(player.joined && player.connected && !player.completed));
+    status.classList.toggle('connected', Boolean(state.stage === 3 && player.joined && player.connected && !player.completed));
     qr.hidden = player.joined;
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
