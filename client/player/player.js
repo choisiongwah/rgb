@@ -104,7 +104,7 @@ function renderController(name, color, state) {
     '<section id="race-screen" class="race-screen" hidden><div class="race-hud"><strong id="race-distance">0 m / 3,000 m</strong><span id="race-speed">1.0× SPEED</span></div><div class="race-road"><div class="road-lane-line line-one"></div><div class="road-lane-line line-two"></div><div id="race-obstacles" class="race-obstacles"></div><div id="race-player" class="race-player"><img id="race-avatar" alt="Your profile" hidden><span id="race-car">🚗</span></div><div id="race-crash" class="race-crash" aria-live="polite">CRASH! +2 SEC</div></div><div class="race-status"><span id="race-lane-label">CENTRE LANE</span><span id="race-penalty"></span></div><div class="race-progress"><div id="race-progress-fill"></div></div></section>' +
     '<div class="pad"><button data-a="R" class="red" aria-label="R / Left lane">R</button><button data-a="G" class="green" aria-label="G / Centre lane">G</button><button data-a="B" class="blue" aria-label="B / Right lane">B</button></div>' +
     '<section id="controls" class="controls"></section>' +
-    '<section id="config-panel" class="config-panel" hidden><label id="config-target-label" for="config-target">Winning target</label><p id="config-target-help">Set the target for this level.</p><input id="config-target" type="number" min="1" max="100" value="10"><button id="save-config">Save level settings</button></section>';
+    '<section id="config-panel" class="config-panel console-config-panel" hidden><header><div><strong>GAME SETTINGS</strong><small>Configure all 10 levels</small></div><button id="close-config" type="button" class="config-close">Close</button></header><div class="console-config-grid"><label>Level 1 · RGB Sequence<input type="number" name="targetCycles" min="1" max="100" inputmode="numeric"></label><label>Level 2 · Dice Reaction<input type="number" name="diceTarget" min="1" max="100" inputmode="numeric"></label><label>Level 3 · Highway Dodge (metres)<input type="number" name="raceTargetMeters" min="100" max="10000" inputmode="numeric"></label><label>Level 4 · Rocket Flight (blockers)<input type="number" name="flappyTargetBlockers" min="1" max="100" inputmode="numeric"></label><label>Level 5 · Burger Builder<input type="number" name="burgerTarget" min="1" max="100" inputmode="numeric"></label><label>Level 6 · UFO Spotter<input type="number" name="ufoTarget" min="1" max="100" inputmode="numeric"></label><label>Level 7 · Knife Hit (hits per colour)<input type="number" name="pieHitsPerColor" min="1" max="20" inputmode="numeric"></label><label>Level 8 · Shark Crossing<input type="number" name="triTarget" min="6" max="200" inputmode="numeric"></label><label>Level 9 · Burger Stack<input type="number" name="burgerStackTarget" min="1" max="100" inputmode="numeric"></label><label>Level 10 · Matrix Master<input type="number" name="matrixTarget" min="1" max="100" inputmode="numeric"></label></div><footer><span>Changes apply to the next time each level starts.</span><button id="save-config" type="button">Save all settings</button></footer></section>';
   document.querySelector('#player-name').textContent = name;
   document.querySelector('#player-color').textContent = color + ' PLAYER';
   root.querySelectorAll('[data-a]').forEach((button) => {
@@ -151,10 +151,28 @@ function renderController(name, color, state) {
   const flightWorld = root.querySelector('#flappy-world');
   flightWorld.addEventListener('pointerdown', jump);
   flightWorld.addEventListener('keydown', (event) => { if ([' ', 'Enter', 'ArrowUp'].includes(event.key)) jump(event); });
+  root.querySelector('#close-config').addEventListener('click', () => { root.querySelector('#config-panel').hidden = true; });
   root.querySelector('#save-config').addEventListener('click', () => {
-    const target = Number(root.querySelector('#config-target').value);
-    emitControl('configure', { target });
-    root.querySelector('#config-panel').hidden = true;
+    const panel = root.querySelector('#config-panel');
+    const targets = {};
+    const names = ['targetCycles','diceTarget','raceTargetMeters','flappyTargetBlockers','burgerTarget','ufoTarget','pieHitsPerColor','triTarget','burgerStackTarget','matrixTarget'];
+    const errors = [];
+    names.forEach((name, index) => {
+      const input = panel.querySelector('[name="' + name + '"]');
+      const value = Number(input.value);
+      if (!Number.isInteger(value) || value < Number(input.min) || value > Number(input.max)) errors.push('Level ' + (index + 1) + ' is out of range');
+      targets[String(index + 1)] = value;
+    });
+    if (errors.length) { setFeedback(errors.join(' · '), 'warning'); return; }
+    const button = root.querySelector('#save-config');
+    button.disabled = true;
+    socket.emit('player:control', { action: 'configure-all', targets }, (result) => {
+      button.disabled = false;
+      if (!result?.ok) { setFeedback(readableError(result?.error), 'warning'); return; }
+      if (result.state) latestState = result.state;
+      panel.hidden = true;
+      setFeedback('All level settings saved', 'success');
+    });
   });
   updateController(state);
 }
@@ -196,24 +214,18 @@ function renderControls(state) {
       if (action === 'end') {
         if (window.confirm('End this game and return everyone to Level 1? All scores from this game will be cleared.')) emitControl('end');
       } else if (action === 'config') {
-        const targetConfig = {
-          1: ['Cycles to win', 'Complete the R → G → B sequence this many times.', latest.targetCycles, 1, 100],
-          2: ['Correct answers to win', 'Number of correct dice rounds required.', latest.diceTarget, 1, 100],
-          3: ['Race distance (metres)', 'Distance required to reach the finish line.', latest.raceTargetMeters, 100, 10000],
-          4: ['Blockers to pass', 'Number of obstacles to clear.', latest.flappyTargetBlockers, 1, 100],
-          5: ['Burgers to complete', 'Number of complete recipes required.', latest.burgerTarget, 1, 100],
-          6: ['Correct UFO answers', 'Number of correct UFO identifications required.', latest.ufoTarget, 1, 100],
-          7: ['Knives per colour', 'Attach this many red, green and blue knives.', latest.pieHitsPerColor, 1, 20],
-          8: ['Sharks to cross', 'Number of coloured shark steps between start and destination (minimum 6).', latest.triTarget, 6, 200],
-          9: ['Burger challenges', 'Number of complete burger stacks required.', latest.burgerStackTarget, 1, 100],
-          10: ['Correct puzzles', 'Number of matrix puzzles to solve.', latest.matrixTarget, 1, 100]
+        const panel = root.querySelector('#config-panel');
+        const values = {
+          targetCycles: latest.targetCycles, diceTarget: latest.diceTarget, raceTargetMeters: latest.raceTargetMeters,
+          flappyTargetBlockers: latest.flappyTargetBlockers, burgerTarget: latest.burgerTarget, ufoTarget: latest.ufoTarget,
+          pieHitsPerColor: latest.pieHitsPerColor, triTarget: latest.triTarget, burgerStackTarget: latest.burgerStackTarget,
+          matrixTarget: latest.matrixTarget
         };
-        const [label, help, value, min, max] = targetConfig[latest.stage];
-        root.querySelector('#config-target-label').textContent = label;
-        root.querySelector('#config-target-help').textContent = help;
-        const input = root.querySelector('#config-target');
-        input.min = String(min); input.max = String(max); input.value = String(value);
-        root.querySelector('#config-panel').hidden = !root.querySelector('#config-panel').hidden;
+        for (const [name, value] of Object.entries(values)) {
+          const input = panel.querySelector('[name="' + name + '"]');
+          if (input && document.activeElement !== input) input.value = String(value);
+        }
+        panel.hidden = !panel.hidden;
       } else {
         emitControl(action);
       }
