@@ -389,7 +389,7 @@ function renderIndividualBoard(board, state, player) {
         knivesHost.append(knife);
       }
       const knifeColors = {R:'#ef4444',G:'#22c55e',B:'#3b82f6'};
-      knife.style.setProperty('--knife-angle', (Number(item.angle || 0)*180/Math.PI) + 'deg');
+      knife.style.setProperty('--knife-angle', (90 + Number(item.angle || 0)*180/Math.PI) + 'deg');
       knife.style.setProperty('--knife-color', knifeColors[item.color] || '#f8fafc');
     }
     for (const node of knivesHost.querySelectorAll('[data-knife-id]')) {
