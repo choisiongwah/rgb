@@ -772,25 +772,35 @@ describe('SessionService Level 8 Island Crossing', () => {
     const player = slots[0];
     expect(service.toPublicView(session).triTarget).toBe(50);
     expect(service.toPublicView(session).triCourseTarget).toBe(49);
-    session.triTarget = 4;
+
+    session.triTarget = 4; // 3 playable crossings; the first course tile is the starting tile.
     player.tri = {
-      pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
+      pipes: [
+        { id: 1, color: 'R', x: -0.1 },
+        { id: 2, color: 'R', x: 1 / 3 }
+      ],
       nextId: 2, score: 0, shift: 0, lastCorrectId: 0
     };
-    while (!player.completed) submitNextPipe(service, session, player);
-    expect(player.tri.score).toBe(3);
-    expect(player.tri.pipes).toHaveLength(0);
+    const result = service.submitInput(session.id, player.token, 'R');
+    expect(result.correct).toBe(true);
+    expect(player.tri.score).toBe(1);
+    expect(player.tri.pipes.some((pipe) => pipe.id === 2)).toBe(true);
   });
-  it('finishes exactly at the configured course target and clears remaining pipes', () => {
+  it('finishes at the playable platform target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
-    session.triTarget = 3;
+    session.triTarget = 3; // 2 playable crossings.
     slots[0].tri = {
-      pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
-      nextId: 2, score: 0, shift: 0, lastCorrectId: 0
+      pipes: [
+        { id: 1, color: 'R', x: -0.1 },
+        { id: 2, color: 'R', x: 1 / 3 }
+      ],
+      nextId: 3, score: 1, shift: 0, lastCorrectId: 0
     };
-    while (!slots[0].completed) submitNextPipe(service, session, slots[0]);
+    const result = service.submitInput(session.id, slots[0].token, 'R');
+    expect(result.correct).toBe(true);
     expect(slots[0].tri.score).toBe(2);
     expect(slots[0].tri.pipes).toHaveLength(0);
+    expect(slots[0].completed).toBe(true);
     expect(session.status).toBe('finished');
   });
 });
