@@ -13,6 +13,26 @@ let inputId = 0;
 let latestState;
 let lastCrashId = 0;
 let lastFlappyCrashId = 0;
+let validAudioContext;
+function playValidSound() {
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    validAudioContext ||= new AudioCtor();
+    const context = validAudioContext;
+    if (context.state === 'suspended') context.resume().catch(() => {});
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(660, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(880, context.currentTime + 0.09);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(); oscillator.stop(context.currentTime + 0.17);
+  } catch { /* Audio is optional when browser playback is unavailable. */ }
+}
 let lastIslandBiteId = 0;
 let lastKnifeMissId = 0;
 let lastKnifeHitId = 0;
@@ -97,7 +117,7 @@ function renderController(name, color, state) {
       button.classList.add('pressed');
       const payload = { action: latestState?.stage === 4 ? 'JUMP' : button.dataset.a, inputId: thisInput };
       if (latestState?.stage === 2) payload.roundId = latestState.diceRoundId;
-      if (latestState?.stage === 5) payload.roundId = latestState.burgerRoundId;
+      if (latestState?.stage === 5) payload.roundId = latestState.players?.find(player => player.color === playerColor)?.burgerRoundId;
       if (latestState?.stage === 6) payload.roundId = latestState.ufoRoundId;
       if (latestState?.stage === 10) payload.roundId = latestState.matrixRoundId;
       socket.emit('player:input', payload, (result) => {
@@ -108,6 +128,7 @@ function renderController(name, color, state) {
           : latestState?.stage === 6 ? '✕ Wrong UFO — wait for the next round'
             : latestState?.stage === 2 ? '✕ Wrong position — wait for the next dice roll'
             : 'Wrong colour — sequence restarted', 'warning'); }
+        else if (latestState?.stage === 4) { playValidSound(); setFeedback('Boost!', 'success'); }
         else if (latestState?.stage === 3) setFeedback('Moving to ' + ({ R: 'left', G: 'centre', B: 'right' }[payload.action]) + ' lane', 'success');
         else if (result.pointAwarded) setFeedback(latestState?.stage === 6 ? 'Correct UFO! +1 point' : latestState?.stage === 7 ? 'Knife hit!' : latestState?.stage === 8 ? 'Safe crossing!' : 'Perfect burger! +1 point', 'success');
         else if (result.cycleCompleted) setFeedback('Cycle complete!', 'success');

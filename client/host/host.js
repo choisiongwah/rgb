@@ -258,6 +258,15 @@ function playRaceKaboom() {
 }
 
 function updateRaceAudio(state, previousState) {
+  if ([3, 4].includes(state.stage) && previousState?.stage === state.stage) {
+    for (const player of state.players || []) {
+      const before = previousState.players?.find(item => item.color === player.color);
+      const crashed = state.stage === 3
+        ? player.race?.crashId > (before?.race?.crashId || 0)
+        : player.flappy?.crashId > (before?.flappy?.crashId || 0);
+      if (crashed) playRaceKaboom();
+    }
+  }
   const active = state.stage === 3 && state.status === 'playing' && !state.paused &&
     (state.players || []).some(player => player.joined && player.activeForRound && !player.completed);
   if (!active) {
@@ -289,12 +298,7 @@ function updateRaceAudio(state, previousState) {
   const speed = racers.reduce((max, player) => Math.max(max, player.race?.speedMultiplier || 1), 1);
   raceEngineOscillator.frequency.setTargetAtTime(48 + speed * 20, context.currentTime, 0.12);
   raceEngineGain.gain.setTargetAtTime(0.045, context.currentTime, 0.18);
-  if (previousState?.stage === 3) {
-    for (const player of state.players || []) {
-      const before = previousState.players?.find(item => item.color === player.color);
-      if (player.race?.crashId > (before?.race?.crashId || 0)) playRaceKaboom();
-    }
-  }
+
 }
 
 function renderRaceDisplay(state) {
@@ -448,8 +452,8 @@ function renderIndividualBoard(board, state, player) {
     }).join('');
     board.querySelector('.board-caption').textContent = (flight.blockersPassed || 0) + ' / ' + state.flappyTargetBlockers + ' BLOCKERS · ' + ((flight.penaltyMs || 0) > 0 ? 'CRASH RECOVERY' : 'TAP ANY COLOUR TO BOOST');
   } else if (state.stage === 5) {
-    const sequence = state.burgerSequence || [];
-    const completedSequence = state.burgerCompletedSequence || [];
+    const sequence = player.burgerSequence || [];
+    const completedSequence = player.burgerCompletedSequence || [];
     const progress = Math.max(0, Math.min(sequence.length, player.burgerProgressIndex || 0));
     const ingredientClass = {R:'tomato',G:'vegetable',B:'meat'};
     const targetOrder = [...sequence].reverse();
@@ -458,8 +462,8 @@ function renderIndividualBoard(board, state, player) {
     model.querySelector('.burger-recipe').innerHTML = modelOrder.map(key => '<span class="burger-block block-' + ingredientClass[key] + '"></span>').join('');
     const stack = board.querySelector('.burger-stack');
     const feedback = board.querySelector('.burger-feedback');
-    const completedId = Number(state.burgerCompletedId || 0);
-    if (player.color === state.burgerWinnerColor && completedId > Number(board.dataset.completedId || 0)) {
+    const completedId = Number(player.burgerCompletedId || 0);
+    if (completedId > Number(board.dataset.completedId || 0)) {
       board.dataset.completedId = String(completedId);
       feedback.innerHTML = '<span class="burger-success">O <b>+1</b></span>';
       feedback.classList.remove('show'); void feedback.offsetWidth; feedback.classList.add('show');
