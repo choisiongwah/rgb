@@ -767,6 +767,20 @@ describe('SessionService Level 8 Island Crossing', () => {
     expect(player.tri.shift).toBe(0);
     expect(player.tri.score).toBe(0);
   });
+  it('uses one fewer playable platform than the configured course length', () => {
+    const { service, session, slots } = createLevel8Session(1);
+    const player = slots[0];
+    expect(service.toPublicView(session).triTarget).toBe(50);
+    expect(service.toPublicView(session).triCourseTarget).toBe(49);
+    session.triTarget = 4;
+    player.tri = {
+      pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
+      nextId: 7, score: 0, shift: 0, lastCorrectId: 0
+    };
+    while (!player.completed) submitNextPipe(service, session, player);
+    expect(player.tri.score).toBe(3);
+    expect(player.tri.pipes).toHaveLength(0);
+  });
   it('finishes exactly at the configured course target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
     session.triTarget = 2;
