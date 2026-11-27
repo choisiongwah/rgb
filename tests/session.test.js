@@ -726,7 +726,7 @@ describe('SessionService Level 8 Island Crossing', () => {
   function submitNextPipe(service, session, slot) {
     const next = slot.tri.pipes
       .filter((pipe) => pipe.x > 0 && pipe.x < 1)
-      .sort((a, b) => Math.abs(a.x - 1 / 3) - Math.abs(b.x - 1 / 6) || a.x - b.x)[0];
+      .sort((a, b) => Math.abs(a.x - 1 / 3) - Math.abs(b.x - 1 / 3) || a.x - b.x)[0];
     if (!next) throw new Error('No next pipe available in test setup');
     return service.submitInput(session.id, slot.token, next.color);
   }
@@ -783,7 +783,7 @@ describe('SessionService Level 8 Island Crossing', () => {
   });
   it('finishes exactly at the configured course target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
-    session.triTarget = 2;
+    session.triTarget = 3;
     slots[0].tri = {
       pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
       nextId: 7, score: 0, shift: 0, lastCorrectId: 0
