@@ -914,3 +914,45 @@ describe('Tournament final results review', () => {
     expect(slots[1].totalPoints).toBe(0);
   });
 });
+
+describe('Bulk game configuration and replay', () => {
+  it('saves all ten level targets together before play', () => {
+    const { service, session } = createPlayingSession(1);
+    const controller = session.players[0];
+    service.resetLevel(session.id, controller.token);
+    const targets = { 1: 12, 2: 7, 3: 2400, 4: 18, 5: 5, 6: 8, 7: 3, 8: 40, 9: 5, 10: 7 };
+    service.configureAll(session.id, 'admin', targets);
+    expect(service.toPublicView(session)).toMatchObject({
+      targetCycles: 12, diceTarget: 7, raceTargetMeters: 2400, flappyTargetBlockers: 18,
+      burgerTarget: 5, ufoTarget: 8, pieHitsPerColor: 3, triTarget: 40,
+      islandTarget: 40, burgerStackTarget: 5, matrixTarget: 7
+    });
+    expect(() => service.configureAll(session.id, 'someone-else', targets)).toThrow('SESSION_NOT_FOUND');
+  });
+
+  it('validates every level target and rejects bulk changes while a level is running', () => {
+    const { service, session, slots } = createPlayingSession(1);
+    const targets = { 1: 10, 2: 6, 3: 3000, 4: 20, 5: 6, 6: 10, 7: 4, 8: 50, 9: 4, 10: 6 };
+    expect(() => service.configureAll(session.id, 'admin', { ...targets, 3: 99 })).toThrow('INVALID_LEVEL_TARGET_3');
+    expect(() => service.configureAll(session.id, 'admin', targets)).toThrow('CONFIG_LOCKED_DURING_GAME');
+  });
+
+  it('restarts from the review page with the same joined players and fresh tournament totals', () => {
+    const { service, session, slots } = createPlayingSession(3);
+    slots[0].totalPoints = 18; slots[1].totalPoints = 12; slots[2].totalPoints = 6;
+    session.stage = 10;
+    session.status = 'finished';
+    service.reviewResults(session.id);
+    const result = service.restartGame(session.id, 'admin');
+    expect(result).toMatchObject({ stage: 1, status: 'waiting', paused: false, finalResults: null });
+    expect(result.players.map((player) => player.totalPoints)).toEqual([0, 0, 0]);
+    expect(result.players.every((player) => player.joined)).toBe(true);
+    expect(result.players.every((player) => player.connected)).toBe(true);
+    expect(result.players.map((player) => player.player.name)).toEqual(['Player 1', 'Player 2', 'Player 3']);
+  });
+
+  it('does not restart unless the tournament results have been reviewed', () => {
+    const { service, session } = createPlayingSession(1);
+    expect(() => service.restartGame(session.id, 'admin')).toThrow('RESULTS_NOT_READY');
+  });
+});
