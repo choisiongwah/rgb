@@ -9,7 +9,8 @@ const inputSchema = z.object({
 const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character: z.enum(['astronaut', 'racer', 'hazmat']).optional(), avatar: z.string().max(180000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional() });
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
-  z.object({ action: z.literal('configure'), target: z.number().int() })
+  z.object({ action: z.literal('configure'), target: z.number().int() }),
+  z.object({ action: z.literal('configure-all'), targets: z.record(z.string(), z.number().int()) })
 ]);
 const room = (id) => 'session:' + id;
 const hostRoom = (id) => 'session:' + id + ':host';
@@ -24,7 +25,7 @@ export function registerSocketHandlers(io, { sessions }) {
 
   io.on('connection', (socket) => {
     if (socket.data.user) {
-      socket.on('host:control', ({ sessionId, action, stage }, ack = () => {}) => {
+      socket.on('host:control', ({ sessionId, action, stage, targets }, ack = () => {}) => {
         if (socket.data.user.role !== 'admin') return ack({ ok: false, error: 'ADMIN_ONLY' });
         try {
           const existing = sessions.get(sessionId);
@@ -32,6 +33,10 @@ export function registerSocketHandlers(io, { sessions }) {
           let session;
           if (action === 'review') {
             session = sessions.reviewResults(sessionId);
+          } else if (action === 'configure-all') {
+            session = sessions.configureAll(sessionId, socket.data.user.username, targets);
+          } else if (action === 'restart') {
+            session = sessions.restartGame(sessionId, socket.data.user.username);
           } else if (action === 'challenge') {
             session = sessions.selectLevel(sessionId, socket.data.user.username, stage);
             const controller = session.players.find((slot) => slot.color === session.controllerColor);

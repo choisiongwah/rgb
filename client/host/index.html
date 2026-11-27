@@ -29,13 +29,31 @@
           <option value="10">Level 10 · Matrix Master</option>
         </select>
         <button id="start-level">Start Level</button>
+        <button id="configure-open" class="secondary" type="button">Config</button>
         <button id="review-results" hidden>Review Results</button>
       </div>
+      <section id="config-panel" class="config-panel" hidden aria-label="All level settings">
+        <header><div><strong>GAME SETTINGS</strong><small>Configure all 10 levels in one go</small></div><button id="config-close" class="secondary" type="button">Close</button></header>
+        <div class="config-grid">
+          <label>Level 1 · RGB Sequence <input type="number" name="targetCycles" min="1" max="100" value="10"></label>
+          <label>Level 2 · Dice Reaction <input type="number" name="diceTarget" min="1" max="100" value="6"></label>
+          <label>Level 3 · Highway Dodge (metres) <input type="number" name="raceTargetMeters" min="100" max="10000" value="3000" step="100"></label>
+          <label>Level 4 · Rocket Flight (blockers) <input type="number" name="flappyTargetBlockers" min="1" max="100" value="20"></label>
+          <label>Level 5 · Burger Builder <input type="number" name="burgerTarget" min="1" max="100" value="6"></label>
+          <label>Level 6 · UFO Spotter <input type="number" name="ufoTarget" min="1" max="100" value="10"></label>
+          <label>Level 7 · Knife Hit (hits per colour) <input type="number" name="pieHitsPerColor" min="1" max="20" value="4"></label>
+          <label>Level 8 · Shark Crossing <input type="number" name="triTarget" min="6" max="200" value="50"></label>
+          <label>Level 9 · Burger Stack <input type="number" name="burgerStackTarget" min="1" max="100" value="4"></label>
+          <label>Level 10 · Matrix Master <input type="number" name="matrixTarget" min="1" max="100" value="6"></label>
+        </div>
+        <footer><span>Settings are saved together and apply to the next time each level starts.</span><button id="config-save" type="button">Save all settings</button></footer>
+      </section>
       <aside id="player-feedback" class="player-feedback" role="status" aria-live="assertive" hidden><strong class="feedback-player"></strong><span class="feedback-message"></span></aside>
       <section id="results-page" hidden aria-live="polite">
         <div class="results-heading"><p>RGB TOURNAMENT</p><h1>CHAMPIONS</h1><p>Final leaderboard · All 10 levels</p></div>
         <div id="podium" class="podium"></div>
         <p class="results-footer">Congratulations to all players!</p>
+        <button id="restart-game" type="button">↻ Restart Game · Same Players</button>
       </section>
       <div id="race-display" class="race-display" aria-label="Three individual highway race screens" hidden></div>
       <div id="game-root" aria-label="Shared game screen"></div>

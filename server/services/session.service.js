@@ -951,6 +951,7 @@ export class SessionService {
     session.burgerSequence = null;
     session.burgerWinnerColor = null;
     session.burgerCompletedSequence = null;
+    session.finalResults = null;
     for (const player of session.players) {
       player.activeForRound = false;
       player.progressIndex = 0;
@@ -964,6 +965,43 @@ export class SessionService {
       player.pointsEarned = 0;
     }
     return session;
+  }
+
+  configureAll(id, hostUsername, targets) {
+    const session = this.get(id);
+    if (!session || session.host.username !== hostUsername) throw new Error('SESSION_NOT_FOUND');
+    if (session.status === 'playing') throw new Error('CONFIG_LOCKED_DURING_GAME');
+    const fields = {
+      1: ['targetCycles', 1, 100], 2: ['diceTarget', 1, 100],
+      3: ['raceTargetMeters', 100, 10000], 4: ['flappyTargetBlockers', 1, 100],
+      5: ['burgerTarget', 1, 100], 6: ['ufoTarget', 1, 100],
+      7: ['pieHitsPerColor', 1, 20], 8: ['triTarget', 6, 200],
+      9: ['burgerStackTarget', 1, 100], 10: ['matrixTarget', 1, 100]
+    };
+    for (const [stage, [field, min, max]] of Object.entries(fields)) {
+      const value = targets?.[stage];
+      if (!Number.isInteger(value) || value < min || value > max) throw new Error('INVALID_LEVEL_TARGET_' + stage);
+      session[field] = value;
+    }
+    session.islandTarget = session.triTarget;
+    for (const player of session.players) {
+      player.island = createIslandState(this.random, session.islandTarget);
+      player.tri = createTriState(this.random, session.triTarget);
+    }
+    return session;
+  }
+
+  restartGame(id, hostUsername) {
+    const session = this.get(id);
+    if (!session || session.host.username !== hostUsername) throw new Error('SESSION_NOT_FOUND');
+    if (session.status !== 'results') throw new Error('RESULTS_NOT_READY');
+    const controller = session.players.find((player) => player.color === session.controllerColor);
+    if (!controller) throw new Error('NO_PLAYERS');
+    const restarted = this.endGame(id, controller.token);
+    restarted.finalResults = null;
+    restarted.status = 'waiting';
+    restarted.stage = 1;
+    return restarted;
   }
 
   configure(id, token, target) {

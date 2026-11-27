@@ -63,6 +63,39 @@ function showPlayerFeedback(feedback) {
   clearTimeout(columnFeedbackTimers.get(color));
   columnFeedbackTimers.set(color, setTimeout(() => { panel.hidden = true; }, 1800));
 }
+function showWinnerConfetti(player, individual) {
+  const selector = individual ? '#race-display [data-color="' + player.color + '"]' : '#player-strip .player-panel[data-color="' + player.color + '"]';
+  const host = $(selector);
+  if (!host) return;
+  host.querySelector('.winner-confetti')?.remove();
+  const layer = document.createElement('div');
+  layer.className = 'winner-confetti';
+  layer.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 54; i += 1) {
+    const piece = document.createElement('i');
+    piece.style.setProperty('--x', (Math.random() * 100) + '%');
+    piece.style.setProperty('--delay', (Math.random() * 0.35) + 's');
+    piece.style.setProperty('--turn', (Math.random() * 360) + 'deg');
+    piece.style.setProperty('--drift', ((Math.random() - 0.5) * 180) + 'px');
+    layer.append(piece);
+  }
+  host.append(layer);
+  window.setTimeout(() => layer.remove(), 2400);
+}
+
+function syncConfigInputs(state) {
+  const values = {
+    targetCycles: state.targetCycles, diceTarget: state.diceTarget, raceTargetMeters: state.raceTargetMeters,
+    flappyTargetBlockers: state.flappyTargetBlockers, burgerTarget: state.burgerTarget, ufoTarget: state.ufoTarget,
+    pieHitsPerColor: state.pieHitsPerColor, triTarget: state.triTarget, burgerStackTarget: state.burgerStackTarget,
+    matrixTarget: state.matrixTarget
+  };
+  for (const [name, value] of Object.entries(values)) {
+    const input = $('#config-panel [name="' + name + '"]');
+    if (input && document.activeElement !== input) input.value = String(value);
+  }
+}
+
 function renderSlots(state) {
   for (const player of state.players) {
     const status = $('#slot-status-' + player.color);
@@ -517,12 +550,20 @@ function renderIndividualBoard(board, state, player) {
 }
 
 function applyState(state) {
+  const previousState = currentState;
   currentState = state;
   const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
   const startLevelButton = $('#start-level');
   if (levelSelect && !levelSelectionPending && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
+  syncConfigInputs(state);
+  if (previousState && previousState.id === state.id && previousState.stage === state.stage) {
+    for (const player of state.players || []) {
+      const previous = previousState.players?.find((item) => item.color === player.color);
+      if (player.joined && player.place && player.place !== previous?.place) showWinnerConfetti(player, [3,4,5,7,8,9].includes(state.stage));
+    }
+  }
   const isIndividualDisplay = [3,4,5,7,8,9].includes(state.stage);
   const room = $('#room');
   room.classList.toggle('individual-mode', isIndividualDisplay);
@@ -1087,6 +1128,43 @@ $('#start-level').addEventListener('click', () => {
       if (ack.state) $('#level-select').value = String(ack.state.stage);
       $('#error').textContent = '';
     }
+  });
+});
+$('#configure-open').addEventListener('click', () => {
+  syncConfigInputs(currentState || {});
+  $('#config-panel').hidden = false;
+});
+$('#config-close').addEventListener('click', () => { $('#config-panel').hidden = true; });
+$('#config-save').addEventListener('click', () => {
+  const panel = $('#config-panel');
+  const targets = {};
+  const names = ['targetCycles','diceTarget','raceTargetMeters','flappyTargetBlockers','burgerTarget','ufoTarget','pieHitsPerColor','triTarget','burgerStackTarget','matrixTarget'];
+  const errors = [];
+  names.forEach((name, index) => {
+    const input = panel.querySelector('[name="' + name + '"]');
+    const value = Number(input.value);
+    if (!Number.isInteger(value) || value < Number(input.min) || value > Number(input.max)) errors.push('Level ' + (index + 1) + ' is out of range');
+    targets[String(index + 1)] = value;
+  });
+  if (errors.length) { $('#error').textContent = errors.join(' · '); return; }
+  const button = $('#config-save'); button.disabled = true;
+  socket?.emit('host:control', { sessionId: currentState?.id, action: 'configure-all', targets }, (ack) => {
+    button.disabled = false;
+    if (!ack?.ok) { $('#error').textContent = ack?.error || 'Could not save settings'; return; }
+    $('#config-panel').hidden = true;
+    $('#error').textContent = '';
+    if (ack.state) applyState(ack.state);
+  });
+});
+$('#restart-game').addEventListener('click', () => {
+  const button = $('#restart-game'); button.disabled = true;
+  socket?.emit('host:control', { sessionId: currentState?.id, action: 'restart' }, (ack) => {
+    button.disabled = false;
+    if (!ack?.ok) { $('#error').textContent = ack?.error || 'Could not restart game'; return; }
+    $('#results-page').hidden = true;
+    $('#config-panel').hidden = true;
+    $('#error').textContent = '';
+    if (ack.state) applyState(ack.state);
   });
 });
 $('#review-results').addEventListener('click', () => {
