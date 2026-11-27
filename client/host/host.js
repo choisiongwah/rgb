@@ -552,13 +552,32 @@ function renderIndividualBoard(board, state, player) {
       if (!activePlatformIds.has(node.dataset.platformId)) node.remove();
     }
     const runner = board.querySelector('.tri-runner-host');
-    const avatar = player.player?.avatar;
-    if (avatar) {
-      let image = runner.querySelector('img');
-      if (!image) { image = document.createElement('img'); runner.replaceChildren(image); }
-      if (image.src !== avatar) image.src = avatar;
+    const character = ['astronaut','racer','hazmat'].includes(player.player?.character)
+      ? player.player.character : 'astronaut';
+    if (runner.dataset.character !== character) {
+      const mascot = document.createElement('div');
+      mascot.className = 'player-mascot ' + character;
+      const head = document.createElement('div');
+      head.className = 'mascot-head';
+      const visor = document.createElement('div');
+      visor.className = 'mascot-visor';
+      const avatarImage = document.createElement('img');
+      avatarImage.alt = 'Player profile';
+      avatarImage.hidden = !player.player?.avatar;
+      if (player.player?.avatar) avatarImage.src = player.player.avatar;
+      visor.append(avatarImage);
+      head.append(visor);
+      const body = document.createElement('div');
+      body.className = 'mascot-body';
+      mascot.append(head, body);
+      runner.replaceChildren(mascot);
+      runner.dataset.character = character;
     } else {
-      runner.innerHTML = '<span class="tri-runner-fallback">' + (player.player?.character === 'racer' ? '🏃' : '🧑‍🚀') + '</span>';
+      const avatarImage = runner.querySelector('.mascot-visor img');
+      if (avatarImage) {
+        avatarImage.hidden = !player.player?.avatar;
+        if (player.player?.avatar && avatarImage.src !== player.player.avatar) avatarImage.src = player.player.avatar;
+      }
     }
     const score = tri.score || 0;
     // Keep the runner aligned with the first stepping platform from the very first frame.
