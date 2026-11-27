@@ -777,7 +777,7 @@ describe('SessionService Level 8 Island Crossing', () => {
     player.tri = {
       pipes: [
         { id: 1, color: 'R', x: -0.1 },
-        { id: 2, color: 'R', x: 1 / 3 }
+        { id: 99, color: 'R', x: 1 / 3 }
       ],
       nextId: 2, score: 0, shift: 0, lastCorrectId: 0
     };
@@ -785,6 +785,7 @@ describe('SessionService Level 8 Island Crossing', () => {
     expect(result.correct).toBe(true);
     expect(player.tri.score).toBe(1);
     expect(player.tri.pipes.some((pipe) => pipe.id === 2)).toBe(true);
+    expect(player.tri.nextId).toBe(3);
   });
   it('finishes at the playable platform target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
