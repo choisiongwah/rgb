@@ -775,7 +775,7 @@ describe('SessionService Level 8 Island Crossing', () => {
     session.triTarget = 4;
     player.tri = {
       pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
-      nextId: 7, score: 0, shift: 0, lastCorrectId: 0
+      nextId: 2, score: 0, shift: 0, lastCorrectId: 0
     };
     while (!player.completed) submitNextPipe(service, session, player);
     expect(player.tri.score).toBe(3);
@@ -786,7 +786,7 @@ describe('SessionService Level 8 Island Crossing', () => {
     session.triTarget = 3;
     slots[0].tri = {
       pipes: Array.from({ length: 6 }, (_, index) => ({ id: index + 1, color: 'R', x: 0.34 + index / 6 })),
-      nextId: 7, score: 0, shift: 0, lastCorrectId: 0
+      nextId: 2, score: 0, shift: 0, lastCorrectId: 0
     };
     while (!slots[0].completed) submitNextPipe(service, session, slots[0]);
     expect(slots[0].tri.score).toBe(2);
