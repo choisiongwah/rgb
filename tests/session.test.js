@@ -771,9 +771,9 @@ describe('SessionService Level 8 Island Crossing', () => {
     const { service, session, slots } = createLevel8Session(1);
     const player = slots[0];
     expect(service.toPublicView(session).triTarget).toBe(50);
-    expect(service.toPublicView(session).triCourseTarget).toBe(49);
+    expect(service.toPublicView(session).triCourseTarget).toBe(51);
 
-    session.triTarget = 4; // 3 playable crossings; the first course tile is the starting tile.
+    session.triTarget = 4; // Include the empty starting position: 5 generated platforms.
     player.tri = {
       pipes: [
         { id: 1, color: 'R', x: -0.1 },
@@ -789,17 +789,17 @@ describe('SessionService Level 8 Island Crossing', () => {
   });
   it('finishes at the playable platform target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
-    session.triTarget = 3; // 2 playable crossings.
+    session.triTarget = 3; // 4 generated platforms including the empty starting position.
     slots[0].tri = {
       pipes: [
         { id: 1, color: 'R', x: -0.1 },
         { id: 2, color: 'R', x: 1 / 3 }
       ],
-      nextId: 3, score: 1, shift: 0, lastCorrectId: 0
+      nextId: 3, score: 4, shift: 0, lastCorrectId: 0
     };
     const result = service.submitInput(session.id, slots[0].token, 'R');
     expect(result.correct).toBe(true);
-    expect(slots[0].tri.score).toBe(2);
+    expect(slots[0].tri.score).toBe(5);
     expect(slots[0].tri.pipes).toHaveLength(0);
     expect(slots[0].completed).toBe(true);
     expect(session.status).toBe('finished');
