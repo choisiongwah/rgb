@@ -933,7 +933,9 @@ describe('Bulk game configuration and replay', () => {
   it('validates every level target and rejects bulk changes while a level is running', () => {
     const { service, session, slots } = createPlayingSession(1);
     const targets = { 1: 10, 2: 6, 3: 3000, 4: 20, 5: 6, 6: 10, 7: 4, 8: 50, 9: 4, 10: 6 };
+    service.resetLevel(session.id, slots[0].token);
     expect(() => service.configureAll(session.id, 'admin', { ...targets, 3: 99 })).toThrow('INVALID_LEVEL_TARGET_3');
+    service.startLevel(session.id, slots[0].token);
     expect(() => service.configureAll(session.id, 'admin', targets)).toThrow('CONFIG_LOCKED_DURING_GAME');
   });
 
