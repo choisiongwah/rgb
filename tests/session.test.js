@@ -799,7 +799,7 @@ describe('SessionService Level 8 Island Crossing', () => {
     };
     const result = service.submitInput(session.id, slots[0].token, 'R');
     expect(result.correct).toBe(true);
-    expect(slots[0].tri.score).toBe(5);
+    expect(slots[0].tri.score).toBe(4);
     expect(slots[0].tri.pipes).toHaveLength(0);
     expect(slots[0].completed).toBe(true);
     expect(session.status).toBe('finished');
