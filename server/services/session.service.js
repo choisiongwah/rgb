@@ -375,7 +375,7 @@ export class SessionService {
         }
       }
       slot.successCount = state.score;
-      if (state.score >= session.triTarget) {
+      if (state.score >= courseTarget) {
         // The final platform has cleared the course; do not leave trailing
         // platforms rendered after the finish condition is reached.
         state.pipes = [];
