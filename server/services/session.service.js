@@ -514,11 +514,13 @@ export class SessionService {
     const expected = SEQUENCE[slot.progressIndex];
     if (action !== expected) {
       slot.progressIndex = 0;
+      slot.roundFeedback = 'wrong';
       return { session, slot, correct: false, reset: true, cycleCompleted: false };
     }
 
     slot.progressIndex += 1;
     slot.successFeedbackId += 1;
+    slot.roundFeedback = 'correct';
     let cycleCompleted = false;
     if (slot.progressIndex === SEQUENCE.length) {
       slot.progressIndex = 0;
