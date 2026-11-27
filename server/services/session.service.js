@@ -141,7 +141,7 @@ export class SessionService {
         connected: false, joined: false, activeForRound: false,
         progressIndex: 0, cycles: 0, successCount: 0, roundAttempted: false,
         roundFeedback: null, successFeedbackId: 0, totalPoints: 0,
-        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, burgerFailureId: 0, burgerSequence: null, burgerRoundId: 0, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], pieThrow: null, island: createIslandState(this.random), tri: createTriState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
+        completed: false, place: null, pointsEarned: 0, burgerProgressIndex: 0, burgerRoundAttempted: false, burgerFailureId: 0, burgerSequence: null, burgerRoundId: 0, burgerCompletedId: 0, burgerCompletedSequence: null, ufoRoundAttempted: false, matrixRoundAttempted: false, pieHits: { R: 0, G: 0, B: 0 }, pieTotalHits: 0, pieHitAngles: [], pieThrow: null, island: createIslandState(this.random), tri: createTriState(this.random), burgerStack: createBurgerStackState(this.random), race: createRaceState(), flappy: createFlappyState()
       }))
     };
     this.sessions.set(id, session);
@@ -1071,7 +1071,7 @@ export class SessionService {
         successCount: player.successCount, roundAttempted: player.roundAttempted,
         roundFeedback: player.roundFeedback, successFeedbackId: player.successFeedbackId,
         race: player.race, flappy: player.flappy,
-        island: player.island, tri: player.tri, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, pieThrow: player.pieThrow, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, burgerFailureId: player.burgerFailureId || 0, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
+        island: player.island, tri: player.tri, burgerStack: player.burgerStack, pieHits: player.pieHits, pieTotalHits: player.pieTotalHits, pieKnives: player.pieKnives, pieThrow: player.pieThrow, burgerProgressIndex: player.burgerProgressIndex, burgerRoundAttempted: player.burgerRoundAttempted, burgerFailureId: player.burgerFailureId || 0, burgerSequence: player.burgerSequence, burgerRoundId: player.burgerRoundId, burgerCompletedId: player.burgerCompletedId || 0, burgerCompletedSequence: player.burgerCompletedSequence || null, ufoRoundAttempted: player.ufoRoundAttempted, matrixRoundAttempted: player.matrixRoundAttempted,
         totalPoints: player.totalPoints, completed: player.completed,
         place: player.place, pointsEarned: player.pointsEarned
       }))
