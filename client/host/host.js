@@ -550,6 +550,7 @@ function renderIndividualBoard(board, state, player) {
 }
 
 function applyState(state) {
+  const previousState = currentState;
   currentState = state;
   const requestId = ++renderRequestId;
   const levelSelect = $('#level-select');
