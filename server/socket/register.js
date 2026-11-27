@@ -10,6 +10,7 @@ const joinSchema = z.object({ name: z.string().trim().min(1).max(20), character:
 const controlSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['start', 'reset', 'finish', 'next', 'pause', 'resume', 'end']) }),
   z.object({ action: z.literal('configure'), target: z.number().int() }),
+  z.object({ action: z.literal('configure-all'), targets: z.record(z.string(), z.number().int()) }),
   z.object({ action: z.literal('configure-all'), targets: z.record(z.string(), z.number().int()) })
 ]);
 const room = (id) => 'session:' + id;
@@ -94,7 +95,7 @@ export function registerSocketHandlers(io, { sessions }) {
       const parsed = controlSchema.safeParse(payload);
       if (!parsed.success) return ack({ ok: false, error: 'INVALID_CONTROL' });
       try {
-        const { action, target } = parsed.data;
+        const { action, target, targets } = parsed.data;
         const id = socket.data.playerSessionId;
         const token = socket.data.playerToken;
         let session;
@@ -106,6 +107,7 @@ export function registerSocketHandlers(io, { sessions }) {
         else if (action === 'pause') session = sessions.setPaused(id, true);
         else if (action === 'resume') session = sessions.setPaused(id, false);
         else if (action === 'configure') session = sessions.configure(id, token, target);
+        else if (action === 'configure-all') session = sessions.configureAllByController(id, token, targets);
         const state = sessions.toPublicView(session);
         io.to(room(session.id)).emit('game:state', state);
         ack({ ok: true, state });
