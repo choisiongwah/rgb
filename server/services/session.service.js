@@ -573,34 +573,40 @@ export class SessionService {
         const race = player.race;
         race.speedMultiplier = Math.min(2.5, 1 + (race.distanceMeters / session.raceTargetMeters) * 1.5);
         const wasPenalized = race.penaltyMs > 0;
-        if (wasPenalized) race.penaltyMs = Math.max(0, race.penaltyMs - delta * 1000);
-        else race.distanceMeters = Math.min(session.raceTargetMeters, race.distanceMeters + 100 * race.speedMultiplier * delta);
+        if (wasPenalized) {
+          race.penaltyMs = Math.max(0, race.penaltyMs - delta * 1000);
+          // Keep the road clear for the full recovery window so the player can
+          // see the crash, regain control, and react before another car appears.
+          race.obstacles = [];
+        } else {
+          race.distanceMeters = Math.min(session.raceTargetMeters, race.distanceMeters + 100 * race.speedMultiplier * delta);
+          const obstacleSpeed = 0.43 * race.speedMultiplier;
+          for (const obstacle of race.obstacles) obstacle.progress += obstacleSpeed * delta;
+          race.obstacles = race.obstacles.filter((obstacle) => obstacle.progress < 1.08);
 
-        const obstacleSpeed = 0.43 * race.speedMultiplier;
-        for (const obstacle of race.obstacles) obstacle.progress += obstacleSpeed * delta;
-        race.obstacles = race.obstacles.filter((obstacle) => obstacle.progress < 1.08);
-
-        if (!wasPenalized && race.penaltyMs <= 0) {
           const collision = race.obstacles.find((obstacle) =>
             obstacle.lane === race.lane && obstacle.progress >= 0.82 && obstacle.progress - obstacleSpeed * delta < 0.82
           );
           if (collision) {
             race.penaltyMs = 2000;
             race.crashId += 1;
-            race.obstacles = race.obstacles.filter((obstacle) => obstacle.id !== collision.id);
+            race.obstacles = [];
+            race.spawnAccumulator = 0;
           }
         }
 
-        race.spawnAccumulator += delta;
-        const spawnInterval = Math.max(0.55, 1.25 / race.speedMultiplier);
-        if (race.spawnAccumulator >= spawnInterval && race.obstacles.length < 5) {
-          race.spawnAccumulator -= spawnInterval;
-          race.obstacles.push({
-            id: race.nextObstacleId++,
-            lane: Math.floor(this.random() * 3),
-            type: RACE_VEHICLES[Math.floor(this.random() * RACE_VEHICLES.length)],
-            progress: 0
-          });
+        if (race.penaltyMs <= 0) {
+          race.spawnAccumulator += delta;
+          const spawnInterval = Math.max(0.75, 1.5 / race.speedMultiplier);
+          if (race.spawnAccumulator >= spawnInterval && race.obstacles.length < 5) {
+            race.spawnAccumulator -= spawnInterval;
+            race.obstacles.push({
+              id: race.nextObstacleId++,
+              lane: Math.floor(this.random() * 3),
+              type: RACE_VEHICLES[Math.floor(this.random() * RACE_VEHICLES.length)],
+              progress: 0
+            });
+          }
         }
 
         if (race.distanceMeters >= session.raceTargetMeters) {
