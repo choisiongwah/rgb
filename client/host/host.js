@@ -562,7 +562,9 @@ function applyState(state) {
         game.scale.resize(width, height);
         scene.layout(width, height);
       }
-      scene.updateState(latestState);
+      // State was already applied synchronously above. This frame only
+      // reconciles canvas dimensions; reapplying the same state here used to
+      // redraw animated scenes twice for every socket broadcast.
     });
   }
 }
@@ -947,7 +949,10 @@ class RGBScene extends Phaser.Scene {
         }
       }
     });
-    this.layout(this.scale.width, this.scale.height);
+    // Do not call layout() on every state packet. layout() clears and
+    // repaints the UFO city/legend graphics, so doing that during Level 6's
+    // live state broadcasts makes the background visibly flicker. Layout is
+    // already handled on scene creation and actual scale resize events.
   }
 }
 function ordinal(place) { return place === 1 ? '1ST' : place === 2 ? '2ND' : place === 3 ? '3RD' : place + 'TH'; }
