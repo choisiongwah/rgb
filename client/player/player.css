@@ -110,3 +110,19 @@ body:has(.knife-wheel-screen:not([hidden])) .pad button{height:13vh;min-height:6
 
 /* Explicitly honour hidden on game-scene sections whose layout uses flex/grid. */
 [hidden]{display:none!important}
+
+
+/* Remote admin configuration: compact, touch-first settings shared with host screen. */
+.console-config-panel{width:100%;max-height:52dvh;overflow:auto;overscroll-behavior:contain;padding:12px;border:1px solid #64748b;border-radius:14px;background:#172033;color:#f8fafc;text-align:left;box-sizing:border-box}
+.console-config-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.console-config-panel>header strong,.console-config-panel>header small{display:block}
+.console-config-panel>header strong{font-size:16px;letter-spacing:.06em}
+.console-config-panel>header small{font-size:11px;color:#cbd5e1;margin-top:3px}
+.console-config-panel .config-close{min-height:38px;padding:7px 12px}
+.console-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.console-config-grid label{display:flex;flex-direction:column;gap:5px;min-width:0;padding:8px;border-radius:9px;background:#263449;font-size:11px;font-weight:800;color:#e2e8f0}
+.console-config-grid input{width:100%;min-width:0;min-height:42px;box-sizing:border-box;border:1px solid #64748b;border-radius:7px;background:#0f172a;color:#fff;padding:7px 9px;font:700 17px system-ui}
+.console-config-panel footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.console-config-panel footer span{font-size:10px;line-height:1.35;color:#cbd5e1}
+.console-config-panel footer button{flex:0 0 auto;min-height:44px;padding:8px 13px}
+@media(max-width:360px){.console-config-grid{grid-template-columns:1fr}.console-config-panel{max-height:48dvh}}
