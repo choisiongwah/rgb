@@ -316,3 +316,16 @@
   from{opacity:.25;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 26px))}
   to{opacity:1;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 14px))}
 }
+
+/* Level 7: knife angle is stored in wheel-local mathematical coordinates.
+   CSS rotation starts at the top, so add 90deg to map the angle to the
+   correct coloured sector. Position the knife just beyond the rim and flip
+   its blade inward while keeping the radial anchor unchanged. */
+.pie-wheel-host{container-type:inline-size}
+.pie-knives-host .pie-stuck-knife{
+  transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw - 7px)) rotate(180deg)!important;
+}
+@keyframes pie-knife-stick{
+  from{opacity:.25;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw + 5px)) rotate(180deg)}
+  to{opacity:1;transform:translate(-50%,-50%) rotate(var(--knife-angle)) translateY(calc(-50cqw - 7px)) rotate(180deg)}
+}
