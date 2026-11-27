@@ -258,6 +258,15 @@ function playRaceKaboom() {
 }
 
 function updateRaceAudio(state, previousState) {
+  if ([3, 4].includes(state.stage) && previousState?.stage === state.stage) {
+    for (const player of state.players || []) {
+      const before = previousState.players?.find(item => item.color === player.color);
+      const crashed = state.stage === 3
+        ? player.race?.crashId > (before?.race?.crashId || 0)
+        : player.flappy?.crashId > (before?.flappy?.crashId || 0);
+      if (crashed) playRaceKaboom();
+    }
+  }
   const active = state.stage === 3 && state.status === 'playing' && !state.paused &&
     (state.players || []).some(player => player.joined && player.activeForRound && !player.completed);
   if (!active) {
@@ -289,15 +298,7 @@ function updateRaceAudio(state, previousState) {
   const speed = racers.reduce((max, player) => Math.max(max, player.race?.speedMultiplier || 1), 1);
   raceEngineOscillator.frequency.setTargetAtTime(48 + speed * 20, context.currentTime, 0.12);
   raceEngineGain.gain.setTargetAtTime(0.045, context.currentTime, 0.18);
-  if ([3, 4].includes(state.stage) && previousState?.stage === state.stage) {
-    for (const player of state.players || []) {
-      const before = previousState.players?.find(item => item.color === player.color);
-      const crashed = state.stage === 3
-        ? player.race?.crashId > (before?.race?.crashId || 0)
-        : player.flappy?.crashId > (before?.flappy?.crashId || 0);
-      if (crashed) playRaceKaboom();
-    }
-  }
+
 }
 
 function renderRaceDisplay(state) {
