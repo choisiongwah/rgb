@@ -343,7 +343,7 @@ export class SessionService {
     if (session.stage === 8) {
       const state = slot.tri;
       if (!TRI_COLORS.includes(action)) throw new Error('INVALID_INPUT');
-      const nextPipe = state.pipes.filter((pipe) => pipe.x > (132/600) && pipe.x < 1).sort((a,b) => a.x-b.x)[0];
+      const nextPipe = state.pipes.filter((pipe) => pipe.x > 0 && pipe.x < 1).sort((a,b) => Math.abs(a.x - (1/6)) - Math.abs(b.x - (1/6)) || a.x-b.x)[0];
       if (!nextPipe) throw new Error('TRI_PIPE_NOT_READY');
       if (action !== nextPipe.color) {
         slot.roundFeedback = 'wrong';
