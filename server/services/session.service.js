@@ -973,6 +973,31 @@ export class SessionService {
     return session;
   }
 
+  configureAllByController(id, token, targets) {
+    const session = this.get(id);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+    this.assertController(session, this.getSlot(id, token));
+    if (session.status === 'playing') throw new Error('CONFIG_LOCKED_DURING_GAME');
+    const fields = {
+      1: ['targetCycles', 1, 100], 2: ['diceTarget', 1, 100],
+      3: ['raceTargetMeters', 100, 10000], 4: ['flappyTargetBlockers', 1, 100],
+      5: ['burgerTarget', 1, 100], 6: ['ufoTarget', 1, 100],
+      7: ['pieHitsPerColor', 1, 20], 8: ['triTarget', 6, 200],
+      9: ['burgerStackTarget', 1, 100], 10: ['matrixTarget', 1, 100]
+    };
+    for (const [stage, [field, min, max]] of Object.entries(fields)) {
+      const value = targets?.[stage];
+      if (!Number.isInteger(value) || value < min || value > max) throw new Error('INVALID_LEVEL_TARGET_' + stage);
+      session[field] = value;
+    }
+    session.islandTarget = session.triTarget;
+    for (const player of session.players) {
+      player.island = createIslandState(this.random, session.islandTarget);
+      player.tri = createTriState(this.random, session.triTarget);
+    }
+    return session;
+  }
+
   configureAll(id, hostUsername, targets) {
     const session = this.get(id);
     if (!session || session.host.username !== hostUsername) throw new Error('SESSION_NOT_FOUND');
