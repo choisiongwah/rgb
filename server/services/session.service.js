@@ -342,6 +342,7 @@ export class SessionService {
 
     if (session.stage === 8) {
       const state = slot.tri;
+      const courseTarget = Math.max(1, session.triTarget - 1);
       if (!TRI_COLORS.includes(action)) throw new Error('INVALID_INPUT');
       const nextPipe = state.pipes.filter((pipe) => pipe.x > 0 && pipe.x < 1).sort((a,b) => Math.abs(a.x - (1/3)) - Math.abs(b.x - (1/3)) || a.x-b.x)[0];
       if (!nextPipe) throw new Error('TRI_PIPE_NOT_READY');
@@ -357,13 +358,13 @@ export class SessionService {
       let rightmost = Math.max(...state.pipes.map((pipe) => pipe.x));
       for (const pipe of state.pipes) {
         if (pipe.x < -(50/600)) {
-          if (state.score >= session.triTarget) {
+          if (state.score >= courseTarget) {
             pipe.x = -1;
             continue;
           }
           state.score += 1;
           // Generate exactly the configured number of platforms in the whole course.
-          if (state.nextId <= session.triTarget) {
+          if (state.nextId <= courseTarget) {
             pipe.x = rightmost + (100/600);
             rightmost = pipe.x;
             pipe.color = TRI_COLORS[Math.floor(this.random() * TRI_COLORS.length)];
@@ -1061,7 +1062,7 @@ export class SessionService {
       burgerRoundId: null, burgerLastDropId: session.burgerLastDropId,
       burgerLastDrop: session.burgerLastDrop, burgerCompletedId: session.burgerCompletedId,
       burgerWinnerColor: session.burgerWinnerColor, burgerCompletedSequence: session.burgerCompletedSequence,
-      islandTarget: session.islandTarget, triTarget: session.triTarget, burgerStackTarget: session.burgerStackTarget, pieHitsPerColor: session.pieHitsPerColor, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
+      islandTarget: session.islandTarget, triTarget: session.triTarget, triCourseTarget: Math.max(1, session.triTarget - 1), burgerStackTarget: session.burgerStackTarget, pieHitsPerColor: session.pieHitsPerColor, pieAngle: session.pieAngle, pieSpeed: session.pieSpeed, pieDirection: session.pieDirection, pieTotalHits: session.pieTotalHits, pieLastHitId: session.pieLastHitId, pieLastHit: session.pieLastHit, pieKnives: session.pieKnives, pieMissId: session.pieMissId, pieLastMiss: session.pieLastMiss, pieTargetColor: pieColorAtStrike(pieImpactAngle(session.pieAngle)),
       matrixTarget: session.matrixTarget, matrixRoundId: session.matrixRoundId, matrixPuzzle: session.matrixPuzzle ? { roundId: session.matrixPuzzle.roundId, difficulty: session.matrixPuzzle.difficulty, category: session.matrixPuzzle.category, cells: session.matrixPuzzle.cells, options: session.matrixPuzzle.options } : null, ufoTarget: session.ufoTarget, ufoRoundId: session.ufoRoundId, ufoCycle: session.ufoCycle, ufoTargetId: session.ufoTargetId, ufoOptions: session.ufoOptions, ufoPathIndex: session.ufoPathIndex, ufoWinnerColor: session.ufoWinnerColor, ufoPhase: session.ufoPhase, ufoElapsedMs: session.ufoElapsedMs, ufoDurationMs: session.ufoDurationMs,
       controllerColor: session.controllerColor, sequence: SEQUENCE,
       players: session.players.map((player) => ({
