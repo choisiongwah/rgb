@@ -27,6 +27,9 @@ let game;
 let currentState;
 let renderRequestId = 0;
 let successAudioContext;
+let raceAudioContext;
+let raceEngineOscillator;
+let raceEngineGain;
 let levelSelectionPending = false;
 
 function show(user) {
@@ -223,6 +226,77 @@ function footerText(column, stage) {
   footer.textContent = labels[stage] || '';
 }
 
+function getRaceAudioContext() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  raceAudioContext ||= new AudioCtor();
+  if (raceAudioContext.state === 'suspended') raceAudioContext.resume().catch(() => {});
+  return raceAudioContext;
+}
+
+function playRaceKaboom() {
+  try {
+    const context = getRaceAudioContext();
+    if (!context) return;
+    const duration = 0.42;
+    const buffer = context.createBuffer(1, Math.floor(context.sampleRate * duration), context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const noise = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, context.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(90, context.currentTime + duration);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.48, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+    noise.buffer = buffer;
+    noise.connect(filter); filter.connect(gain); gain.connect(context.destination);
+    noise.start(); noise.stop(context.currentTime + duration);
+  } catch { /* Audio may be blocked by browser policy. */ }
+}
+
+function updateRaceAudio(state, previousState) {
+  const active = state.stage === 3 && state.status === 'playing' && !state.paused &&
+    (state.players || []).some(player => player.joined && player.activeForRound && !player.completed);
+  if (!active) {
+    if (raceEngineGain && raceAudioContext) {
+      const now = raceAudioContext.currentTime;
+      raceEngineGain.gain.cancelScheduledValues(now);
+      raceEngineGain.gain.setTargetAtTime(0.0001, now, 0.06);
+      try { raceEngineOscillator?.stop(now + 0.25); } catch {}
+    }
+    raceEngineOscillator = null;
+    raceEngineGain = null;
+    return;
+  }
+  const context = getRaceAudioContext();
+  if (!context) return;
+  if (!raceEngineOscillator) {
+    raceEngineOscillator = context.createOscillator();
+    raceEngineGain = context.createGain();
+    const filter = context.createBiquadFilter();
+    raceEngineOscillator.type = 'sawtooth';
+    filter.type = 'lowpass';
+    filter.frequency.value = 420;
+    raceEngineOscillator.frequency.value = 54;
+    raceEngineGain.gain.value = 0.0001;
+    raceEngineOscillator.connect(filter); filter.connect(raceEngineGain); raceEngineGain.connect(context.destination);
+    raceEngineOscillator.start();
+  }
+  const racers = (state.players || []).filter(player => player.joined && player.activeForRound && !player.completed);
+  const speed = racers.reduce((max, player) => Math.max(max, player.race?.speedMultiplier || 1), 1);
+  raceEngineOscillator.frequency.setTargetAtTime(48 + speed * 20, context.currentTime, 0.12);
+  raceEngineGain.gain.setTargetAtTime(0.045, context.currentTime, 0.18);
+  if (previousState?.stage === 3) {
+    for (const player of state.players || []) {
+      const before = previousState.players?.find(item => item.color === player.color);
+      if (player.race?.crashId > (before?.race?.crashId || 0)) playRaceKaboom();
+    }
+  }
+}
+
 function renderRaceDisplay(state) {
   const display = $('#race-display');
   if (!display) return;
@@ -240,9 +314,10 @@ function renderRaceDisplay(state) {
     const crash = column.querySelector('.host-race-crash');
     const scene = column.querySelector('.host-individual-scene');
     name.textContent = player.player?.name || player.color;
-    status.textContent = player.joined
-      ? (player.connected ? 'CONNECTED' : 'DISCONNECTED') + (player.completed ? ' · ' + ordinal(player.place) + ' PLACE' : '')
-      : 'SCAN QR TO JOIN';
+    status.textContent = !player.joined ? 'SCAN QR TO JOIN'
+      : player.completed ? ordinal(player.place) + ' PLACE'
+        : player.connected ? '' : 'DISCONNECTED';
+    status.classList.toggle('connected', Boolean(state.stage === 3 && player.joined && player.connected && !player.completed));
     qr.hidden = player.joined;
     const sourceQr = $('#qr-' + player.color);
     if (sourceQr?.src) qr.src = sourceQr.src;
@@ -558,6 +633,7 @@ function applyState(state) {
   if (levelSelect && !levelSelectionPending && document.activeElement !== levelSelect) levelSelect.value = String(state.stage);
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
   syncConfigInputs(state);
+  updateRaceAudio(state, previousState);
   if (previousState && previousState.id === state.id && previousState.stage === state.stage) {
     for (const player of state.players || []) {
       const previous = previousState.players?.find((item) => item.color === player.color);
