@@ -726,7 +726,7 @@ describe('SessionService Level 8 Island Crossing', () => {
   function submitNextPipe(service, session, slot) {
     const next = slot.tri.pipes
       .filter((pipe) => pipe.x > 0 && pipe.x < 1)
-      .sort((a, b) => Math.abs(a.x - 1 / 6) - Math.abs(b.x - 1 / 6) || a.x - b.x)[0];
+      .sort((a, b) => Math.abs(a.x - 1 / 3) - Math.abs(b.x - 1 / 6) || a.x - b.x)[0];
     if (!next) throw new Error('No next pipe available in test setup');
     return service.submitInput(session.id, slot.token, next.color);
   }
@@ -743,6 +743,19 @@ describe('SessionService Level 8 Island Crossing', () => {
     expect(player.tri.score).toBe(1);
     expect(player.successCount).toBe(1);
     expect(player.tri.shift).toBe(3);
+  });
+  it('requires the incoming platform after each successful step, not the platform under the runner', () => {
+    const { service, session, slots } = createLevel8Session(1, () => 0);
+    const player = slots[0];
+    player.tri.pipes[0].color = 'R';
+    player.tri.pipes[1].color = 'G';
+    const first = service.submitInput(session.id, player.token, 'R');
+    expect(first.correct).toBe(true);
+    expect(player.tri.pipes.find((pipe) => Math.abs(pipe.x - 1 / 6) < 0.001).color).toBe('R');
+    expect(player.tri.pipes.find((pipe) => Math.abs(pipe.x - 1 / 3) < 0.001).color).toBe('G');
+    const next = service.submitInput(session.id, player.token, 'G');
+    expect(next.correct).toBe(true);
+    expect(player.tri.shift).toBe(2);
   });
   it('rejects a mismatched colour without advancing the course', () => {
     const { service, session, slots } = createLevel8Session(1, () => 0);
