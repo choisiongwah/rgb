@@ -353,3 +353,7 @@
 #restart-game{padding:14px 24px;border-radius:12px;background:#16a34a;color:#fff;font-size:clamp(15px,2vw,22px);font-weight:900;box-shadow:0 6px 20px #0007}
 #restart-game:disabled,#config-save:disabled{opacity:.6;cursor:wait}
 @media(max-width:620px){.config-panel{top:58px;left:8px;right:8px;width:auto;padding:12px}.config-grid{gap:8px}.config-grid label{font-size:10px}.config-grid input{padding:8px;font-size:14px}.config-panel footer span{font-size:9px}}
+
+/* Level 3: connected players get a quiet green status dot, not a text label. */
+.race-player-status.connected{font-size:0;min-height:12px;display:flex;justify-content:center;align-items:center}
+.race-player-status.connected:before{content:"";display:block;width:11px;height:11px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e99}
