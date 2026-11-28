@@ -32,6 +32,12 @@ let successAudioContext;
 let raceAudioContext;
 let raceEngineOscillator;
 let raceEngineGain;
+let chillAudioContext;
+let chillMasterGain;
+let chillOscillators = [];
+let chillChordTimer = null;
+let chillStopTimer = null;
+let chillChordIndex = 0;
 let levelSelectionPending = false;
 
 function show(user) {
@@ -238,6 +244,87 @@ function getRaceAudioContext() {
 
 function playRaceKaboom() {
   playSoundAsset(carCrashSoundUrl);
+}
+
+function getChillAudioContext() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  chillAudioContext ||= new AudioCtor();
+  if (chillAudioContext.state === 'suspended') chillAudioContext.resume().catch(() => {});
+  return chillAudioContext;
+}
+
+// Called directly from the Start Level click so browsers can unlock audio.
+function primeChillMusic() {
+  getChillAudioContext();
+}
+
+function startChillMusic() {
+  const context = getChillAudioContext();
+  if (!context) return;
+  if (chillStopTimer) { clearTimeout(chillStopTimer); chillStopTimer = null; }
+  const chords = [
+    [130.81, 164.81, 196.00, 246.94],
+    [110.00, 130.81, 164.81, 196.00],
+    [87.31, 130.81, 164.81, 220.00],
+    [98.00, 146.83, 196.00, 220.00]
+  ];
+  if (!chillMasterGain) {
+    chillMasterGain = context.createGain();
+    chillMasterGain.gain.value = 0.0001;
+    chillMasterGain.connect(context.destination);
+    chillOscillators = chords[0].map((frequency) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(chillMasterGain);
+      oscillator.start();
+      return oscillator;
+    });
+    chillChordIndex = 0;
+  }
+  const now = context.currentTime;
+  chillMasterGain.gain.cancelScheduledValues(now);
+  chillMasterGain.gain.setTargetAtTime(0.012, now, 1.1);
+  if (!chillChordTimer) {
+    chillChordTimer = window.setInterval(() => {
+      if (!chillAudioContext || !chillOscillators.length) return;
+      chillChordIndex = (chillChordIndex + 1) % chords.length;
+      const at = chillAudioContext.currentTime;
+      chillOscillators.forEach((oscillator, index) => {
+        oscillator.frequency.setTargetAtTime(chords[chillChordIndex][index], at, 1.8);
+      });
+    }, 6500);
+  }
+}
+
+function stopChillMusic() {
+  if (chillChordTimer) { clearInterval(chillChordTimer); chillChordTimer = null; }
+  if (!chillMasterGain || !chillAudioContext) return;
+  const gain = chillMasterGain;
+  const oscillators = chillOscillators;
+  const now = chillAudioContext.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setTargetAtTime(0.0001, now, 0.22);
+  if (chillStopTimer) clearTimeout(chillStopTimer);
+  chillStopTimer = window.setTimeout(() => {
+    oscillators.forEach((oscillator) => {
+      try { oscillator.stop(); oscillator.disconnect(); } catch {}
+    });
+    gain.disconnect();
+    if (chillMasterGain === gain) {
+      chillMasterGain = null;
+      chillOscillators = [];
+    }
+    chillStopTimer = null;
+  }, 1000);
+}
+
+function updateLevel9Audio(state) {
+  const active = state.stage === 9 && state.status === 'playing' && !state.paused &&
+    (state.players || []).some((player) => player.joined && player.activeForRound && !player.completed);
+  if (active) startChillMusic();
+  else stopChillMusic();
 }
 
 function updateRaceAudio(state, previousState) {
@@ -628,10 +715,17 @@ function applyState(state) {
   currentState = state;
   // Play one short error cue when a player's answer changes into a wrong
   // result. Level 5 already has its own failure-ID cue, so avoid doubling it.
-  if (previousState && previousState.id === state.id && previousState.stage === state.stage && true) {
+  if (previousState && previousState.id === state.id && previousState.stage === state.stage) {
     for (const player of state.players || []) {
       const before = previousState.players?.find((item) => item.color === player.color);
-      if (player.joined && player.roundFeedback === 'wrong' && before?.roundFeedback !== 'wrong') playWrongAnswerSound();
+      if (!player.joined || !before) continue;
+      if (state.stage === 9) {
+        const misses = player.burgerStack?.missId || 0;
+        const previousMisses = before.burgerStack?.missId || 0;
+        if (misses > previousMisses) playWrongAnswerSound();
+      } else if (player.roundFeedback === 'wrong' && before.roundFeedback !== 'wrong') {
+        playWrongAnswerSound();
+      }
     }
   }
   const requestId = ++renderRequestId;
@@ -641,6 +735,7 @@ function applyState(state) {
   if (startLevelButton && !startLevelButton.dataset.pending) startLevelButton.disabled = false;
   syncConfigInputs(state);
   updateRaceAudio(state, previousState);
+  updateLevel9Audio(state);
   if (previousState && previousState.id === state.id && previousState.stage === state.stage) {
     for (const player of state.players || []) {
       const previous = previousState.players?.find((item) => item.color === player.color);
@@ -1229,6 +1324,7 @@ $('#create').addEventListener('click', createRoom);
 $('#level-select').addEventListener('change', () => { levelSelectionPending = true; });
 $('#start-level').addEventListener('click', () => {
   const stage = Number($('#level-select').value);
+  if (stage === 9) primeChillMusic();
   $('#start-level').disabled = true;
   $('#start-level').dataset.pending = 'true';
   $('#error').textContent = '';
