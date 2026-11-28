@@ -1,5 +1,7 @@
 import QRCode from 'qrcode';
 import Phaser from 'phaser';
+import errorSoundUrl from './error.mp3?url&no-inline';
+import carCrashSoundUrl from './carcrash.mp3?url&no-inline';
 import ufo01Url from './ufo/ufo-01.svg?url&no-inline';
 import ufo02Url from './ufo/ufo-02.svg?url&no-inline';
 import ufo03Url from './ufo/ufo-03.svg?url&no-inline';
@@ -235,26 +237,7 @@ function getRaceAudioContext() {
 }
 
 function playRaceKaboom() {
-  try {
-    const context = getRaceAudioContext();
-    if (!context) return;
-    const duration = 0.42;
-    const buffer = context.createBuffer(1, Math.floor(context.sampleRate * duration), context.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    const noise = context.createBufferSource();
-    const filter = context.createBiquadFilter();
-    const gain = context.createGain();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(900, context.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(90, context.currentTime + duration);
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.48, context.currentTime + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
-    noise.buffer = buffer;
-    noise.connect(filter); filter.connect(gain); gain.connect(context.destination);
-    noise.start(); noise.stop(context.currentTime + duration);
-  } catch { /* Audio may be blocked by browser policy. */ }
+  playSoundAsset(carCrashSoundUrl);
 }
 
 function updateRaceAudio(state, previousState) {
@@ -416,44 +399,18 @@ function ensureIndividualBoard(scene, stage) {
   return board;
 }
 
-function playWrongAnswerBuzz() {
+function playSoundAsset(url) {
   try {
-    const AudioCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtor) return;
-    const context = successAudioContext || new AudioCtor();
-    successAudioContext = context;
-    if (context.state === 'suspended') context.resume();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(260, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(115, context.currentTime + 0.19);
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
-    oscillator.connect(gain); gain.connect(context.destination);
-    oscillator.start(); oscillator.stop(context.currentTime + 0.23);
-  } catch { /* Audio may be blocked until a user gesture. */ }
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    audio.volume = 0.9;
+    const playback = audio.play();
+    playback?.catch(() => { /* Browser audio policy may block playback. */ });
+  } catch { /* Audio is optional when unsupported or blocked. */ }
 }
 
-function playBurgerErrorBuzz() {
-  try {
-    const AudioCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtor) return;
-    const context = successAudioContext || new AudioCtor();
-    successAudioContext = context;
-    if (context.state === 'suspended') context.resume();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'sawtooth';
-    oscillator.frequency.setValueAtTime(190, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(85, context.currentTime + 0.22);
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
-    oscillator.connect(gain); gain.connect(context.destination);
-    oscillator.start(); oscillator.stop(context.currentTime + 0.29);
-  } catch { /* Audio may be blocked until a user gesture. */ }
+function playWrongAnswerSound() {
+  playSoundAsset(errorSoundUrl);
 }
 
 function renderIndividualBoard(board, state, player) {
@@ -499,7 +456,6 @@ function renderIndividualBoard(board, state, player) {
       board.dataset.failureId = String(failureId);
       feedback.innerHTML = '<span class="burger-failure">✕</span>';
       feedback.classList.remove('show'); void feedback.offsetWidth; feedback.classList.add('show');
-      playBurgerErrorBuzz();
     }
     board.querySelector('.burger-progress').textContent = 'BURGER ' + (player.successCount || 0) + ' / ' + state.burgerTarget + '  ·  INGREDIENT ' + progress + ' / ' + sequence.length;
   } else if (state.stage === 7) {
@@ -672,10 +628,10 @@ function applyState(state) {
   currentState = state;
   // Play one short error cue when a player's answer changes into a wrong
   // result. Level 5 already has its own failure-ID cue, so avoid doubling it.
-  if (previousState && previousState.id === state.id && previousState.stage === state.stage && state.stage !== 5) {
+  if (previousState && previousState.id === state.id && previousState.stage === state.stage && true) {
     for (const player of state.players || []) {
       const before = previousState.players?.find((item) => item.color === player.color);
-      if (player.joined && player.roundFeedback === 'wrong' && before?.roundFeedback !== 'wrong') playWrongAnswerBuzz();
+      if (player.joined && player.roundFeedback === 'wrong' && before?.roundFeedback !== 'wrong') playWrongAnswerSound();
     }
   }
   const requestId = ++renderRequestId;
