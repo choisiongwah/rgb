@@ -350,6 +350,12 @@ export class SessionService {
         slot.roundFeedback = 'wrong';
         return { session, slot, correct: false, reset: false, cycleCompleted: false, targetColor: nextPipe.color };
       }
+      // Progress represents successful steps, not platforms that have
+      // physically scrolled off the left edge. The spawn animation may lag
+      // behind the player's inputs by several steps, so counting on exit made
+      // the HUD show 0 after valid moves and could finish on the wrong step.
+      state.score += 1;
+      slot.successCount = state.score;
       for (const pipe of state.pipes) pipe.x -= 1 / 6;
       state.shift += 1;
       state.lastCorrectId += 1;
@@ -362,7 +368,6 @@ export class SessionService {
             pipe.x = -1;
             continue;
           }
-          state.score += 1;
           if (state.nextId <= courseTarget) {
             pipe.x = rightmost + (100/600);
             rightmost = pipe.x;
@@ -373,10 +378,7 @@ export class SessionService {
           }
         }
       }
-      slot.successCount = state.score;
       if (state.score >= courseTarget) {
-        // The final platform has cleared the course; do not leave trailing
-        // platforms rendered after the finish condition is reached.
         state.pipes = [];
         slot.completed = true;
         slot.place = session.nextPlace++;
