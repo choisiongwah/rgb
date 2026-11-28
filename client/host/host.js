@@ -163,7 +163,7 @@ function renderFinalResults(state) {
     trophy.textContent = medals[player.rank] || '🏅';
     const rank = document.createElement('p');
     rank.className = 'rank-label';
-    rank.textContent = labels[player.rank] || (player.rank + ' PLACE');
+    rank.textContent = labels[player.rank] || (ordinal(player.rank));
     const name = document.createElement('h2');
     name.textContent = player.name;
     const color = document.createElement('p');
@@ -302,7 +302,7 @@ function renderRaceDisplay(state) {
     const scene = column.querySelector('.host-individual-scene');
     name.textContent = player.player?.name || player.color;
     status.textContent = !player.joined ? 'SCAN QR TO JOIN'
-      : player.completed ? ordinal(player.place) + ' PLACE'
+      : player.completed ? ordinal(player.place)
         : player.connected ? '' : 'DISCONNECTED';
     status.classList.toggle('connected', Boolean(state.stage === 3 && player.joined && player.connected && !player.completed));
     qr.hidden = player.joined;
@@ -317,7 +317,7 @@ function renderRaceDisplay(state) {
       4: (player.flappy?.blockersPassed || 0) + ' / ' + state.flappyTargetBlockers + ' BLOCKERS',
       5: (player.successCount || 0) + ' / ' + state.burgerTarget + ' BURGERS',
       7: 'R ' + (player.pieHits?.R || 0) + '/' + state.pieHitsPerColor + ' · G ' + (player.pieHits?.G || 0) + '/' + state.pieHitsPerColor + ' · B ' + (player.pieHits?.B || 0) + '/' + state.pieHitsPerColor,
-      8: (player.tri?.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget + 1)) + ' SHARKS',
+      8: (player.tri?.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget)) + ' SHARKS',
       9: (player.burgerStack?.successCount || 0) + ' / ' + state.burgerStackTarget + ' BURGERS'
     };
     distance.textContent = !player.joined ? 'WAITING' : individual ? (stageProgress[state.stage] || '') : highway ? Math.floor(race.distanceMeters || 0).toLocaleString() + ' / ' + state.raceTargetMeters.toLocaleString() + ' m' : '';
@@ -577,7 +577,7 @@ function renderIndividualBoard(board, state, player) {
       confettiHost.innerHTML = '';
       world.classList.remove('tri-complete');
     }
-    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget + 1)) + ' SHARKS · MATCH THE NEXT COLOUR';
+    board.querySelector('.board-caption').textContent = (tri.score || 0) + ' / ' + (state.triCourseTarget || Math.max(1, state.triTarget)) + ' SHARKS · MATCH THE NEXT COLOUR';
   } else if (state.stage === 9) {
     const stack = player.burgerStack || {lane:1,drops:[],stacked:[],successCount:0,penaltyMs:0};
     const dropsHost = board.querySelector('.stack-drops-host');
@@ -1053,7 +1053,7 @@ class RGBScene extends Phaser.Scene {
     if (!isDice && !isUfo && !isPie) {
       players.forEach((player) => {
         const index = state.players.findIndex((slot) => slot.color === player.color);
-        const placeLine = player.place ? '\\n' + ordinal(player.place) + ' PLACE  ·  +' + player.pointsEarned + ' POINTS' : '';
+        const placeLine = player.place ? '\\n' + ordinal(player.place) + ' ·  +' + player.pointsEarned + ' POINTS' : '';
         const progressLine = isFlappy
           ? (player.flappy?.blockersPassed || 0) + ' / 20 blockers\\n' + ['EASY','WIND','TIGHT GAPS','TURBULENCE'][Math.min(3, Math.floor((player.flappy?.blockersPassed || 0) / 6))]
           : isRace ? Math.floor(player.race?.distanceMeters || 0).toLocaleString() + ' / ' + state.raceTargetMeters.toLocaleString() + ' m\\n' + (player.race?.speedMultiplier || 1).toFixed(1) + '× SPEED'
@@ -1102,7 +1102,14 @@ class RGBScene extends Phaser.Scene {
     // already handled on scene creation and actual scale resize events.
   }
 }
-function ordinal(place) { return place === 1 ? '1ST' : place === 2 ? '2ND' : place === 3 ? '3RD' : place + 'TH'; }
+function ordinal(place) {
+  const remainder = place % 100;
+  const suffix = remainder >= 11 && remainder <= 13 ? 'th'
+    : place % 10 === 1 ? 'st'
+      : place % 10 === 2 ? 'nd'
+        : place % 10 === 3 ? 'rd' : 'th';
+  return String(place) + suffix;
+}
 
 async function createRoom() {
   try {
