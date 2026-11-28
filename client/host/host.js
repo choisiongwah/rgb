@@ -903,6 +903,7 @@ class RGBScene extends Phaser.Scene {
       this.lastBurgerComplete = 0;
       this.lastPieHit = 0;
       this.lastUfoRound = null;
+      this.lastUfoPrompt = null;
       this.playerTexts.forEach((item) => item?.destroy());
       this.playerTexts = [];
       this.ufoTarget?.setVisible(false).setAlpha(1);
@@ -941,15 +942,33 @@ class RGBScene extends Phaser.Scene {
       const recipeLength = (state.burgerSequence || []).length;
       this.sequenceText.setFontSize(Math.max(18, Math.min(48, this.scale.width * 0.04, this.scale.width / Math.max(14, recipeLength * 4.5))));
     }
-    this.statusText.setText(isMatrix ? (state.matrixPuzzle?.category || 'Mixed logic puzzles') + ' · ' + (state.matrixPuzzle?.difficulty ? ['','EASY','MEDIUM','HARD','EXPERT'][state.matrixPuzzle.difficulty] : 'READY') : state.status === 'waiting' ? 'Waiting for players'
-      : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
-      : state.paused ? 'GAME PAUSED'
-      : isFlappy ? 'First to ' + state.flappyTargetBlockers + ' blockers wins · Keep your rocket in the moving gaps!'
-      : isRace ? 'First to ' + state.raceTargetMeters.toLocaleString() + ' m wins · Avoid traffic and watch your speed!'
-      : isDice ? 'Tap the colour matching the largest number'
-      : isPie ? ('KNIFE WHEEL ' + (state.pieSpeed || 0.9).toFixed(1) + '× · THROW ON COLOUR') : isUfo ? (state.ufoPhase === 'flyby' ? 'SPOT THE UFO · ROUND ' + state.ufoCycle : state.ufoPhase === 'feedback' ? 'ROUND COMPLETE · NEXT UFO INCOMING' : 'WHICH UFO JUST FLEW PAST? · ROUND ' + state.ufoCycle)
-      : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
-      : 'Race to ' + state.targetCycles + ' completed cycles!');
+    if (isUfo) {
+      const prompt = state.status === 'waiting'
+        ? 'Waiting for players'
+        : state.status === 'finished'
+          ? 'LEVEL COMPLETE · NEXT LEVEL READY'
+          : state.paused
+            ? 'GAME PAUSED'
+            : state.ufoPhase === 'flyby'
+              ? 'SPOT THE UFO · ROUND ' + state.ufoCycle
+              : state.ufoPhase === 'feedback'
+                ? 'ROUND COMPLETE · NEXT UFO INCOMING'
+                : 'WHICH UFO JUST FLEW PAST? · ROUND ' + state.ufoCycle;
+      if (prompt !== this.lastUfoPrompt) {
+        this.lastUfoPrompt = prompt;
+        this.statusText.setText(prompt);
+      }
+    } else {
+      this.statusText.setText(isMatrix ? (state.matrixPuzzle?.category || 'Mixed logic puzzles') + ' · ' + (state.matrixPuzzle?.difficulty ? ['','EASY','MEDIUM','HARD','EXPERT'][state.matrixPuzzle.difficulty] : 'READY') : state.status === 'waiting' ? 'Waiting for players'
+        : state.status === 'finished' ? 'LEVEL COMPLETE · NEXT LEVEL READY'
+        : state.paused ? 'GAME PAUSED'
+        : isFlappy ? 'First to ' + state.flappyTargetBlockers + ' blockers wins · Keep your rocket in the moving gaps!'
+        : isRace ? 'First to ' + state.raceTargetMeters.toLocaleString() + ' m wins · Avoid traffic and watch your speed!'
+        : isDice ? 'Tap the colour matching the largest number'
+        : isPie ? ('KNIFE WHEEL ' + (state.pieSpeed || 0.9).toFixed(1) + '× · THROW ON COLOUR')
+        : isBurger ? 'R = MEAT     ·     G = VEGETABLE     ·     B = TOMATO'
+        : 'Race to ' + state.targetCycles + ' completed cycles!');
+    }
     this.diceGraphics.setVisible(isDice);
     this.matrixCells.forEach((cell, index) => {
       if (!cell) return;
