@@ -767,13 +767,13 @@ describe('SessionService Level 8 Island Crossing', () => {
     expect(player.tri.shift).toBe(0);
     expect(player.tri.score).toBe(0);
   });
-  it('uses one fewer playable platform than the configured course length', () => {
+  it('generates exactly the configured number of course platforms', () => {
     const { service, session, slots } = createLevel8Session(1);
     const player = slots[0];
     expect(service.toPublicView(session).triTarget).toBe(50);
-    expect(service.toPublicView(session).triCourseTarget).toBe(51);
+    expect(service.toPublicView(session).triCourseTarget).toBe(50);
 
-    session.triTarget = 4; // Include the empty starting position: 5 generated platforms.
+    session.triTarget = 4;
     player.tri = {
       pipes: [
         { id: 1, color: 'R', x: -0.1 },
@@ -787,19 +787,39 @@ describe('SessionService Level 8 Island Crossing', () => {
     expect(player.tri.pipes.some((pipe) => pipe.id === 2)).toBe(true);
     expect(player.tri.nextId).toBe(3);
   });
+  it('completes a 20-platform course at 20, without generating a 21st platform', () => {
+    const { service, session, slots } = createLevel8Session(1);
+    const player = slots[0];
+    session.triTarget = 20;
+    player.tri = {
+      pipes: Array.from({ length: 6 }, (_, index) => ({
+        id: index + 1, color: 'R', x: (2 / 6) + index * (1 / 6)
+      })),
+      nextId: 7, score: 0, shift: 0, lastCorrectId: 0
+    };
+
+    expect(service.toPublicView(session).triCourseTarget).toBe(20);
+    while (!player.completed) submitNextPipe(service, session, player);
+
+    expect(player.tri.score).toBe(20);
+    expect(player.tri.nextId).toBe(21);
+    expect(player.tri.pipes).toHaveLength(0);
+    expect(player.completed).toBe(true);
+    expect(session.status).toBe('finished');
+  });
   it('finishes at the playable platform target and clears remaining pipes', () => {
     const { service, session, slots } = createLevel8Session(1);
-    session.triTarget = 3; // 4 generated platforms including the empty starting position.
+    session.triTarget = 3;
     slots[0].tri = {
       pipes: [
         { id: 1, color: 'R', x: -0.1 },
         { id: 2, color: 'R', x: 1 / 3 }
       ],
-      nextId: 3, score: 4, shift: 0, lastCorrectId: 0
+      nextId: 3, score: 2, shift: 0, lastCorrectId: 0
     };
     const result = service.submitInput(session.id, slots[0].token, 'R');
     expect(result.correct).toBe(true);
-    expect(slots[0].tri.score).toBe(4);
+    expect(slots[0].tri.score).toBe(3);
     expect(slots[0].tri.pipes).toHaveLength(0);
     expect(slots[0].completed).toBe(true);
     expect(session.status).toBe('finished');
