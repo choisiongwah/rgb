@@ -739,9 +739,14 @@ describe('SessionService Level 8 Island Crossing', () => {
   it('advances through matching coloured pipes and increments course score as pipes clear', () => {
     const { service, session, slots } = createLevel8Session(1);
     const player = slots[0];
-    for (let i = 0; i < 3; i += 1) submitNextPipe(service, session, player);
+    submitNextPipe(service, session, player);
     expect(player.tri.score).toBe(1);
     expect(player.successCount).toBe(1);
+    submitNextPipe(service, session, player);
+    expect(player.tri.score).toBe(2);
+    expect(player.successCount).toBe(2);
+    submitNextPipe(service, session, player);
+    expect(player.tri.score).toBe(3);
     expect(player.tri.shift).toBe(3);
   });
   it('requires the incoming platform after each successful step, not the platform under the runner', () => {
@@ -799,6 +804,10 @@ describe('SessionService Level 8 Island Crossing', () => {
     };
 
     expect(service.toPublicView(session).triCourseTarget).toBe(20);
+    submitNextPipe(service, session, player);
+    submitNextPipe(service, session, player);
+    expect(player.tri.score).toBe(2);
+    expect(player.completed).toBe(false);
     while (!player.completed) submitNextPipe(service, session, player);
 
     expect(player.tri.score).toBe(20);
